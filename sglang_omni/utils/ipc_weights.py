@@ -353,6 +353,9 @@ AUDIT_ONLY_WEIGHT_SHARE_POLICIES: dict[str, WeightSharePolicy] = {
     "Qwen3TTSTalker": WeightSharePolicy(
         private_tensor_names=frozenset({"model.decode_feedback_embedding.weight"})
     ),
+    "VoicingTTSTalker": WeightSharePolicy(
+        private_tensor_names=frozenset({"model.decode_feedback_embedding.weight"})
+    ),
     # Note (Jiaxin Deng): Qwen3-Omni runs two engines per pipeline; the
     # launcher only drives single-SGLang-engine pipelines, so these cannot
     # reach e2e validation on it. The talker keeps its decode staging in

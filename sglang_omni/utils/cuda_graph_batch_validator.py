@@ -35,6 +35,9 @@ _BUFFER_PROBES: dict[str, BufferProbe] = {
     "Qwen3TTSTalker": BufferProbe(
         (("feedback_buffer", lambda m: m.feedback_buffer.shape[0]),)
     ),
+    "VoicingTTSTalker": BufferProbe(
+        (("feedback_buffer", lambda m: m.feedback_buffer.shape[0]),)
+    ),
     "MossTTSDelaySGLangModel": BufferProbe(
         (
             (

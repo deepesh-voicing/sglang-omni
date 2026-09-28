@@ -27,6 +27,7 @@ _CONFIG_MODEL_TYPE_TO_ARCH = {
     "moss_tts_local": "MossTTSLocalModel",
     "dots_tts": "DotsTTSForConditionalGeneration",
     "qwen3_tts": "Qwen3TTSForConditionalGeneration",
+    "voicing_tts": "VoicingTTSForConditionalGeneration",
     "voxtral_tts": "VoxtralTTSForConditionalGeneration",
     "zonos2": "Zonos2ForCausalLM",
     "personaplex": "PersonaPlexForCausalLM",

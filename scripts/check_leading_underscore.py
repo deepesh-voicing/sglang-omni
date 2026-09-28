@@ -63,6 +63,7 @@ ALLOWED_DEFS: frozenset[tuple[str, str]] = frozenset(
         ),
         # torch.nn.Module._buffers
         ("sglang_omni/models/qwen3_tts/codec_state_arena.py", "_buffers"),
+        ("sglang_omni/models/voicing_tts/codec_state_arena.py", "_buffers"),
         # SGLang ModelRunner / Scheduler / cache / MLX hooks
         ("sglang_omni/model_runner/sglang_model_runner.py", "_extend_forward_kwargs"),
         (
@@ -92,6 +93,7 @@ ALLOWED_DEFS: frozenset[tuple[str, str]] = frozenset(
         ("sglang_omni/scheduling/omni_scheduler.py", "_run_batch"),
         ("sglang_omni/models/minimax_music3/dit.py", "_transformer"),
         ("sglang_omni/models/qwen3_tts/reference_encoder_cuda_graph.py", "_encode"),
+        ("sglang_omni/models/voicing_tts/reference_encoder_cuda_graph.py", "_encode"),
         ("sglang_omni/models/qwen3_omni/components/code2wav_cuda_graph.py", "_build"),
         # Remaining production exceptions carried from the rename
         ("sglang_omni/scheduling/dllm_scheduler.py", "_event_loop"),

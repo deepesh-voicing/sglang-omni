@@ -343,6 +343,7 @@ def test_every_generation_model_has_a_probe():
     expected = {
         "HiggsTTSModel",
         "Qwen3TTSTalker",
+        "VoicingTTSTalker",
         "MossTTSDelaySGLangModel",
         "MossTTSLocalSGLangModel",
         "S2ProSGLangTextModel",
