@@ -236,7 +236,7 @@ def test_omni_scheduler_weight_updates_flush_and_advance_epoch(
 def test_weight_swap_isolates_prompt_cache_when_flush_fails() -> None:
     from sglang_omni.scheduling.omni_scheduler import OmniScheduler
 
-    cache_key = "qwen3_tts:prompt:v1"
+    cache_key = "voicing_tts:prompt:v1"
     retracted = SimpleNamespace(
         extra_key=f"{cache_key}:weights:0",
         _omni_prompt_cache_key=cache_key,

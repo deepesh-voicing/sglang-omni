@@ -136,8 +136,5 @@ class AppleOmniPlatform(OmniPlatform):
         else:
             torch.mps.synchronize()
 
-    def enable_code2wav_graph(self) -> bool:
-        return False
-
 
 __all__ = ["AppleOmniPlatform"]

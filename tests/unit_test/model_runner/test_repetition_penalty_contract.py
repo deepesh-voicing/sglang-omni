@@ -5,25 +5,8 @@ from types import SimpleNamespace
 
 import pytest
 import torch
-from sglang.srt.sampling.sampling_params import SamplingParams
 
 from sglang_omni.model_runner.base import ModelRunner
-
-
-def test_qwen3_omni_thinker_explicit_penalty_is_preserved():
-    from sglang_omni.models.qwen3_omni.request_builders import (
-        build_sglang_thinker_request,
-    )
-    from tests.unit_test.fixtures.qwen_fakes import FakeQwenTokenizer, make_qwen_state
-
-    data = build_sglang_thinker_request(
-        make_qwen_state(),
-        params={"repetition_penalty": 1.7},
-        tokenizer=FakeQwenTokenizer(),
-        vocab_size=32000,
-    )
-    assert isinstance(data.req.sampling_params, SamplingParams)
-    assert data.req.sampling_params.repetition_penalty == 1.7
 
 
 @pytest.mark.parametrize("with_sglang_state", [False, True])

@@ -32,7 +32,6 @@ config_app = typer.Typer(help="Inspect, resolve and export the pipeline configur
 
 _MODEL_PATH_HELP = "The Hugging Face model ID or the path to the model directory."
 _CONFIG_HELP = "Path to a pipeline config file, as accepted by `sgl-omni serve`."
-_TEXT_ONLY_HELP = "Use the thinker-only pipeline, as `sgl-omni serve --text-only` does."
 _MEM_FRACTION_HELP = (
     "Set engine.mem_fraction_static on every SGLang engine stage, as "
     "`sgl-omni serve --mem-fraction-static` does."
@@ -119,7 +118,6 @@ def resolve_sources(
     *,
     model_path: str | None,
     config_file: str | None,
-    text_only: bool,
     mem_fraction_static: float | None,
     argv: list[str],
 ) -> Resolution:
@@ -156,9 +154,7 @@ def resolve_sources(
             else:
                 pass
         else:
-            manager = ConfigManager.from_model_path(
-                str(model_path), variant="text" if text_only else None
-            )
+            manager = ConfigManager.from_model_path(str(model_path))
             baseline, patches = manager.config, ConfigPatchSet()
 
         patches = patches.merge(
@@ -217,9 +213,6 @@ def resolve(
     ctx: typer.Context,
     model_path: Annotated[str | None, typer.Option(help=_MODEL_PATH_HELP)] = None,
     config: Annotated[str | None, typer.Option(help=_CONFIG_HELP)] = None,
-    text_only: Annotated[
-        bool, typer.Option("--text-only", help=_TEXT_ONLY_HELP)
-    ] = False,
     mem_fraction_static: Annotated[
         float | None, typer.Option("--mem-fraction-static", help=_MEM_FRACTION_HELP)
     ] = None,
@@ -239,13 +232,12 @@ def resolve(
     Takes the same arguments as `sgl-omni serve`, including dotted overrides
     (the stages. prefix is implied, exactly as on serve):
 
-        sgl-omni config resolve --model-path Qwen/Qwen3-Omni \\
-            --thinker.tp_size 4 --show diff
+        sgl-omni config resolve --config examples/configs/voicing_tts_1_7b.yaml \\
+            --tts_engine.engine.mem_fraction_static 0.6 --show diff
     """
     resolution = resolve_sources(
         model_path=model_path,
         config_file=config,
-        text_only=text_only,
         mem_fraction_static=mem_fraction_static,
         argv=ctx.args,
     )
@@ -298,30 +290,27 @@ def explain(
     path: Optional[str] = typer.Argument(
         None,
         help=(
-            "Config path, canonical (stages.thinker.factory.max_seq_len) or "
-            "CLI-spelled (thinker.factory.max_seq_len). Omit to list every "
+            "Config path, canonical (stages.vocoder.factory.max_batch_size) or "
+            "CLI-spelled (vocoder.factory.max_batch_size). Omit to list every "
             "path a source touched. Pass it before any dotted override so "
             "it is not mistaken for one."
         ),
     ),
     model_path: Annotated[str | None, typer.Option(help=_MODEL_PATH_HELP)] = None,
     config: Annotated[str | None, typer.Option(help=_CONFIG_HELP)] = None,
-    text_only: Annotated[
-        bool, typer.Option("--text-only", help=_TEXT_ONLY_HELP)
-    ] = False,
     mem_fraction_static: Annotated[
         float | None, typer.Option("--mem-fraction-static", help=_MEM_FRACTION_HELP)
     ] = None,
 ) -> None:
     """Say where one configuration value came from, and what it overrode.
 
-        sgl-omni config explain stages.thinker.factory.max_seq_len \\
-            --config omni.yaml --thinker.factory.max_seq_len 8192
+        sgl-omni config explain stages.vocoder.factory.max_batch_size \\
+            --config examples/configs/voicing_tts_1_7b.yaml \\
+            --vocoder.factory.max_batch_size 4
     """
     resolution = resolve_sources(
         model_path=model_path,
         config_file=config,
-        text_only=text_only,
         mem_fraction_static=mem_fraction_static,
         argv=ctx.args,
     )

@@ -240,8 +240,8 @@ def test_resolve_skips_retracted_row():
     """A request retracted (KV freed, returned to waiting) while its lagged step
     was in flight must be skipped at resolve, exactly like a prior-step finish.
 
-    This guards the shared async-resolve path (Higgs and MOSS-TTS-Local both use
-    base ModelRunner.execute_resolve): without overlap, upstream would otherwise
+    This guards the shared async-resolve path (base
+    ModelRunner.execute_resolve): without overlap, upstream would otherwise
     append + check_finished the retracted req and re-free its already-freed KV
     (a double-free assertion). Crash-fix only; faithful frame accounting for a
     retracted req is out of scope here.
@@ -543,7 +543,7 @@ def test_prompt_only_radix_reuses_prompt_without_caching_tail():
         total = allocator.available_size()
         prompt = [1, 2, 3]
         first = decoding_req(allocator, req_to_token_pool, "first", prompt, [20])
-        first.extra_key = "qwen3_tts:prompt:v1"
+        first.extra_key = "voicing_tts:prompt:v1"
         first.init_next_round_input(cache)
         first.set_extend_range(0, len(prompt))
         maybe_cache_unfinished_req(first, cache)
@@ -558,13 +558,13 @@ def test_prompt_only_radix_reuses_prompt_without_caching_tail():
             "",
             prompt,
             SamplingParams(max_new_tokens=8),
-            extra_key="qwen3_tts:prompt:v1",
+            extra_key="voicing_tts:prompt:v1",
         )
         second.output_ids = []
         second.init_next_round_input(cache)
         tail_match = cache.match_prefix(
             MatchPrefixParams(
-                key=RadixKey(prompt + [20], extra_key="qwen3_tts:prompt:v1")
+                key=RadixKey(prompt + [20], extra_key="voicing_tts:prompt:v1")
             )
         )
 

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Shared managed Rust-router helpers for Omni model CI tests."""
+"""Shared managed Rust-router helpers for TTS model CI tests."""
 
 from __future__ import annotations
 
@@ -110,7 +110,6 @@ def launch_managed_router(
     force_log: bool = False,
     external_worker_urls: list[str] | None = None,
     worker_env: dict[str, str] | None = None,
-    generation_streaming: bool = True,
     named_voice: bool = False,
 ) -> Iterator[ManagedRouterHandle]:
     """Launch a Rust router over local or externally owned workers."""
@@ -153,7 +152,6 @@ def launch_managed_router(
         router_port=router_port,
         worker_urls=worker_urls,
         model_name=model_name,
-        generation_streaming=generation_streaming,
         named_voice=named_voice,
     )
     router_log = (
@@ -459,7 +457,6 @@ def write_router_config(
     router_port: int,
     worker_urls: list[str],
     model_name: str,
-    generation_streaming: bool = True,
     named_voice: bool = False,
 ) -> Path:
     config_path = tmp_path_factory.mktemp("omni_router_config") / "router.toml"
@@ -469,7 +466,6 @@ def write_router_config(
             router_port=router_port,
             worker_urls=worker_urls,
             model_name=model_name,
-            generation_streaming=generation_streaming,
             named_voice=named_voice,
         ),
         encoding="utf-8",

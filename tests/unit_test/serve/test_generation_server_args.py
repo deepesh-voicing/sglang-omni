@@ -18,15 +18,7 @@ import pytest
 from sglang_omni.cli.serve import serve
 from sglang_omni.config import PipelineConfig
 from sglang_omni.config.manager import ConfigManager
-from sglang_omni.models.fishaudio_s2_pro.config import S2ProPipelineConfig
-from sglang_omni.models.fun_asr.config import FunASRPipelineConfig
-from sglang_omni.models.higgs_tts.config import HiggsTtsPipelineConfig
-from sglang_omni.models.moss_tts.config import MossTTSPipelineConfig
-from sglang_omni.models.moss_tts_local.config import MossTTSLocalPipelineConfig
-from sglang_omni.models.qwen3_asr.config import Qwen3ASRPipelineConfig
-from sglang_omni.models.qwen3_tts.config import Qwen3TTSPipelineConfig
-from sglang_omni.models.voxtral_tts.config import VoxtralTTSPipelineConfig
-from sglang_omni.models.whisper_asr.config import WhisperASRPipelineConfig
+from sglang_omni.models.voicing_tts.config import VoicingTTSPipelineConfig
 
 TEST_MAX_TOTAL_TOKENS = 82000
 
@@ -65,15 +57,7 @@ def set_generation_server_args(
 @pytest.mark.parametrize(
     ("config_cls", "stage_name"),
     [
-        (HiggsTtsPipelineConfig, "tts_engine"),
-        (Qwen3TTSPipelineConfig, "tts_engine"),
-        (MossTTSPipelineConfig, "tts_engine"),
-        (MossTTSLocalPipelineConfig, "tts_engine"),
-        (S2ProPipelineConfig, "tts_engine"),
-        (VoxtralTTSPipelineConfig, "tts_generation"),
-        (Qwen3ASRPipelineConfig, "asr"),
-        (WhisperASRPipelineConfig, "asr"),
-        (FunASRPipelineConfig, "asr"),
+        (VoicingTTSPipelineConfig, "tts_engine"),
     ],
 )
 def test_dotted_engine_flags_reach_each_generation_stage(
@@ -93,7 +77,7 @@ def test_dotted_engine_flags_reach_each_generation_stage(
 
 
 def test_engine_flags_on_a_non_engine_stage_are_refused() -> None:
-    config = HiggsTtsPipelineConfig(model_path="dummy")
+    config = VoicingTTSPipelineConfig(model_path="dummy")
     with pytest.raises(ValueError, match="not an engine stage"):
         ConfigManager(config).merge_config(
             [("vocoder.engine.max_running_requests", "64")]
@@ -106,7 +90,7 @@ def test_serve_routes_dotted_engine_flags_to_the_stage(
     from_model_path,
     launch_server,
 ) -> None:
-    config = HiggsTtsPipelineConfig(model_path="dummy")
+    config = VoicingTTSPipelineConfig(model_path="dummy")
     from_model_path.return_value = ConfigManager(config)
 
     serve(
@@ -134,7 +118,7 @@ def test_serve_without_engine_flags_preserves_pipeline_default(
     from_model_path,
     launch_server,
 ) -> None:
-    config = HiggsTtsPipelineConfig(model_path="dummy")
+    config = VoicingTTSPipelineConfig(model_path="dummy")
     from_model_path.return_value = ConfigManager(config)
 
     serve(**serve_kwargs())

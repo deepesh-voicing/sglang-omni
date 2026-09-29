@@ -9,17 +9,6 @@ from typing import Any
 
 
 @dataclass
-class Message:
-    """Chat-style message."""
-
-    role: str
-    content: Any
-
-    def to_dict(self) -> dict[str, Any]:
-        return {"role": self.role, "content": self.content}
-
-
-@dataclass
 class UsageInfo:
     """Token usage details."""
 
@@ -89,8 +78,6 @@ class GenerateRequest:
     model: str | None = None
 
     prompt: str | dict[str, Any] | None = None
-    prompt_token_ids: list[int] | None = None
-    messages: list[Message] | None = None
 
     sampling: SamplingParams = field(default_factory=SamplingParams)
     stage_sampling: dict[str, SamplingParams] | None = None
@@ -101,7 +88,6 @@ class GenerateRequest:
 
     # Multi-modal support
     output_modalities: list[str] | None = None
-    multimodal_train_inputs: dict[str, Any] | None = None
 
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -109,8 +95,6 @@ class GenerateRequest:
         return {
             "model": self.model,
             "prompt": self.prompt,
-            "prompt_token_ids": self.prompt_token_ids,
-            "messages": [m.to_dict() for m in self.messages] if self.messages else None,
             "sampling": self.sampling.to_dict(),
             "stage_sampling": (
                 {key: params.to_dict() for key, params in self.stage_sampling.items()}
@@ -122,7 +106,6 @@ class GenerateRequest:
             "stream": self.stream,
             "max_tokens": self.max_tokens,
             "output_modalities": self.output_modalities,
-            "multimodal_train_inputs": self.multimodal_train_inputs,
             "metadata": dict(self.metadata),
         }
 
@@ -188,43 +171,6 @@ class AbortResult:
 # ---------------------------------------------------------------------------
 # High-level result types
 # ---------------------------------------------------------------------------
-
-
-@dataclass
-class CompletionAudio:
-    """Audio data from a non-streaming completion."""
-
-    id: str
-    data: str  # base64
-    transcript: str | None = None
-
-
-@dataclass
-class CompletionResult:
-    """Result of a non-streaming completion call."""
-
-    request_id: str
-    text: str
-    audio: CompletionAudio | None = None
-    finish_reason: str = "stop"
-    usage: UsageInfo | None = None
-    output_token_logprobs: list[Any] | None = None
-    omni_rollout: dict[str, Any] | None = None
-    weight_version: str | None = None
-    language: str | None = None
-
-
-@dataclass
-class CompletionStreamChunk:
-    """A single chunk from a streaming completion call."""
-
-    request_id: str
-    text: str = ""
-    modality: str = "text"
-    audio_b64: str | None = None  # already base64-encoded
-    finish_reason: str | None = None
-    usage: UsageInfo | None = None
-    stage_name: str | None = None
 
 
 @dataclass

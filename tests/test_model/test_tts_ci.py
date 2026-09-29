@@ -61,7 +61,8 @@ from tests.test_model.omni_router_utils import (
 )
 from tests.test_model.tts_ci_config import select_tts_ci_preset
 from tests.utils import (
-    QWEN3_ASR_WER_CONCURRENCY,
+    WER_ASR_CONCURRENCY,
+    ExternalAsrServer,
     MetricCheckCollector,
     assert_speed_thresholds,
     assert_streaming_consistency,
@@ -169,7 +170,6 @@ def run_benchmark(
         warmup=warmup,
         stream=stream,
         ref_format=PRESET.ref_format,
-        token_count=PRESET.token_count,
         voice=PRESET.voice,
         voice_clone=PRESET.voice_clone,
     )
@@ -187,13 +187,13 @@ def run_wer_transcribe(
     meta: str,
     output_dir: str,
     *,
-    asr_router_port: int,
+    asr: ExternalAsrServer,
     concurrency: int,
     stream: bool = False,
     lang: str = "en",
     device: str = "cuda:0",
 ) -> dict:
-    """Transcribe saved audio and compute WER via Qwen3-ASR router."""
+    """Transcribe saved audio and compute WER on the external ASR server."""
     from benchmarks.eval.benchmark_tts_seedtts import (
         TtsSeedttsBenchmarkConfig,
         run_tts_seedtts_transcribe,
@@ -207,15 +207,16 @@ def run_wer_transcribe(
         device=device,
         stream=stream,
         concurrency=concurrency,
-        asr_concurrency=QWEN3_ASR_WER_CONCURRENCY,
+        asr_model_path=asr.model_path,
+        asr_concurrency=WER_ASR_CONCURRENCY,
         ref_format=PRESET.ref_format,
-        token_count=PRESET.token_count,
         voice=PRESET.voice,
         voice_clone=PRESET.voice_clone,
     )
     run_tts_seedtts_transcribe(
         config,
-        asr_router_port=asr_router_port,
+        asr_router_port=asr.port,
+        asr_host=asr.host,
     )
 
     results_path = Path(output_dir) / "wer_results.json"
@@ -913,7 +914,7 @@ def test_voice_cloning_wer(
     wer_input_dirs: dict[str, dict[int, str]],
     dataset_repo: str,
     selected_tts_concurrencies: tuple[int, ...],
-    qwen3_asr_wer_router: ManagedRouterHandle,
+    external_wer_asr: ExternalAsrServer,
 ) -> None:
     checks = MetricCheckCollector("TTS non-streaming WER")
     for concurrency in selected_tts_concurrencies:
@@ -927,7 +928,7 @@ def test_voice_cloning_wer(
         results = run_wer_transcribe(
             dataset_repo,
             output_dir,
-            asr_router_port=qwen3_asr_wer_router.port,
+            asr=external_wer_asr,
             concurrency=concurrency,
         )
         print_wer_summary(
@@ -1004,7 +1005,7 @@ def test_voice_cloning_streaming_wer(
     wer_input_dirs: dict[str, dict[int, str]],
     dataset_repo: str,
     selected_tts_concurrencies: tuple[int, ...],
-    qwen3_asr_wer_router: ManagedRouterHandle,
+    external_wer_asr: ExternalAsrServer,
 ) -> None:
     checks = MetricCheckCollector("TTS streaming WER")
     for concurrency in selected_tts_concurrencies:
@@ -1020,7 +1021,7 @@ def test_voice_cloning_streaming_wer(
             dataset_repo,
             output_dir,
             stream=True,
-            asr_router_port=qwen3_asr_wer_router.port,
+            asr=external_wer_asr,
             concurrency=concurrency,
         )
         print_wer_summary(

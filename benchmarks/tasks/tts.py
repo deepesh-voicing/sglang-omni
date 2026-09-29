@@ -1,17 +1,13 @@
 # SPDX-License-Identifier: Apache-2.0
-"""TTS task utilities: voice-clone API clients, seed-tts eval stages, and HTTP send functions.
+"""TTS task utilities: seed-tts eval stages and /v1/audio/speech send functions.
 
 ASR transcription and WER scoring live in benchmarks.tasks.asr. This module
 maps generated audio into ASR samples and reuses that layer.
-
-Replaces tasks/tts_speed.py and tasks/voice_clone.py.
 """
 
 from __future__ import annotations
 
 import asyncio
-import base64
-import binascii
 import csv
 import io
 import json
@@ -19,22 +15,16 @@ import logging
 import os
 import time
 import wave
-from typing import AsyncIterator, Literal, Protocol, TypedDict
+from typing import AsyncIterator, Protocol
 
 import aiohttp
 import numpy as np
-import soundfile as sf
 import torch
 from tqdm import tqdm
 
 from benchmarks.benchmarker.data import RequestResult
 from benchmarks.benchmarker.runner import SendFn
-from benchmarks.benchmarker.utils import (
-    WAV_HEADER_SIZE,
-    get_wav_duration,
-    parse_sse_event,
-    save_json_results,
-)
+from benchmarks.benchmarker.utils import get_wav_duration, save_json_results
 from benchmarks.dataset.seedtts import SampleInput, load_seedtts_samples
 from benchmarks.metrics.performance import (
     build_speed_results,
@@ -53,23 +43,13 @@ from benchmarks.metrics.wer import (
     print_asr_speed_summary,
     print_wer_summary,
 )
-from benchmarks.tasks.asr import (
-    ASR_WARMUP_MULTIPLIER,
-    apply_wer,
-    run_asr_transcription,
-    transcribe_and_compute_wer,
-)
+from benchmarks.tasks.asr import ASR_WARMUP_MULTIPLIER, apply_wer, run_asr_transcription
 
 logger = logging.getLogger(__name__)
 
 TEXT_PREVIEW_LENGTH = 60
 SPEAKER_SIMILARITY_BATCH_SIZE = 8
-MOSS_TTS_TOKEN_COUNT_AUTO = "auto"
-MOSS_TTS_ZH_TOKENS_PER_CHAR = 3.098411951313033
-MOSS_TTS_EN_TOKENS_PER_CHAR = 0.8673376262755219
-MOSS_TTS_MIN_AUTO_TOKEN_COUNT = 32
 UTMOS_BATCH_SIZE = 8
-ReferenceAudioField = Literal["audios", "audio.ref_audio"]
 
 
 # ---------------------------------------------------------------------------
@@ -144,13 +124,7 @@ def save_wer_results(
 
 
 class SeedttsSimilarityConfig(Protocol):
-    """Subset of config fields the shared speaker-similarity pipeline reads.
-
-    Both :class:`OmniSeedttsBenchmarkConfig` and
-    :class:`TtsSeedttsBenchmarkConfig` satisfy this protocol via their
-    dataclass fields; entry-point parsers default ``similarity_checkpoint``
-    to ``None`` when the user does not pass ``--similarity-checkpoint``.
-    """
+    """Subset of config fields the shared speaker-similarity pipeline reads."""
 
     model: str
     meta: str
@@ -511,6 +485,7 @@ def _log_transcribe_result(
 
 def _transcribe_generated_via_runner(
     generated: list[dict],
+    asr_host: str,
     router_port: int,
     model_path: str,
     lang: str,
@@ -531,6 +506,7 @@ def _transcribe_generated_via_runner(
     results, wall_s = asyncio.run(
         run_asr_transcription(
             samples,
+            host=asr_host,
             port=router_port,
             model_path=model_path,
             lang=lang,
@@ -574,18 +550,19 @@ def run_seedtts_transcribe(
     wer_config: dict,
     generation_mode: str | None = None,
     log_per_sample: bool = False,
-    asr_router_port: int | None = None,
+    asr_router_port: int,
+    asr_host: str,
 ) -> dict:
     """Transcribe saved audio, compute WER + ASR-speed metrics, and persist them.
 
-    Shared pipeline used by both Qwen3-Omni and S2-Pro seed-tts-eval benchmarks.
-    The caller-specific ``wer_config`` dict is embedded in ``wer_results.json``
-    to preserve backward-compatible fields.
+    ASR runs on an external OpenAI-compatible /v1/audio/transcriptions server
+    at asr_host:asr_router_port. The caller-specific wer_config dict is
+    embedded in wer_results.json.
 
     Returns a dict with keys:
-        - ``wer_summary``: corpus-level WER metrics (see :func:`calculate_wer_metrics`)
-        - ``asr_speed``:   ASR transcription latency/throughput metrics
-        - ``per_sample``:  list[SampleOutput] with per-sample details
+        - wer_summary: corpus-level WER metrics from calculate_wer_metrics
+        - asr_speed: ASR transcription latency/throughput metrics
+        - per_sample: list[SampleOutput] with per-sample details
     """
     generated_path = os.path.join(config.output_dir, "generated.json")
     with open(generated_path) as f:
@@ -596,6 +573,7 @@ def run_seedtts_transcribe(
     asr_concurrency = max(1, int(config.asr_concurrency))
     outputs, asr_wall_time_s = _transcribe_generated_via_runner(
         generated,
+        asr_host,
         asr_router_port,
         asr_model_path,
         config.lang,
@@ -631,395 +609,6 @@ def run_seedtts_transcribe(
         "asr_speed": asr_metrics,
         "per_sample": outputs,
     }
-
-
-# ---------------------------------------------------------------------------
-# Voice-clone API clients
-# ---------------------------------------------------------------------------
-
-
-class VoiceCloneTTS:
-    """Voice cloning via /v1/audio/speech (OAI TTS API format)."""
-
-    async def generate_speech(
-        self,
-        session: aiohttp.ClientSession,
-        api_url: str,
-        model_name: str,
-        sample: SampleInput,
-        max_new_tokens: int = 2048,
-        temperature: float = 0.8,
-        seed: int | None = None,
-    ) -> tuple[bytes, float]:
-        payload: dict = {
-            "model": model_name,
-            "input": sample.target_text,
-            "ref_audio": sample.ref_audio,
-            "ref_text": sample.ref_text,
-            "response_format": "wav",
-            "max_new_tokens": max_new_tokens,
-            "temperature": temperature,
-        }
-        if seed is not None:
-            payload["seed"] = seed
-
-        t0 = time.perf_counter()
-        async with session.post(api_url, json=payload) as response:
-            if response.status != 200:
-                error_text = await response.text()
-                raise RuntimeError(f"HTTP {response.status}: {error_text}")
-            wav_bytes = await response.read()
-        latency = time.perf_counter() - t0
-
-        if len(wav_bytes) <= WAV_HEADER_SIZE:
-            raise ValueError(
-                f"Empty or invalid audio response ({len(wav_bytes)} bytes)"
-            )
-        return wav_bytes, latency
-
-    async def generate_speech_streaming(
-        self,
-        session: aiohttp.ClientSession,
-        api_url: str,
-        model_name: str,
-        sample: SampleInput,
-        max_new_tokens: int = 2048,
-        temperature: float = 0.8,
-        seed: int | None = None,
-    ) -> tuple[bytes, float]:
-        """Generate speech via raw PCM streaming and return a WAV container."""
-        payload: dict = {
-            "model": model_name,
-            "input": sample.target_text,
-            "ref_audio": sample.ref_audio,
-            "ref_text": sample.ref_text,
-            "response_format": "pcm",
-            "max_new_tokens": max_new_tokens,
-            "temperature": temperature,
-            "stream": True,
-        }
-        if seed is not None:
-            payload["seed"] = seed
-
-        t0 = time.perf_counter()
-        pcm_chunks: list[bytes] = []
-
-        async with session.post(api_url, json=payload) as response:
-            if response.status != 200:
-                error_text = await response.text()
-                raise RuntimeError(f"HTTP {response.status}: {error_text}")
-
-            pcm_format = _validate_raw_pcm_response_headers(response.headers)
-            if pcm_format is None:
-                content_type = response.headers.get("Content-Type")
-                raise ValueError(
-                    f"Expected audio/pcm streaming response, got {content_type!r}"
-                )
-            async for chunk, _ in _iter_response_http_chunks(response):
-                if chunk:
-                    pcm_chunks.append(chunk)
-
-        latency = time.perf_counter() - t0
-
-        if not pcm_chunks:
-            raise ValueError("No audio chunks received from streaming response")
-        pcm_bytes = b"".join(pcm_chunks)
-        block_align = pcm_format[1] * pcm_format[2]
-        if len(pcm_bytes) % block_align != 0:
-            raise ValueError(
-                "PCM response ended with a partial audio frame "
-                f"(bytes={len(pcm_bytes)}, block_align={block_align})"
-            )
-
-        return _build_streaming_wav_bytes(pcm_chunks, pcm_format), latency
-
-    async def evaluate_sample(
-        self,
-        session: aiohttp.ClientSession,
-        api_url: str,
-        model_name: str,
-        asr: dict,
-        sample: SampleInput,
-        lang: str,
-        device: str,
-        audio_dir: str,
-        max_new_tokens: int = 2048,
-        temperature: float = 0.8,
-        seed: int | None = None,
-        stream: bool = False,
-    ) -> SampleOutput:
-        output = SampleOutput(
-            sample_id=sample.sample_id,
-            target_text=sample.target_text,
-        )
-        wav_path = os.path.join(audio_dir, f"{sample.sample_id}.wav")
-
-        try:
-            gen_fn = self.generate_speech_streaming if stream else self.generate_speech
-            wav_bytes, latency = await gen_fn(
-                session, api_url, model_name, sample, max_new_tokens, temperature, seed
-            )
-            with open(wav_path, "wb") as f:
-                f.write(wav_bytes)
-            output.latency_s = round(latency, 4)
-            output.audio_duration_s = round(sf.info(wav_path).duration, 4)
-        except Exception as exc:
-            output.error = f"Generation failed: {exc}"
-            logger.error(f"[{sample.sample_id}] {output.error}")
-            return output
-
-        return transcribe_and_compute_wer(output, wav_path, asr, lang, device)
-
-
-def preload_reference_audio(samples: list[SampleInput]) -> dict[str, str]:
-    """Encode each reference WAV as a data URI, keyed by path, before timing starts."""
-    reference_audio_by_path: dict[str, str] = {}
-    for sample in samples:
-        if sample.ref_audio in reference_audio_by_path:
-            continue
-        with open(sample.ref_audio, "rb") as reference_file:
-            encoded_audio = base64.b64encode(reference_file.read()).decode("ascii")
-        reference_audio_by_path[sample.ref_audio] = (
-            f"data:audio/wav;base64,{encoded_audio}"
-        )
-    return reference_audio_by_path
-
-
-class TalkerSamplingParams(TypedDict, total=False):
-    talker_temperature: float
-    talker_top_p: float
-    talker_top_k: int
-    talker_repetition_penalty: float
-
-
-def talker_sampling_params(
-    *,
-    talker_temperature: float | None,
-    talker_top_p: float | None,
-    talker_top_k: int | None,
-    talker_repetition_penalty: float | None,
-) -> TalkerSamplingParams:
-    talker_params: TalkerSamplingParams = {}
-    if talker_temperature is not None:
-        talker_params["talker_temperature"] = talker_temperature
-    if talker_top_p is not None:
-        talker_params["talker_top_p"] = talker_top_p
-    if talker_top_k is not None:
-        talker_params["talker_top_k"] = talker_top_k
-    if talker_repetition_penalty is not None:
-        talker_params["talker_repetition_penalty"] = talker_repetition_penalty
-    return talker_params
-
-
-class VoiceCloneOmni:
-    """Voice cloning via /v1/chat/completions (Omni API format).
-
-    Shared by Qwen3 Omni and future Omni models.
-    """
-
-    THINKER_MAX_NEW_TOKENS = 256
-
-    async def generate_speech(
-        self,
-        session: aiohttp.ClientSession,
-        api_url: str,
-        model_name: str,
-        sample: SampleInput,
-        lang: str,
-        speaker: str = "Ethan",
-        max_tokens: int | None = None,
-        temperature: float = 0.7,
-        seed: int | None = None,
-        voice_clone: bool = False,
-        stream: bool = False,
-        system_prompt: str | None = None,
-        chunk_times_out: list[float] | None = None,
-        text_first_time_holder: list[float] | None = None,
-        reference_audio_field: ReferenceAudioField = "audios",
-        reference_audio_data: str | None = None,
-        talker_params: TalkerSamplingParams | None = None,
-    ) -> tuple[bytes, float, dict]:
-        if max_tokens is None:
-            max_tokens = self.THINKER_MAX_NEW_TOKENS
-
-        if voice_clone and reference_audio_field == "audios":
-            if lang == "en":
-                prompt_text = (
-                    f'Listen to the audio above. The speaker is reading: "{sample.ref_text}". '
-                    f"Now please read the following text out loud in the same voice and style: "
-                    f"{sample.target_text}"
-                )
-            else:
-                prompt_text = (
-                    f'听上面的音频，说话人正在朗读："{sample.ref_text}"。'
-                    f"现在请用同样的声音和风格朗读以下文本：{sample.target_text}"
-                )
-        else:
-            if lang == "en":
-                prompt_text = (
-                    f"Please read the following text out loud in English: "
-                    f"{sample.target_text}"
-                )
-            else:
-                prompt_text = f"请用中文朗读以下文本: {sample.target_text}"
-
-        messages: list[dict] = []
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt_text})
-
-        payload = {
-            "model": model_name,
-            "messages": messages,
-            "modalities": ["text", "audio"],
-            "audio": {"format": "wav"},
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-            "stream": stream,
-        }
-        if seed is not None:
-            payload["seed"] = seed
-        if talker_params:
-            payload.update(talker_params)
-        if voice_clone:
-            if reference_audio_field == "audios":
-                payload["audios"] = [sample.ref_audio]
-            elif reference_audio_field == "audio.ref_audio":
-                if reference_audio_data is None:
-                    raise ValueError(
-                        f"audio.ref_audio needs preloaded reference audio for "
-                        f"sample {sample.sample_id}; see preload_reference_audio"
-                    )
-                payload["audio"]["ref_audio"] = reference_audio_data
-            else:
-                raise ValueError(
-                    f"Unsupported reference audio field: {reference_audio_field}"
-                )
-
-        t0 = time.perf_counter()
-        async with session.post(api_url, json=payload) as response:
-            if response.status != 200:
-                error_text = await response.text()
-                raise RuntimeError(f"HTTP {response.status}: {error_text}")
-            if stream:
-                wav_bytes, usage = await self._read_streaming_chat_audio(
-                    response,
-                    chunk_times_out=chunk_times_out,
-                    text_first_time_holder=text_first_time_holder,
-                )
-                latency = time.perf_counter() - t0
-                return wav_bytes, latency, usage
-            resp_json = await response.json()
-        latency = time.perf_counter() - t0
-
-        choices = resp_json.get("choices", [])
-        if not choices:
-            raise ValueError("No choices in response")
-
-        message = choices[0].get("message", {})
-        audio_obj = message.get("audio")
-        if audio_obj is None:
-            raise ValueError(
-                f"No audio in response for sample '{sample.sample_id}'. "
-                f"Text response: {message.get('content', 'N/A')[:100]}"
-            )
-
-        audio_b64 = audio_obj.get("data")
-        if not audio_b64:
-            raise ValueError("Empty audio data in response")
-
-        wav_bytes = base64.b64decode(audio_b64)
-        usage = resp_json.get("usage", {})
-        return wav_bytes, latency, usage
-
-    async def _read_streaming_chat_audio(
-        self,
-        response: aiohttp.ClientResponse,
-        chunk_times_out: list[float] | None = None,
-        text_first_time_holder: list[float] | None = None,
-    ) -> tuple[bytes, dict]:
-        """Read OpenAI chat SSE audio deltas and concatenate them into one WAV."""
-        pcm_chunks: list[bytes] = []
-        pcm_format: tuple[int, int, int] | None = None
-        usage: dict = {}
-        buffer = bytearray()
-
-        async for chunk in response.content.iter_any():
-            buffer.extend(chunk)
-            while b"\n" in buffer:
-                idx = buffer.index(b"\n")
-                raw_line = bytes(buffer[:idx])
-                del buffer[: idx + 1]
-                pcm_format = _collect_chat_streaming_audio(
-                    raw_line.decode("utf-8", errors="replace").strip(),
-                    pcm_chunks,
-                    pcm_format,
-                    usage,
-                    chunk_times_out=chunk_times_out,
-                    text_first_time_holder=text_first_time_holder,
-                )
-
-        if buffer.strip():
-            pcm_format = _collect_chat_streaming_audio(
-                bytes(buffer).decode("utf-8", errors="replace").strip(),
-                pcm_chunks,
-                pcm_format,
-                usage,
-                chunk_times_out=chunk_times_out,
-                text_first_time_holder=text_first_time_holder,
-            )
-
-        if not pcm_chunks or pcm_format is None:
-            raise ValueError("No audio chunks received from streaming response")
-        return _build_streaming_wav_bytes(pcm_chunks, pcm_format), usage
-
-    async def evaluate_sample(
-        self,
-        session: aiohttp.ClientSession,
-        api_url: str,
-        model_name: str,
-        asr: dict,
-        sample: SampleInput,
-        lang: str,
-        asr_device: str,
-        audio_dir: str,
-        speaker: str = "Ethan",
-        max_tokens: int | None = None,
-        voice_clone: bool = False,
-        stream: bool = False,
-        system_prompt: str | None = None,
-        reference_audio_field: ReferenceAudioField = "audios",
-    ) -> SampleOutput:
-        output = SampleOutput(
-            sample_id=sample.sample_id,
-            target_text=sample.target_text,
-        )
-        wav_path = os.path.join(audio_dir, f"{sample.sample_id}.wav")
-
-        try:
-            wav_bytes, latency, _usage = await self.generate_speech(
-                session,
-                api_url,
-                model_name,
-                sample,
-                lang,
-                speaker,
-                max_tokens,
-                voice_clone=voice_clone,
-                stream=stream,
-                system_prompt=system_prompt,
-                reference_audio_field=reference_audio_field,
-            )
-            with open(wav_path, "wb") as f:
-                f.write(wav_bytes)
-            output.latency_s = round(latency, 4)
-            output.audio_duration_s = round(sf.info(wav_path).duration, 4)
-        except Exception as exc:
-            output.error = f"Generation failed: {exc}"
-            logger.error(f"[{sample.sample_id}] {output.error}")
-            return output
-
-        return transcribe_and_compute_wer(output, wav_path, asr, lang, asr_device)
 
 
 # ---------------------------------------------------------------------------
@@ -1065,8 +654,7 @@ def _build_tts_payload(
         payload["task_type"] = task_type
     if instructions is not None:
         payload["instructions"] = instructions
-    resolved_gen_kwargs = _resolve_tts_generation_kwargs(sample, gen_kwargs)
-    for key, value in resolved_gen_kwargs.items():
+    for key, value in gen_kwargs.items():
         if value is not None:
             payload[key] = value
     if stream:
@@ -1074,37 +662,6 @@ def _build_tts_payload(
         if initial_codec_chunk_frames is not None:
             payload["initial_codec_chunk_frames"] = initial_codec_chunk_frames
     return payload
-
-
-def estimate_moss_tts_duration_tokens(text: str) -> int:
-    """Estimate MOSS-TTS duration tokens using OpenMOSS app defaults."""
-    normalized = text or ""
-    effective_len = max(len(normalized), 1)
-    zh_chars = sum(1 for ch in normalized if "\u4e00" <= ch <= "\u9fff")
-    en_chars = sum(1 for ch in normalized if ("A" <= ch <= "Z") or ("a" <= ch <= "z"))
-    factor = (
-        MOSS_TTS_ZH_TOKENS_PER_CHAR
-        if zh_chars and zh_chars >= en_chars
-        else MOSS_TTS_EN_TOKENS_PER_CHAR
-    )
-    return max(MOSS_TTS_MIN_AUTO_TOKEN_COUNT, int(effective_len * factor))
-
-
-def _resolve_tts_generation_kwargs(
-    sample: SampleInput,
-    gen_kwargs: dict,
-) -> dict:
-    token_count = gen_kwargs.get("token_count")
-    if not isinstance(token_count, str):
-        return gen_kwargs
-
-    normalized = token_count.strip().lower()
-    if normalized != MOSS_TTS_TOKEN_COUNT_AUTO:
-        return gen_kwargs
-
-    resolved = dict(gen_kwargs)
-    resolved["token_count"] = estimate_moss_tts_duration_tokens(sample.target_text)
-    return resolved
 
 
 def _parse_response_headers(result: RequestResult, headers: dict) -> None:
@@ -1251,56 +808,6 @@ async def _handle_non_streaming_response(
         with open(audio_path, "wb") as fh:
             fh.write(audio_bytes)
         result.wav_path = audio_path
-
-
-def _collect_chat_streaming_audio(
-    line: str,
-    pcm_chunks: list[bytes],
-    pcm_format: tuple[int, int, int] | None,
-    usage: dict,
-    chunk_times_out: list[float] | None = None,
-    text_first_time_holder: list[float] | None = None,
-) -> tuple[int, int, int] | None:
-    event = parse_sse_event(line)
-    if event is None:
-        return pcm_format
-
-    event_usage = event.get("usage")
-    if isinstance(event_usage, dict):
-        usage.clear()
-        usage.update(event_usage)
-
-    for choice in event.get("choices", []):
-        if not isinstance(choice, dict):
-            continue
-        delta = choice.get("delta")
-        if not isinstance(delta, dict):
-            continue
-        if text_first_time_holder is not None and not text_first_time_holder:
-            content = delta.get("content")
-            if isinstance(content, str) and content:
-                text_first_time_holder.append(time.perf_counter())
-        audio = delta.get("audio")
-        if not isinstance(audio, dict) or not audio.get("data"):
-            continue
-        try:
-            chunk_bytes = base64.b64decode(audio["data"])
-            if len(chunk_bytes) <= WAV_HEADER_SIZE:
-                continue
-            with io.BytesIO(chunk_bytes) as buf:
-                with wave.open(buf, "rb") as wf:
-                    pcm_chunks.append(wf.readframes(wf.getnframes()))
-                    if chunk_times_out is not None:
-                        chunk_times_out.append(time.perf_counter())
-                    if pcm_format is None:
-                        pcm_format = (
-                            wf.getframerate(),
-                            wf.getnchannels(),
-                            wf.getsampwidth(),
-                        )
-        except (binascii.Error, wave.Error, EOFError) as exc:
-            logger.debug(f"Skipping malformed chat streaming audio chunk: {exc}")
-    return pcm_format
 
 
 def _build_streaming_wav_bytes(

@@ -24,49 +24,7 @@ class BufferProbe:
 
 
 _BUFFER_PROBES: dict[str, BufferProbe] = {
-    "HiggsTTSModel": BufferProbe(
-        (
-            ("sampler_pool.seeds", lambda m: m.sampler_pool.seeds.shape[0]),
-            ("cg_codes_BN", lambda m: m.cg_codes_BN.shape[0]),
-            ("cg_active_last_codes", lambda m: m.cg_active_last_codes.shape[0]),
-        ),
-        note="sampler pool = max_running_requests + 1 (one reserved padding row)",
-    ),
-    "Qwen3TTSTalker": BufferProbe(
-        (("feedback_buffer", lambda m: m.feedback_buffer.shape[0]),)
-    ),
     "VoicingTTSTalker": BufferProbe(
-        (("feedback_buffer", lambda m: m.feedback_buffer.shape[0]),)
-    ),
-    "MossTTSDelaySGLangModel": BufferProbe(
-        (
-            (
-                "decode_input_embedding.weight",
-                lambda m: m.decode_input_embedding.weight.shape[0],
-            ),
-        )
-    ),
-    "MossTTSLocalSGLangModel": BufferProbe(
-        (
-            (
-                "decode_input_embedding.weight",
-                lambda m: m.decode_input_embedding.weight.shape[0],
-            ),
-        )
-    ),
-    "S2ProSGLangTextModel": BufferProbe(
-        (("vq_codes", lambda m: m.vq_codes.shape[0]),),
-        note="allocated only after setup_vq_decode()",
-    ),
-    "VoxtralSGLangTTSModel": BufferProbe(
-        (
-            (
-                "decode_input_embed_buffer",
-                lambda m: m.decode_input_embed_buffer.shape[0],
-            ),
-        )
-    ),
-    "Qwen3OmniTalker": BufferProbe(
         (("feedback_buffer", lambda m: m.feedback_buffer.shape[0]),)
     ),
 }

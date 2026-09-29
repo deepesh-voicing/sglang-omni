@@ -345,7 +345,7 @@ def select_audio_delta(
         pass
     if audio.ndim > 1:
         # Streaming chunks are mono; downmix multi-channel payloads
-        # (e.g. the 48 kHz stereo MOSS-TTS Local codec) instead of
+        # (e.g. a stereo codec) instead of
         # silently dropping channels.
         channel_axis = 0 if audio.shape[0] < audio.shape[-1] else -1
         audio = audio.mean(axis=channel_axis).astype("float32")

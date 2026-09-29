@@ -531,7 +531,7 @@ def test_chunk_scaffold_accepts_configured_input_modality() -> None:
 
 def test_scaffold_errors_use_stream_source_hint() -> None:
     # note (Gaokai): client-visible scaffold errors carry the display hint
-    # (e.g. moss passes "MOSS-TTS Local"), keeping migrated error text
+    # (e.g. Voicing-TTS passes "Voicing-TTS"), keeping migrated error text
     # byte-identical to the pre-refactor schedulers.
     scheduler = FakeStreamingVocoder(stream_source_hint="Fake TTS")
     bad = SimpleNamespace(request=SimpleNamespace(params="nope"))

@@ -137,7 +137,6 @@ class DeviceInfoMustNotRun:
         ("CUDA_VISIBLE_DEVICES", "1"),
         ("CUDA_DEVICE_ORDER", "PCI_BUS_ID"),
         ("CUDA_MPS_PIPE_DIRECTORY", "/external/mps"),
-        ("SGLANG_OMNI_WEIGHT_SHARE", "leader:/tmp/weights"),
     ],
 )
 def test_mps_rejects_worker_gpu_environment_overrides_before_acquire(

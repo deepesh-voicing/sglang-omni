@@ -14,7 +14,7 @@ class ModelCapabilities:
 
     These flags describe what a model architecture can support. Concrete
     checkpoint and deployment policy stays with ``PipelineConfig`` methods. For
-    example, a Qwen3-TTS CustomVoice checkpoint can reject uploaded reference
+    example, a Voicing-TTS CustomVoice checkpoint can reject uploaded reference
     audio even though the architecture declares reference-audio support.
 
     Fields:

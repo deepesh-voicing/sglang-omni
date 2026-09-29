@@ -11,11 +11,6 @@ from sglang_omni.config.sources import patches_from_dotted_cli, sources_from_con
 from sglang_omni.models.registry import PIPELINE_CONFIG_REGISTRY
 from sglang_omni.utils import (
     architecture_from_hf_config,
-    try_resolve_arch_from_auk_layout,
-    try_resolve_arch_from_cosyvoice3_layout,
-    try_resolve_arch_from_mistral_config,
-    try_resolve_arch_from_nemo_config,
-    try_resolve_arch_from_personaplex_layout,
     try_resolve_arch_from_raw_config,
 )
 
@@ -41,26 +36,6 @@ def resolve_config_cls_for_model_path(model_path: str):
     arch = architecture_from_hf_config(hf_config) if hf_config is not None else None
     if arch is None:
         arch = try_resolve_arch_from_raw_config(repo_id, revision=revision)
-    else:
-        pass
-    if arch is None:
-        arch = try_resolve_arch_from_mistral_config(repo_id, revision=revision)
-    else:
-        pass
-    if arch is None:
-        arch = try_resolve_arch_from_nemo_config(repo_id, revision=revision)
-    else:
-        pass
-    if arch is None:
-        arch = try_resolve_arch_from_cosyvoice3_layout(repo_id, revision=revision)
-    else:
-        pass
-    if arch is None:
-        arch = try_resolve_arch_from_auk_layout(repo_id, revision=revision)
-    else:
-        pass
-    if arch is None:
-        arch = try_resolve_arch_from_personaplex_layout(repo_id, revision=revision)
     else:
         pass
     if arch is None:
@@ -224,7 +199,7 @@ def normalize_flag_key(key: str) -> str:
     """Strip the leading dashes and normalize the flag's first segment.
 
     Only the first dotted segment gets its dashes rewritten to underscores:
-    later segments can be document keys -- ``--stages.thinker.env.MY-FLAG``
+    later segments can be document keys -- ``--stages.tts_engine.env.MY-FLAG``
     names an env var whose spelling must survive verbatim.
     """
     key = key.lstrip("-")

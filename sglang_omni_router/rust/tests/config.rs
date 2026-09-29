@@ -125,7 +125,7 @@ fn omitted_server_limits_use_bounded_defaults() {
 #[test]
 fn shipped_examples_match_the_strict_schema() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    for name in ["omni.toml", "tts.toml", "asr.toml"] {
+    for name in ["tts.toml"] {
         let path = root.join("examples").join(name);
         Config::load(&path).unwrap_or_else(|error| panic!("{name} must load: {error}"));
     }

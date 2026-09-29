@@ -16,13 +16,15 @@ below.
 3. If the upstream HF config is not in stock `transformers`, call
    `AutoConfig.register("<model_type>", <Config>)` at import time or in the
    AR factory.
-4. Write the SGLang model class in `sglang_model.py` (or split it like Higgs
-   does), then add one line to
-   `sglang_omni/model_runner/sglang_model_runner.py::_register_omni_model` so
-   SGLang can resolve the architecture.
+4. Write the SGLang model class in `sglang_model.py` (or split it across
+   several modules), then add one line to
+   `sglang_omni/model_runner/sglang_model_runner.py::SGLModelRunner.register_omni_model`
+   so SGLang can resolve the architecture.
 5. Implement the three stage factories in `stages.py`. The AR factory builds
    server args via `build_sglang_server_args`, hands them to
-   `create_sglang_infrastructure`, and returns an `OmniScheduler`.
+   `create_sglang_infrastructure`, and returns an `OmniScheduler`. Subclassing
+   `TtsEngineBuilder` from `sglang_omni/scheduling/engine_factory.py`, as
+   `sglang_omni/models/voicing_tts/engine_builder.py` does, covers these steps.
 6. Write `request_builders.py` and `payload_types.py`. Wire abort cleanup
    into every scheduler that touches shared state.
 7. Add `examples/configs/<name>.yaml` and list the model in
@@ -44,15 +46,16 @@ sglang_model.py       # SGLang-side model class registered under the HF arch
 model_runner.py       # custom AR runner, only when the default does not fit
 ```
 
-Not every model needs every file (Higgs splits its model into `model.py` +
-`modeling.py`; Voxtral keeps its pipeline submodules under `pipeline/`). Use
-whatever shape fits, but keep model code out of the framework layers.
+Not every model needs every file, and larger models add their own modules
+(Voicing-TTS adds `engine_builder.py`, `streaming_vocoder.py`, and CUDA-graph
+runners next to the files above). Use whatever shape fits, but keep model code
+out of the framework layers.
 
 ## Pipeline shape
 
-The minimum useful pipeline is three stages. Qwen3-TTS, Voxtral-TTS and S2-Pro
-all keep this shape; Qwen3-TTS and S2-Pro call the AR stage `tts_engine`, while
-Voxtral uses the analogous `tts_generation` name.
+The minimum useful pipeline is three stages. Voicing-TTS
+(`sglang_omni/models/voicing_tts/config.py`) keeps this shape and calls the AR
+stage `tts_engine`.
 
 1. **preprocessing** - validate the request, fetch and tokenize references,
    build prompt state. Keep heavy CPU/GPU work here so the AR loop is not held
@@ -65,14 +68,13 @@ Voxtral uses the analogous `tts_generation` name.
    handles most batched vocoders. Use a streaming scheduler when audio needs
    to leave the server before generation finishes.
 
-Two variants in the tree are worth knowing about:
+Two variants are worth knowing about:
 
 - Insert an extra **audio_encoder** stage between preprocessing and `tts_engine`
-  when you need to run a heavy encoder on the AR device once per request;
-  Higgs TTS does this for its multi-codebook reference embed.
+  when you need to run a heavy encoder on the AR device once per request.
 - For per-chunk streaming from engine to vocoder, set `stream_to=["vocoder"]`
   on the engine `StageConfig` and `can_accept_stream_before_payload=True` on
-  the vocoder `StageConfig`. S2-Pro is the reference for this.
+  the vocoder `StageConfig`. Voicing-TTS is the reference for this.
 
 Wire all of the above declaratively in `config.py` (stage order, terminal
 flags, GPU placement, fan-out). Then expose `EntryClass = YourPipelineConfig`
@@ -108,13 +110,15 @@ contract" in [config.md](config.md).
 
 Two pieces of glue still have to be added by hand:
 
-- Insert your SGLang model class into `ModelRegistry.models[...]` inside
-  `sglang_omni/model_runner/sglang_model_runner.py::_register_omni_model`.
+- Add your SGLang model class to the `sglang_omni_models` map inside
+  `sglang_omni/model_runner/sglang_model_runner.py::SGLModelRunner.register_omni_model`.
   Pass the same key as `model_arch_override` when the HF architecture string
-  does not match the class name you registered.
-- If upstream weights don't load cleanly into your SGLang module, add a
-  `weight_loader.py` (see Higgs's `DiscreteWeightMapper` for the shape).
-  Most models don't need one.
+  does not match the class name you registered (Voicing-TTS registers
+  `VoicingTTSTalker` for `VoicingTTSForConditionalGeneration`).
+- If upstream weights don't load cleanly into your SGLang module, give it a
+  `load_weights` method that remaps checkpoint names, as
+  `sglang_omni/models/voicing_tts/sglang_model.py` does. Most models don't
+  need more than that.
 
 ## Where the request comes in
 
@@ -126,9 +130,9 @@ request builder turns it into whatever the AR scheduler needs.
 Two things are easy to get wrong at this boundary:
 
 - **Endpoint defaults silently override model defaults.** The HTTP layer fills
-  in a single set of sampling defaults (currently the S2-Pro values). For any
-  other model, those values look exactly like the user explicitly asking for
-  them. Pass an `explicit_generation_params` list (or equivalent) through the
+  in a single set of sampling defaults (see `build_sampling_params` in
+  `speech_service.py`). For a model with different defaults, those values look
+  exactly like the user explicitly asking for them. Pass an `explicit_generation_params` list (or equivalent) through the
   request and have your request builder distinguish "user set this" from "the
   endpoint filled it in". The same trick is needed for any field where the
   endpoint has an opinion.
@@ -201,7 +205,7 @@ Practical line:
   prefill/decode.
 
 One more trap: if your prefix includes continuous embeddings spliced into the
-token stream (Higgs and Qwen3-TTS both do this), the radix cache key has to
+token stream (Voicing-TTS does this), the radix cache key has to
 be derived from the embedding content. Two different prompts that happen to
 share the same placeholder token IDs will otherwise alias to the same KV
 prefix, and you will see one user's audio leak into another's.

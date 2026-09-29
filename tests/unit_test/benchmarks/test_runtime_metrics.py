@@ -7,7 +7,6 @@ from types import ModuleType, SimpleNamespace
 import pytest
 
 from benchmarks import runtime_metrics
-from benchmarks.eval import benchmark_asr_seedtts
 from benchmarks.runtime_metrics import (
     ResourceMonitor,
     ResourceSample,
@@ -244,73 +243,3 @@ def test_resource_monitor_keeps_nvml_calls_on_sampler_thread(
     assert nvml_threads
     assert caller_thread not in nvml_threads
     assert len(set(nvml_threads)) == 1
-
-
-@pytest.mark.asyncio
-async def test_asr_repeat_stops_resource_monitor_when_request_fails(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    stopped = False
-    util_stopped = False
-
-    class FakeMonitor:
-        def __init__(self, **_kwargs) -> None:
-            pass
-
-        def start(self):
-            return self
-
-        def stop(self):
-            nonlocal stopped
-            stopped = True
-            return {}
-
-    class FakeUtilizationSampler:
-        def __init__(self, **_kwargs) -> None:
-            pass
-
-        def start(self) -> None:
-            pass
-
-        def stop(self):
-            nonlocal util_stopped
-            util_stopped = True
-            return SimpleNamespace(to_dict=lambda: {})
-
-    async def fail_request(*_args, **_kwargs):
-        raise RuntimeError("request failed")
-
-    monkeypatch.setattr(benchmark_asr_seedtts, "ResourceMonitor", FakeMonitor)
-    monkeypatch.setattr(
-        benchmark_asr_seedtts,
-        "UtilizationSampler",
-        FakeUtilizationSampler,
-    )
-    monkeypatch.setattr(
-        benchmark_asr_seedtts,
-        "run_asr_seedtts_once",
-        fail_request,
-    )
-    args = SimpleNamespace(
-        disable_resource_monitor=False,
-        gpu_index=0,
-        monitor_interval_s=0.2,
-        gpu_process_pids=None,
-        sample_util=True,
-        util_gpu_ids="",
-        util_interval=0.2,
-        save_raw_dir="",
-        host="127.0.0.1",
-        port=8000,
-        model_path="model",
-        lang="en",
-        stream=False,
-    )
-
-    with pytest.raises(RuntimeError, match="request failed"):
-        await benchmark_asr_seedtts._run_repeat(
-            args, [], 1, 1
-        )  # noqa: leading-underscore  # production name
-
-    assert stopped is True
-    assert util_stopped is True

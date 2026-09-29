@@ -3,262 +3,49 @@
 tests/
 ├── README.md
 ├── __init__.py
-├── utils.py
-├── data/
+├── utils/
+│   ├── __init__.py
+│   └── ci_cpu_contention.py
+├── test_ci/
+│   ├── test_mps_native.py
+│   └── test_omni_missing_dependencies.py
 ├── test_model/
 │   ├── conftest.py
-│   ├── test_rl_distributed_weight_update.py
-│   ├── test_qwen3_omni_*_ci.py
-│   ├── test_qwen3_omni_videoamme_talker_tp2_ci.py
+│   ├── omni_router_utils.py
+│   ├── rust_router_config.py
+│   ├── tts_ci_config.py
 │   ├── test_tts_ci.py
-│   ├── test_asr_ci_multi_speaker.py
-│   └── test_asr_ci_seedtts.py
+│   ├── test_tts_consistency_artifacts.py
+│   ├── test_tts_serving_ci.py
+│   └── test_voicing_tts_batch_invariance.py
 └── unit_test/
     ├── benchmarks/
-    │   ├── test_dataset_regressions.py
-    │   └── test_runtime_metrics.py
     ├── ci/
-    │   ├── test_cpu_contention.py
-    │   ├── test_cpuset_pinning.py
-    │   ├── test_ci_model_pick.py
-    │   ├── test_tts_mps_runtime.py
-    │   └── test_tts_mps_workflow_contract.py
     ├── cli/
-    │   └── test_sglang_backend.py
     ├── client/
-    │   ├── test_audio.py
-    │   └── test_completion_rollout.py
+    ├── config/
+    ├── cpu/
     ├── diagnostics/
-    │   └── test_gpu.py
-    ├── quantization/
-    │   ├── test_autoround.py
-    │   ├── test_fp8.py
-    │   ├── test_integration.py
-    │   └── test_weight_preprocess.py
     ├── fixtures/
-    │   ├── fish_fakes.py
-    │   ├── mini_checkpoint.py
-    │   ├── pipeline_fakes.py
-    │   └── qwen_fakes.py
-    ├── utils/
-    │   ├── test_audio.py
-    │   └── test_g711.py
-    ├── preprocessing/
-    │   ├── test_cache_key.py
-    │   ├── test_resample_cache.py
-    │   └── test_transcription.py
-    ├── sampling/
-    │   └── test_seed.py
-    ├── vendor/
-    │   ├── test_sglang_layers_patch.py
-    │   └── test_sglang_server_args.py
-    ├── xpu/
-    │   ├── test_device_layer.py
-    │   └── test_install_script.py
-    ├── pipeline/
-    │   ├── helpers.py
-    │   ├── test_async_decode.py
-    │   ├── test_comm_engine_ack.py
-    │   ├── test_comm_router.py
-    │   ├── test_compile.py
-    │   ├── test_coordinator.py
-    │   ├── test_gpu_memory.py
-    │   ├── test_ipc.py
-    │   ├── test_placement.py
-    │   ├── test_replicas.py
-    │   ├── test_runtime_adapter.py
-    │   ├── test_runtime_schema.py
-    │   ├── test_scheduler.py
-    │   ├── test_simple_scheduler_concurrent.py
-    │   ├── test_stage.py
-    │   ├── test_stage_process_env.py
-    │   └── test_stage_streaming.py
-    ├── relay/
-    │   ├── test_cuda_ipc_relay.py
-    │   └── test_shm_relay.py
-    ├── models/
-    │   └── test_model_capabilities.py
     ├── model_runner/
-    │   ├── test_arch_override.py
-    │   └── test_prefill_cuda_graph_usage.py
-    ├── audar_tts/
-    │   └── test_pipeline.py
-    ├── qwen3_omni/
-    │   ├── test_audio_encoder_batch_dedup.py
-    │   ├── test_cli.py
-    │   ├── test_code2wav.py
-    │   ├── test_code2wav_batching.py
-    │   ├── test_code2wav_cuda_graph.py
-    │   ├── test_code2wav_overlap.py
-    │   ├── test_colocation_config.py
-    │   ├── test_config_manager.py
-    │   ├── test_fp8_backend_config.py
-    │   ├── test_example_launcher.py
-    │   ├── test_logit_shaping.py
-    │   ├── test_model_fixture_overrides.py
-    │   ├── test_mrope_positions.py
-    │   ├── test_pipeline.py
-    │   ├── test_sglang_ar_budget.py
-    │   ├── test_streaming.py
-    │   ├── test_talker.py
-    │   ├── test_talker_codec_coalesce.py
-    │   ├── test_talker_prefill_embed_cache.py
-    │   ├── test_talker_emit_snapshot.py
-    │   ├── test_talker_feedback_write.py
-    │   ├── test_talker_row_ownership.py
-    │   ├── test_talker_token_readback.py
-    │   ├── test_text_template.py
-    │   └── test_thinker_prefill_contract.py
-    ├── ming_omni/
-    │   ├── test_omni_serve.py
-    │   ├── test_pipeline.py
-    │   ├── test_streaming_decode.py
-    │   ├── test_streaming_e2e_glue.py
-    │   ├── test_streaming_speech_config.py
-    │   ├── test_talker.py
-    │   ├── test_talker_voice_validation.py
-    │   ├── test_thinker.py
-    │   ├── test_tokenizer.py
-    │   ├── test_tp.py
-    │   └── test_vision_patch_embed_linear.py
-    ├── ming_tts/
-    │   ├── test_audio_decode.py
-    │   ├── test_engine_io.py
-    │   ├── test_model_runner.py
-    │   ├── test_reference_encode.py
-    │   └── test_request_builders.py
-    ├── dots_tts/
-    │   ├── test_engine_builder.py
-    │   ├── test_flow_head.py
-    │   ├── test_hf_config.py
-    │   ├── test_model_runner.py
-    │   ├── test_pipeline.py
-    │   ├── test_preprocessing.py
-    │   ├── test_reference_encode_batching.py
-    │   ├── test_registry.py
-    │   ├── test_request_builders.py
-    │   ├── test_result_contracts.py
-    │   ├── test_sglang_model.py
-    │   ├── test_tail.py
-    │   ├── test_vocoder.py
-    │   └── test_vocoder_streaming.py
-    ├── llada2_uni/
-    │   └── test_request_builders.py
-    ├── minimax_music3/
-    │   ├── test_core.py
-    │   └── test_request_builders.py
-    ├── nemotron_voicechat/
-    │   ├── test_checkpoint_shim.py
-    │   ├── test_paged_rollback.py
-    │   ├── test_request_builders.py
-    │   └── test_streaming_codec.py
-    ├── personaplex/
-    │   ├── test_code2wav_stream.py
-    │   ├── test_depformer.py
-    │   ├── test_engine_builder.py
-    │   ├── test_mimi_streaming.py
-    │   ├── test_model_runner.py
-    │   ├── test_prompts.py
-    │   ├── test_request_builders.py
-    │   ├── test_sglang_model.py
-    │   ├── test_stages.py
-    │   └── test_timeline.py
-    ├── qwen3_asr/
-    │   ├── test_encoder_cuda_graph.py
-    │   ├── test_pipeline.py
-    │   ├── test_request_builders.py
-    │   └── test_stream_output_builder.py
-    ├── fun_asr/
-    │   ├── test_encoder_service.py
-    │   ├── test_model.py
-    │   ├── test_pipeline.py
-    │   ├── test_request_builders.py
-    │   ├── test_stream_output_builder.py
-    │   └── test_streaming_client.py
-    ├── fun_cosyvoice3/
-    │   ├── test_flow_batch.py
-    │   ├── test_engine_builder.py
-    │   ├── test_mlx_model.py
-    │   ├── test_mlx_vocoder_backend.py
-    │   ├── test_model_runner.py
-    │   ├── test_pipeline.py
-    │   ├── test_request_builders.py
-    │   ├── test_utils.py
-    │   └── test_vocoder.py
-    ├── arkasr/
-    │   ├── test_encoder_cuda_graph.py
-    │   ├── test_encoder_service.py
-    │   ├── test_pipeline.py
-    │   └── test_stream_output_builder.py
-    ├── moss_transcribe_diarize/
-    │   ├── test_encoder_cache.py
-    │   ├── test_encoder_service.py
-    │   ├── test_pipeline.py
-    │   ├── test_request_builders.py
-    │   ├── test_stream_output_builder.py
-    │   └── test_transcription_adapter.py
-    ├── qwen3_tts/
-    │   ├── test_pipeline.py
-    │   ├── test_predictor_cuda_graph.py
-    │   ├── test_predictor_kernels.py
-    │   └── test_sampling_kernels.py
-    ├── higgs_tts/
-    │   ├── test_async_decode_runner.py
-    │   ├── test_batched_step.py
-    │   ├── test_cli_decode_mode.py
-    │   ├── test_pipeline.py
-    │   └── test_request_builders.py
-    ├── moss_tts/
-    │   ├── test_audio_tokenizer.py
-    │   ├── test_pipeline.py
-    │   └── test_streaming_vocoder.py
-    ├── moss_tts_local/
-    │   ├── test_pipeline.py
-    │   ├── test_radix_hash.py
-    │   ├── test_s0_gate.py
-    │   ├── test_state_pool.py
-    │   └── test_streaming_vocoder.py
-    ├── router/
-    │   ├── test_app.py
-    │   └── test_core.py
+    ├── models/
+    ├── mps/
+    ├── npu/
+    ├── pipeline/
+    ├── platforms/
+    ├── preprocessing/
     ├── profiler/
-    │   ├── test_event_recorder.py
-    │   ├── test_stop_run_id.py
-    │   └── test_views.py
-    ├── serve/
-    │   ├── test_cli_audio_chunking.py
-    │   ├── test_generation_batch_policy.py
-    │   ├── test_generation_server_args.py
-    │   ├── test_openai_api.py
-    │   ├── test_openai_errors.py
-    │   ├── test_speech_to_text.py
-    │   ├── test_subtitles.py
-    │   ├── test_transcription_chunking.py
-    │   ├── test_translation_capability.py
-    │   └── test_translations.py
+    ├── quantization/
+    ├── relay/
+    ├── router/
+    ├── sampling/
     ├── scheduling/
-    │   ├── test_deferred_admission.py
-    │   ├── test_engine_factory.py
-    │   ├── test_evict_heap_radix_cache.py
-    │   ├── test_pipeline_state.py
-    │   ├── test_reference_encoder.py
-    │   ├── test_server_args_builder_resolution.py
-    │   ├── test_stage_cache.py
-    │   └── test_streaming_vocoder.py
-    ├── fishaudio_s2_pro/
-    │   ├── test_pipeline.py
-    │   ├── test_streaming_vocoder.py
-    │   ├── test_tts.py
-    │   └── test_vocoder.py
-    ├── whisper_asr/
-    │   ├── test_encoder_cuda_graph.py
-    │   ├── test_encoder_service.py
-    │   ├── test_pipeline.py
-    │   ├── test_request_builders.py
-    │   ├── test_timestamp_logit_processor.py
-    │   └── test_transcription_adapter.py
-    └── voxtral_tts/
-        └── test_pipeline.py
+    ├── scripts/
+    ├── serve/
+    ├── utils/
+    ├── vendor/
+    ├── voicing_tts/
+    └── xpu/
 ```
 
 ## How To Add A Test
@@ -282,8 +69,8 @@ Apply markers for resource requirements and CI selection, and use them to
 filter runs.
 
 - `benchmark`: GPU performance, parity, and deployment tests, primarily in
-  `test_model/`. They may require model artifacts, a populated Hugging Face
-  cache, and substantial GPU memory; per-test docstrings state their hardware
+  `test_model/`. They may require converted Voicing-TTS checkpoints and
+  substantial GPU memory; per-test docstrings state their hardware
   requirements.
 - `tts_stage(name)`: in-file CI stage selector for TTS benchmarks.
   Combined with `--tts-stage` (see `test_model/conftest.py`).
@@ -301,18 +88,27 @@ filter runs.
 
 - `README.md`: This file. It explains test ownership and where new tests belong.
 - `__init__.py`: Keeps `tests` importable as a package.
-- `utils.py`: Shared helpers used by model CI tests.
+- `utils/`: Shared helpers used by model CI tests: server lifecycle, metric
+  checks, the external WER ASR fixture, and the CPU contention sampler.
 
-## `data/`
+## Checkpoints
 
-Small static fixtures shared by tests, such as images, audio, and short videos.
-Keep these files small and deterministic. Large model artifacts, generated
-outputs, and benchmark datasets should live outside the unit test tree.
+The model tests serve converted Voicing-TTS checkpoints. Convert a stock
+checkpoint once with:
+
+```bash
+python -m sglang_omni.models.voicing_tts.convert_checkpoint \
+  Qwen/Qwen3-TTS-12Hz-1.7B-Base checkpoints/voicing-tts-12hz-1.7b-base
+```
+
+`VOICING_TTS_MODEL_PATH` and `VOICING_TTS_CUSTOM_VOICE_MODEL_PATH` point the
+TTS CI presets at the Base and CustomVoice checkpoints; they default to
+`checkpoints/voicing-tts-12hz-1.7b-{base,customvoice}`.
 
 ## `test_model/`
 
 End-to-end and model CI tests. These are allowed to depend on real servers,
-model snapshots, benchmark artifacts, optional packages, and GPU/runtime
+model checkpoints, benchmark artifacts, optional packages, and GPU/runtime
 resources.
 
 Expected command (GPU benchmark subset):
@@ -323,139 +119,56 @@ pytest tests/test_model -m benchmark -v -s
 
 Relevant model CI ownership:
 
-- Qwen3-Omni server fixtures in `conftest.py` span the five viable 2xH100
-  serving topologies (one per stage type — see the H20->H100 migration PR):
-  `qwen3_omni_fp8_colocated_server` (FP8 colocated DP2),
-  `qwen3_omni_bf16_colocated_server` / `qwen3_omni_bf16_colocated_thinker_server`
-  (BF16 colocated DP2, full / thinker-only), `qwen3_omni_bf16_disagg_server`
-  (BF16 disaggregated), and `qwen3_omni_fp8_tp2_server` (FP8 thinker-TP=2);
-  BF16 thinker-TP=2 is exercised by thinker_length via `_start_qwen3_omni_tp2`.
-- `test_qwen3_omni_tts_ci.py`: gates the SeedTTS speed/WER path through the
-  router at TTS generation concurrency 16 and verifies both colocated workers
-  receive traffic. The same stage requires each thinker worker to report the
-  breakable prefill runner, registered `input_embeds`, and at least one replay.
-  WER reuses saved audio after the Qwen3-Omni server is stopped, then
-  transcribes through Qwen3-ASR at concurrency 32.
-- `test_qwen3_omni_realtime.py` keeps the lower-cost thinker-only VAD/text
-  path covered; `test_qwen3_omni_realtime_audio.py` separately launches the
-  speech topology and verifies VAD-driven raw PCM16 response streaming.
-- `test_asr_ci_multi_speaker.py`: MOSS-Transcribe-Diarize multi-speaker
-  ASR/diarization correctness + speed via the managed router at DP=2. It
-  runs movies800times (non-stream + stream), aishell4_long, aishell4_long90
-  (a 90 minute concat tier with catastrophic bounds instead of calibrated
-  thresholds), and googletime, writes `moss_transcribe_diarize_results.json`,
-  `moss_transcribe_diarize_stream_results.json`,
-  `moss_transcribe_diarize_aishell4_long_results.json`,
-  `moss_transcribe_diarize_aishell4_long90_results.json`, and
-  `moss_transcribe_diarize_googletime_results.json`, and enforces calibrated
-  accuracy/speed thresholds generated with the private maintainer
-  [`calibrate-h100-ci` skill](https://github.com/zhaochenyang20/sglang-omni-calibration/tree/main/skills/calibrate-h100-ci).
-- `test_asr_ci_seedtts.py`: SeedTTS ASR correctness + speed via SGLang Omni
-  router (`/v1/audio/transcriptions`) for the model preset selected through
-  `ASR_CI_MODEL` (or `--asr-ci-model`; presets and thresholds live in
-  `asr_ci_config.py`). Gates the full 1088-sample
-  English and 2020-sample Chinese SeedTTS splits. It writes
-  `asr_seedtts_en_results.json` and `asr_seedtts_zh_results.json` for
-  threshold calibration (`asr` in the external `calibrate-h100-ci` skill).
-  Its stdout uses the same boxed summary style as the other benchmark stages:
-  `ASR WER Benchmark Result` followed by `ASR Speed Benchmark Result`.
-- `utils.py`: shared fixture/helpers for talker/TTS WER CI —
-  stops the upstream model server, runs `delete_gpu_process.sh --kill-orphans`, then launches
-  a Qwen3-ASR router. It also owns the WER ASR concurrency constant
-  (`QWEN3_ASR_WER_CONCURRENCY`, currently 4). Used by Qwen3 talker WER tests
-  and TTS WER tests instead of the in-process transformers Whisper pipeline.
-- Talker / video WER CI (`test_qwen3_omni_*_talker_ci.py`, `test_tts_ci.py`):
-  generate audio with the model router first, tear down that server, free both
-  GPUs, then transcribe saved WAVs through the ASR router. Qwen3-Omni
-  talker/TTS generation concurrency is 16, including the
-  `videoamme_talker_tp2` stage; ASR/WER transcription concurrency is 4 to
-  respect one worker's long-audio admission cap. Dedicated ASR speed
-  benchmarks retain concurrency 32.
-- CI env alignment on the H100 repro host: `source .github/scripts/ci_env.sh`
-  then `source omni/bin/activate`.
-  Omni CI (`omni-ci.yaml`) runs benchmark suites sequentially after one shared
-  setup: PR Test (`test.yaml` unit tests) → ASR CI → TTS CI → Qwen3-Omni CI. A
-  failure in an earlier suite does not skip later ones; only a failed setup
-  blocks the chain.
-  Full WER sweep: `.github/scripts/run_all_wer_ci_aligned.sh` (milestones on
-  stdout; details in `/tmp/wer_ci_qwen3.log` and `/tmp/wer_ci_tts.log`).
-- GPU handoff between stages: `.github/scripts/delete_gpu_process.sh --kill-orphans` (kills orphan
-  spawn/router workers, waits for VRAM below threshold).
-- `qwen3_omni_vision_sglang_env`: session-scoped SGLang dist + DP-attention
-  init from `conftest.py`, shared by every Qwen3-Omni vision-encoder benchmark
-  module — avoids re-initializing the process-global TP group when the combined
-  `-m benchmark` command runs more than one module.
-- `test_qwen3_omni_realtime.py`: starts `examples/run_qwen3_omni_server.py`
-  with `--enable-realtime` and drives `/v1/realtime` through a real WebSocket
-  client to cover text responses, server VAD transcription, and disconnect
-  teardown.
-- `test_rl_distributed_weight_update.py`: launches a Higgs TTS worker on one GPU
-  and a rank-0 trainer subprocess on another GPU, initializes the distributed
-  weight-update group, broadcasts base-model body weights, verifies the
-  `tts_engine` checksum changes, destroys the update group, and checks the
-  server still serves audio. It is skipped unless two GPUs and the required
-  Higgs base checkpoint are already available in the Hugging Face cache.
-- CLI flags `--s2pro-stage {nonstream,stream,consistency,all}` and
-  `--concurrency {1,2,4,8,16,all}`: scope an S2-Pro CI sweep without editing
-  source.
-
-### Ming TP Parity
-
-`tests/test_model/test_ming_tp_parity_ci.py` launches Ming-Omni twice, first
-with TP=1 and then with TP=N, and compares deterministic text responses. It is
-skipped by default because it requires a Ming checkpoint and enough GPUs.
-
-Remote GPU example:
-
-```bash
-RUN_MING_TP_PARITY=1 \
-MING_TP_PARITY_TP_SIZE=4 \
-MING_TP_PARITY_CUDA_VISIBLE_DEVICES=0,1,2,3,4 \
-MING_OMNI_MODEL_PATH=inclusionAI/Ming-flash-omni-2.0 \
-MING_OMNI_MODEL_NAME=ming-omni \
-python3 -m pytest tests/test_model/test_ming_tp_parity_ci.py -q -s
-```
-
 - `test_tts_ci.py`: default TTS CI gate. It starts the TTS managed router
-  with two one-GPU workers using the default model config, runs the
-  full SeedTTS EN set (1088 samples) in non-streaming / streaming stages at
-  concurrency 16, and frees the server GPUs before ASR/WER and
-  speaker-similarity checks. Non-streaming and streaming WER pass the selected
-  TTS generation concurrency into the result config while keeping Qwen3-ASR
-  transcription concurrency at 4.
+  with two one-GPU workers using the selected preset, runs the full SeedTTS EN
+  set (1088 samples) in non-streaming / streaming stages at concurrency 16,
+  and frees the server GPUs before the WER, speaker-similarity, and UTMOS
+  checks. WER transcribes the saved WAVs on an external OpenAI-compatible ASR
+  server at concurrency 4, since this repository serves Voicing-TTS only.
+- `tests/utils/__init__.py` owns the `external_wer_asr` fixture. Set
+  `WER_ASR_PORT` (and `WER_ASR_HOST` if the server is not local) to run the WER
+  stages; `WER_ASR_MODEL` names the served ASR model and defaults to
+  `Qwen/Qwen3-ASR-1.7B`. Without `WER_ASR_PORT` the WER stages skip. GitHub CI
+  reads all three from repository variables of the same name.
 - `test_tts_consistency_artifacts.py`: CPU-only stage-3 check that compares
   TTS non-stream and streaming `speed_results.json` under
   `${OMNI_CI_HOME}/tts-stage-results/{nonstream,stream}/`.
+- `test_tts_serving_ci.py`: production-mimic serving benchmark through a
+  two-worker router, driven by the spec in `benchmarks/tts_serving/`. Its mixed
+  reference values are unset until they are recalibrated for Voicing-TTS, so
+  the stage reports numbers without gating on them.
+- `test_voicing_tts_batch_invariance.py`: deterministic inference checks that
+  compare batch-size-1 and batch-size-8 audio for the Base and CustomVoice
+  checkpoints. `VOICING_TTS_TEST_MODEL`,
+  `VOICING_TTS_TEST_CUSTOM_VOICE_MODEL`, `VOICING_TTS_TEST_CUSTOM_VOICE`,
+  `VOICING_TTS_TEST_CUSTOM_LANGUAGE`, and `VOICING_TTS_TEST_DATASET` override
+  the defaults.
+- `conftest.py`: TTS CI options and the session-wide `OMNI_CI_CPUSET` pinning
+  with its contention report.
 - CLI flags `--tts-stage {tts-stage-1-nonstream,tts-stage-2-stream,tts-stage-3-consistency,all}`
   and `--concurrency {1,2,4,8,16,all}`: scope a TTS CI sweep without
   editing source.
-- CLI flag `--tts-ci-model {higgs,moss,qwen3-tts,cosyvoice3,qwen3-tts-custom-voice}`:
+- CLI flag `--tts-ci-model {voicing-tts,voicing-tts-custom-voice}`:
   select the TTS CI model preset for `test_tts_ci.py` without editing source.
-  Defaults to the `TTS_CI_MODEL` environment variable, then `higgs`.
-- CLI flag `--asr-ci-model {fun,qwen3,whisper}`: select the ASR CI model preset for
-  `test_asr_ci_seedtts.py` without editing source. Defaults to the
-  `ASR_CI_MODEL` environment variable, then `fun`.
-- CLI flag `--omni-ci-model {qwen3-omni,minicpmo}` selects the offline Omni
-  model tests. It defaults to `OMNI_CI_MODEL`, then `qwen3-omni`.
-  GitHub CI accepts the mutually exclusive `run-qwen3-omni` and `run-minicpmo`
-  labels, or the `omni_ci_model` manual-dispatch input. The input overrides
-  a single label; conflicting labels fail selection. Without either, Qwen3-Omni
-  remains selected. `/tag-and-rerun-ci minicpmo` selects MiniCPM-O 4.5 and
-  reruns Omni CI; it can be combined with one TTS and one ASR model target.
-  Model selection does not imply calibrated performance or quality thresholds.
-  MiniCPM uses two complete one-GPU workers behind the Rust router, with
-  non-streaming speech output. The shared stages cover thinker length, SeedTTS,
-  and text/speech answers for MMMU, MMSU, Video-MME, and Video-AMME. Qwen's
-  TP2 and speech CUDA-graph assertions remain Qwen-only, as does the PCM stage.
-  `SGLANG_OMNI_TEST_MINICPMO_MODEL` can point to an offline checkpoint including
-  its `assets/token2wav` files and default reference audio.
-  MiniCPM's raw references in `omni_ci_config.py` are calibrated on H100 DP2
-  with the Rust router. Benchmarks enforce request completeness and the
-  model-specific accuracy, speed, WER, speaker similarity, and UTMOS gates.
-  Calibration establishes a baseline; ordinary CI must still pass for the
-  revision being qualified. For an uncalibrated preset, metrics are collected
-  before the explicit calibration gate. Calibration runs must omit `-x` so
-  later quality metrics are collected after that expected gate.
+  Defaults to the `TTS_CI_MODEL` environment variable, then `voicing-tts`.
+  The CustomVoice preset gates nothing until it is calibrated on the CI host.
+- CI env alignment on the H100 repro host: `source .github/scripts/ci_env.sh`
+  then `source omni/bin/activate`.
+  Omni CI (`omni-ci.yaml`) runs PR Test (`test.yaml` unit tests) and then TTS
+  CI after one shared setup, which also converts the Voicing-TTS checkpoints.
+  A PR Test failure does not skip TTS CI; only a failed setup blocks the chain.
+  Full WER sweep: `.github/scripts/run_all_wer_ci_aligned.sh` (milestones on
+  stdout; details in `/tmp/wer_ci_tts.log`).
+- GPU handoff between stages: `.github/scripts/delete_gpu_process.sh --kill-orphans` (kills orphan
+  spawn/router workers, waits for VRAM below threshold).
+
+## `test_ci/`
+
+- `test_mps_native.py`: native MPS lifecycle smoke on one GPU. It serves the
+  CustomVoice checkpoint with the vocoder in its own process, so `--mps auto`
+  sees two clients. Not wired into a workflow; run it manually on a GPU host.
+- `test_omni_missing_dependencies.py`: the requirement probe the CI venv
+  setup uses to decide whether to reinstall.
 
 ## `unit_test/`
 
@@ -477,6 +190,26 @@ to confirm the intended hardware paths actually ran.
 Choose the location by the behavior contract being protected, not by the file
 that happened to contain an older version of the test.
 
+- `unit_test/voicing_tts/`: Voicing-TTS unit tests:
+  - pipeline config and registry contracts
+  - the Transformers compatibility patches applied before the vendored
+    library is imported
+  - OmniScheduler-backed AR stage factory wiring
+  - request mapping for `ref_audio` / `ref_text` and `references`
+  - incremental codec-to-vocoder ordering, priority batching, fallback parity,
+    CUDA stream handoff, and abort/failure cleanup
+  - streaming vocoder decode slots: per-thread pinned staging with one reused
+    completion event, bad rows raised from `resolve()`, pageable fallback after
+    pinned allocation failure, and slot retirement or process-lifetime
+    retention when a launch or event wait fails (with a real CUDA reuse case)
+  - model-owned default preservation for language and sampling parameters
+  - Base, CustomVoice, and VoiceDesign request validation
+  - voice-clone reference validation
+  - pipeline payload state serialization
+  - code-predictor CUDA-graph bit-identity, capture-failure fallback, top-k
+    ladder masking, and enablement gating (env, `disable_cuda_graph`, TP)
+  - reference and speaker encoder CUDA graphs, NPU sampling, and prefill
+    retraction.
 - `unit_test/pipeline/`: Model-agnostic pipeline tests:
   - compile
   - placement planning
@@ -488,12 +221,8 @@ that happened to contain an older version of the test.
   - stage routing
   - centralized comm router selection, data-reference serialization, ack
     lifecycle, and sender backpressure release
-  - local-object fan-out selector contracts, including negative coverage for
-    shared mutable payload containers while preserving tensor leaf sharing
   - stage process environment
   - relay handling
-  - stream relay/IPC selector contracts, including negative coverage for CPU
-    tensor metadata and large inline metadata on same-GPU stream chunks
   - GPU memory accounting helpers
   - IPC lifecycle
   - scheduler batching
@@ -512,41 +241,27 @@ that happened to contain an older version of the test.
   - these tests prove transport mechanics, not full pipeline throughput,
     NVLink selection, or production backpressure behavior; keep those covered
     in `unit_test/pipeline/` integration tests and GPU benchmarks.
-- `unit_test/benchmarks/`: Benchmark dataset/loading regression tests plus
-  runtime resource-monitoring, PID-scoping, aggregation, and provenance coverage.
-  `test_omni_seedtts_warmup.py` checks separate concurrent warmup, output
-  isolation, failure reporting, disabled warmup, and CLI configuration using
-  the real benchmark runner with a fake speech generator.
-  - `test_realtime_asr_benchmark.py`: the realtime ASR benchmark client
-    (`benchmarks/realtime_asr/client.py`) against an in-process fake
-    `/v1/realtime` WebSocket server (packet splitting, wall-clock pacing,
-    manual commit, trailing silence, timeout reporting), and the metric
-    definitions in `benchmarks/realtime_asr/metrics.py` pinned with hand-built
-    traces (first-partial refresh-point lookup, partial gaps, committed→final,
-    protocol invariant violations, percentile summaries). No GPU or server.
+- `unit_test/benchmarks/`: TTS SeedTTS benchmark configuration and phase
+  ordering (including releasing the TTS server before the external ASR phase),
+  dataset loading regressions, playback continuity, sweeps, and runtime
+  resource-monitoring, PID-scoping, aggregation, and provenance coverage.
 - `unit_test/utils/`: Shared utility tests:
-  - audio loading helpers for data URIs, file URIs, HTTP URLs, timeout fallback,
-    and mono/channel preservation, plus the 8 kHz telephony fixtures under
-    `tests/data/`.
-  - G.711 helpers (`test_g711.py`): media-type and extension resolution, and
-    wrapping headerless bytes in a WAV container that matches ffmpeg's while
-    leaving WAV and Sun AU inputs untouched.
   - pinned CUDA staging primitives (`cuda_staging`): exact-size growth,
     reusable events, non-blocking completion queries, device checks, and
     record/query/synchronize failure handling. Failed records invalidate
     completion reads until a later record succeeds. CPU tests use stand-ins;
     `accelerator` cases cover in-flight D2H queries and cross-device use.
+  - checkpoint and device helpers, and the shared SnakeBeta activation.
 - `unit_test/model_runner/`: Shared model-runner contract tests:
-  - arch override pool sizing: a sub-model engine's KV pool takes the
-    sub-model's layer count through SGLang's layer resolver (the Qwen3-Omni
-    talker at 20 layers, the thinker at 48).
-  - graph-safe hidden-state capture: stable registered buffers refreshed by
-    decoder-layer pre-hooks, capacity validation, graph-replay row reads, and
-    buffer address stability across forwards, including real breakable CUDA
-    Graph replay without exposing padded rows.
+  - arch override pool sizing: the talker engine's KV pool takes the talker's
+    layer count through SGLang's layer resolver (the Voicing-TTS talker at 28
+    layers under a 36-layer root config).
+  - Voicing-TTS talker registration with the SGLang model registry.
   - prefill CUDA Graph usage: isolated counter state, replay/eager phase
     classification, executed-bucket counts, and JSON-safe model-info output.
-- `unit_test/models/`: Model registry and cross-model contract tests:
+  - sampling seeds, penalty history, repetition penalty, rollout log-probs,
+    and weight checks.
+- `unit_test/models/`: Model registry contract tests:
   - static TTS `ModelCapabilities` declarations, registry lookup, aliases, and
     launcher startup logging.
 - `unit_test/scheduling/`: Shared scheduling-service unit tests:
@@ -567,416 +282,68 @@ that happened to contain an older version of the test.
     the `remove_if` eviction predicate evaluated outside the lock (re-entrant
     and deadlock-free), and concurrent remove_if/put state integrity.
   - `build_sglang_server_args` on a real mini checkpoint: the record leaves the
-    builder resolved once, the CUDA Graph config it declared reads back through
-    `resolution_result` and the generation batch policy accessors, and the
-    encoder memory reserve is applied to the declared fraction.
-- `unit_test/qwen3_asr/`: Qwen3-ASR unit tests:
-  - pipeline config and stage factory `max_running_requests=64` default,
-    async-decode default,
-    and the dotted `factory.enable_async_decode` CLI override
-  - RTX 4090 profile config resolution, SM-specific multimodal-attention
-    defaults, and resolved decode CUDA Graph bucket diagnostics
-  - single-source audio token length formula used by both processor and
-    request builder paths
-  - all 30 language-code/name mappings, Chinese compatibility aliases,
-    automatic language detection, canonical forced-language prompts, and early
-    unsupported-language rejection
-  - token-level result adapter marker handling, avoiding decode/encode
-    text round-trips for byte-level BPE output.
-  - invalid encoded-audio classification versus operational loader failures,
-    including transcription-route HTTP 400/500 mapping.
-  - encoder CUDA graph runner: config-derived token buckets, dummy-window
-    padding invariants, get_audio_feature routing with eager fallback, and a
-    CUDA-only graph-vs-eager parity check of the captured layer stack.
-- `unit_test/arkasr/`: ARK-ASR-3B unit tests:
-  - asynchronous pre-LM encoder submission, bounded queue backpressure,
-    single-flight deduplication, CPU cache validation, and failure recovery
-  - pipeline config, stage factory concurrency defaults, encoder CUDA-graph
-    working-set precapture, async-decode default, and the dotted `factory.enable_async_decode` CLI override
-  - encoder CUDA graph runner: 2-D `(batch, T)` buckets aligned to
-    `merge_factor`, batch buckets derived from `encoder_max_batch_size`,
-    startup working-set precapture (no request-path capture), eager
-    fallback for uncaptured shapes, and a CUDA-only graph-vs-eager
-    parity check
-  - audio-token count formula, audio-tower forward shape, marker-token
-    suppression, and the fp16 encoder residual clamp.
-  - streaming output: request-contract validation, chunked-prefill gating,
-    rate-limited and terminal flushes, UTF-8 boundaries, per-request state,
-    and `join(deltas).strip() == done.text`.
-- `unit_test/fun_asr/`: Fun-ASR-Nano unit tests:
-  - pipeline config and stage factory: single `asr` stage, `max_running_requests=64`,
-    auto static KV budget, pre-LM encoder/cache defaults, scheduler-owned
-    shutdown, disabled multimodal embedding cache and torch.compile, and
-    `FunAsrNanoForConditionalGeneration` registry wiring
-  - pending-build-aware prefill coalescing: pipeline config and stage factory
-    defaults agree on coalesce batch size, wait window, idle admission, and
-    the pending-build and decode-phase gates
-  - pre-LM encoder service: bounded batching, complete-embedding validation,
-    single-flight deduplication, stale cache races, CPU LRU budgets, failure
-    isolation, stream-synchronized state commits, request-scoped OOM recovery,
-    detached failure diagnostics, healthy-request continuation, telemetry, and
-    worker shutdown
-  - model audio-feature shape and checkpoint weight-loading contracts
-  - request builder: inclusive audio offset recording, language-prompt prefix
-    construction, encode-after-validation ordering, and result adapter
-    direct-transcript decoding and token telemetry
-  - streaming output: request-contract validation, chunked-prefill gating,
-    rate-limited and terminal flushes, UTF-8 boundaries, per-request state,
-    and direct-client aggregation without repeating the terminal transcript.
-- `unit_test/fun_cosyvoice3/`: Fun-CosyVoice3 unit tests:
-  - pipeline configuration and stage/registry contracts
-  - request preprocessing, model-runner, and utility behavior
-  - batched Flow inference with variable prompt/target lengths, CFG
-    conditioning, bucketed admission, and serial-parity invariants
-  - vocoder batching, conditioning handoff, output payload construction, and
-    abort/error handling
-  - opt-in Flow DiT TensorRT wrapper: ONNX resolution, request-wise CFG-pair
-    chunking, CUDA-only attach, and mutual exclusion with torch.compile
-- `unit_test/moss_transcribe_diarize/`: MOSS-Transcribe-Diarize unit tests:
-  - pipeline config and stage factory default routing/memory contracts
-  - request builder audio-source resolution, single-audio enforcement, audio
-    token padding, and default transcribe+diarize prompt injection
-  - pre-LM encoder service bounded batching, request-scoped OOM recovery,
-    transactional embedding publication, and per-item fallback
-  - verbose_json transcription adapter: architecture-based resolution, special
-    token stripping, and speaker/timestamp segment parsing with fallback.
-- `unit_test/qwen3_omni/` Qwen3-Omni unit tests:
-
-  - public CLI/config behavior
-  - example launcher config contract (TP/GPU/mem-fraction overrides)
-  - SGLang argument builders
-  - backend policy and quantization compatibility contracts
-  - tokenizer and preprocessing fallback behavior
-  - audio cache identity from complete decoded content, mixed-batch cache
-    hits, and cached output ownership across reused encoder buffers
-    (`test_pipeline.py`, `test_audio_encoder_batch_dedup.py`). The output
-    ownership case is marked `accelerator`; the cache-key cases use CPU.
-  - preprocessing dispatch defaults to serial `SimpleScheduler`;
-    `max_concurrency > 1` opts into `ThreadedSimpleScheduler`
-    (`test_pipeline.py`).
-  - threaded preprocessing request isolation, error propagation, and running
-    request cancellation, plus repeated remote-image loading against a local
-    HTTP server and media-loader cleanup on failure (`test_pipeline.py`).
-  - memory flag contracts
-  - colocation config and SGLang AR budget contracts
-  - full-model fixture overrides target the preprocessing and thinker context
-    limits without leaking thinker-only arguments into the decode stage
-  - `Qwen3OmniPipelineState` request builders, including projected payload container
-    isolation for mutable streaming state
-  - vectorized thinker M-RoPE position indexing (`test_mrope_positions.py`):
-    bit-identical differential coverage vs the sglang HF-port oracle for
-    image / video / audio / audio-in-video / interleaved / mixed prompts,
-    non-integer vision timescales, AIV end-of-sequence `st_idx` semantics,
-    `_compute_mrope_positions` wiring, and the talker
-    `talker_can_use_linear_mrope` safe gate
-  - talker behavior, including partial-prefix startup gate, the real
-    `_build_talker_request_data` propagation contract (input_ids,
-    tts_pad_embed, sampling_seed, fallback chunks, thinker_done), and the
-    `_rollback_decode_prep_after_skip` idempotency contract, projected prefill
-    tensor storage/slicing, decode feedback/text FIFO consumption, and replay
-    of generated-token input embeds after decode retract
-  - `test_talker_codec_coalesce.py`: CPU frame-threshold, snapshot
-    ownership, first-flush, post-prefix window cadence, EOS removal, final-tail,
-    and feedback-order contracts. Early Talker startup opt-in, chunk gates, and
-    config forwarding are covered in `test_talker.py` and `test_config_manager.py`.
-  - Code2Wav streaming/cleanup behavior plus bounded batching deadlines,
-    fire rules, sub-batch decomposition, output equivalence, and lifecycle.
-    `test_code2wav_batching.py` also covers per-window batch ceilings,
-    staging-pool capacity, graph keys, and bounded first-window telemetry.
-  - Code2Wav CUDA Graph lifecycle, exact-shape replay, atomic rollback, memory
-    budget enforcement, eager fallbacks, replay failures, and JSON-safe stats;
-    the `accelerator`-marked cases exercise real CUDA stream restoration and
-    graph capture/replay. Run them with:
-
-    ```bash
-    pytest tests/unit_test/qwen3_omni/test_code2wav_cuda_graph.py -m accelerator -q
-    ```
-  - Code2Wav output overlap (depth-2 pipelined D2H): byte parity with the
-    synchronous path, first-window and stream-done behavior, CUDA Graph replay,
-    and slot lifecycle across abort and failure paths. The `accelerator` cases
-    cover real pinned buffers and events, eager/graph parity, in-flight
-    completion queries, abort recovery, and cross-device use.
-  - Shared SnakeBeta: BF16 bitwise parity at any batch and channel count and the
-    module's own epsilon, eager fallback,
-    prewarm without runtime compilation, and factory installation before
-    graph capture. The real checkpoint gates require explicit local paths:
-
-    ```bash
-    QWEN3_OMNI_MODEL_PATH=/path/to/Qwen3-Omni-30B-A3B-Instruct \
-      pytest tests/unit_test/qwen3_omni/test_code2wav_snake_beta.py -q
-    QWEN3_TTS_TOKENIZER_PATH=/path/to/speech_tokenizer \
-      pytest tests/unit_test/qwen3_tts/test_incremental_codec.py -q
-    ```
-
-    Real checkpoint cases carry both `benchmark` and `accelerator` markers.
-    Set `QWEN3_OMNI_CODES_PATH` to a directory of saved `[B, Q, T]` codec
-    tensors (`.pt`) to additionally replay actual Talker outputs. Every
-    supported activation must launch the fused kernel; full decoder PCM,
-    exact-shape graph replay, and chunked decoding require `torch.equal`.
-  - logit-shaping helpers (e.g. repetition penalty) numerical equivalence with the original per-row scalar formulas.
-  - Thinker prefill contracts: `OmniPrefillInputs` adoption for text and
-    audio-input → text-output prefills, whole-batch fail-closed qualification,
-    audio placeholder/cursor handling across chunked prefill, fresh
-    cached-audio-prefix eager fallback correctness, M-RoPE metadata
-    preservation, and unsupported visual/deepstack paths remaining on the
-    inherited eager path. Run the focused suite with:
-
-    ```bash
-    pytest tests/unit_test/qwen3_omni/test_thinker_prefill_contract.py -q
-    ```
-  - Speech prefill graph integration: H100 profile resolution, bootstrap
-    capture/attestation, custom-eager counting, and phase-defined static
-    auxiliary-hidden slicing with strict row-count validation.
-
-- `unit_test/ming_omni/` Ming-Omni unit tests:
-
-  - text + speech pipeline config and stage schema
-  - omni serve CLI/config merge, default speech vs. text-only selection,
-    launcher handoff, GPU placement, TP wiring, and unsupported flag capability
-    boundaries
-  - stage factory and scheduler contracts (preprocessing, encoders, thinker, talker, decode)
-  - thinker bootstrap registration and Ming model runner wiring
-  - multimodal embed injection (per-modality consumed state, pad-value fallback, short-embeds detection)
-  - image/vision encoder TP context preservation
-  - audio/image preprocessor placeholder construction and cache-key plumbing
-  - talker executor request gating and result-builder modality merging
-  - talker voice-preset validation (load-time manifest / wav existence, request-time prompt_wav_path priority), duration-cap heuristic, and `generate()` final-chunk flush across stop-token and step-ceiling exits
-  - Bailing tokenizer loader fallback for vocab compatibility
-  - TP topology validation (rank-specific stage specs, talker/thinker GPU collision detection, server_args alignment before infra init)
-  - vision encoder `patch_embed` numerical equivalence: `nn.Conv3d` vs `F.linear` reshape at the substitution boundary, using synthetic weights without loading real Ming checkpoints.
-  - streaming text decode (`MingStreamingDetokenizeScheduler` /
-    `make_text_stream_output_builder`): per-token detokenization and delta
-    emission with UTF-8 multibyte boundary safety, streaming vs. non-streaming
-    final-result shape, stream-completion ordering races, per-request failure
-    isolation, bounded orphan `_state` eviction with abort cleanup, and
-    text-stream output gating on the `stream` flag, chunked prefill, and
-    text-vs-audio-only output modalities
-  - streaming speech glue and topology: thinker text/combined stream builders
-    fanning token ids to decode and text to the segmenter (audio-only kept off
-    decode), client merge of decode deltas with the talker stream, and
-    `MingOmniStreamingSpeechPipelineConfig` wiring (segmenter between thinker and
-    talker, terminal talker-stream stage, thinker/talker GPU-range collision
-    rejection, streaming variant exposure).
-
-- `unit_test/ming_tts/`: Ming-TTS unit tests:
-  - request builder rejection for unsupported seed inputs until the FlowLoss RNG
-    contract is exposed
-  - request/result adapter finish semantics for empty latent output, stop-head
-    finish, SGLang length finish, max-step length finish, and terminal cleanup
-  - TP tail-failure propagation and idempotent abort cleanup without loading a
-    model checkpoint
-  - reference-audio content-cache identity and invalidation
-  - audio decode behavior for zero generated latents without invoking AudioVAE.
-
-- `unit_test/qwen3_tts/`: Qwen3-TTS unit tests:
-  - pipeline config and registry contracts
-  - OmniScheduler-backed AR stage factory wiring
-  - request mapping for `ref_audio` / `ref_text` and `references`
-  - incremental codec-to-vocoder ordering, priority batching, fallback parity,
-    CUDA stream handoff, and abort/failure cleanup
-  - streaming vocoder decode slots: per-thread pinned staging with one reused
-    completion event, bad rows raised from `resolve()`, pageable fallback after
-    pinned allocation failure, and slot retirement or process-lifetime
-    retention when a launch or event wait fails (with a real CUDA reuse case)
-  - model-owned default preservation for language and sampling parameters
-  - Base, CustomVoice, and VoiceDesign request validation
-  - voice-clone reference validation
-  - pipeline payload state serialization
-  - code-predictor CUDA-graph bit-identity, capture-failure fallback, top-k
-    ladder masking, and enablement gating (env, `disable_cuda_graph`, TP).
-
-- `unit_test/higgs_tts/`: Higgs TTS unit tests:
-  - OmniScheduler-backed AR stage factory wiring
-  - upstream Transformers codec binding and bundled-config state-dict structure
-  - sampler-driven finish handling for eager and CUDA-graph paths
-  - request builder sampling normalization and server-side token caps
-  - model slot cleanup and engine timing in scheduler result adapters
-  - async-decode one-step-lookahead parity with the synchronous collect path
-  - async-decode default-on config + the dotted `factory.enable_async_decode` CLI override.
-
-- `unit_test/moss_tts/`: MOSS-TTS unit tests:
-  - pipeline config and registry contracts
-  - OmniScheduler-backed AR/vocoder stage factory wiring
-  - request mapping for `ref_audio`, `references`, and `token_count`
-  - preprocessing handoff and abort cleanup behavior
-  - delay-pattern runner, codec splitting, and seeded sampling contracts
-  - incremental delay-row emission, bounded overlap decode parity, early-done
-    final-tail handling, and streaming abort cleanup
-  - shared MOSS-Audio-Tokenizer transformer and vocoder decoder packing,
-    local-causal FlashAttention window equivalence, CUDA bf16 packed-vs-SDPA
-    parity, zero-length handling, and flash-unavailable fallback.
-
-- `unit_test/moss_tts_local/`: MOSS-TTS Local unit tests:
-  - pipeline config, request builders, and scheduler adapter contracts
-  - decode-state pool acquisition, launch-state gathers, repetition-penalty history, cleanup, and resume/retraction lifecycle
-  - chunked prefill feedback/journal suppression and postprocess alignment checks
-  - synchronous frame-decode parity harness and S0 gate coverage
-  - streaming vocoder session lifecycle, per-request chunk-threshold and
-    coalescing contracts, decode-failure isolation, and non-streaming full-sequence
-    decode through the codec path.
-
-- `unit_test/zonos2/`: ZONOS2 unit tests:
-  - pipeline configuration, text normalization, and speaker/component caches
-  - streaming vocoder chunking and flush behavior
-  - scheduler terminal/abort cleanup, complete row reset and reuse, mixed-batch
-    ownership, and async resolve contracts.
-
+    builder resolved once, and the CUDA Graph config it declared reads back
+    through `resolution_result` and the generation batch policy accessors.
 - `unit_test/router/`: SGLang-Omni Router unit tests:
   - router CLI/config behavior
   - worker metadata and health-state contracts
   - request routing, proxying, and streaming relay
   - worker selection policy behavior
   - managed launcher command construction and cleanup.
-
 - `unit_test/serve/`: In-process serving API unit tests:
   - generation-stage SGLang server-args role mapping and CLI override capability boundaries
-  - OpenAI-compatible request/response behavior
-  - shared speech-to-text form, request, response-format, and serialization mechanics,
-    including headerless G.711 uploads getting a WAV container at read time
+  - OpenAI-compatible speech, voices, models, health, and admin routes
+  - speech request validation, error mapping, batching, speaker caching, and
+    the speech WebSocket
   - streaming response framing and failure semantics.
-  - the stop-list bounds that SGLang's `SamplingParams.normalize` enforces
-    (stop string count, stop regex count and length) mapped to a bad request,
-    the bounds themselves accepted, and an unrelated failure staying internal.
-  - realtime barge-in cancellation, partial session updates, terminal races,
-    VAD stop-to-start segmentation, and assistant-history truncation.
-  - Browser-side realtime playback state is covered separately by
-    `playground/qwen-omni/realtime/playback.test.js`.
-
-- `unit_test/fishaudio_s2_pro/`: FishAudio S2-Pro unit tests:
-  - inference prompt segmentation, reference VQ edge cases, and state contracts
-  - TTS scheduler behavior
-  - model-runner state transitions
-  - vocoder batching/trim behavior
-  - streaming vocoder chunking, flush, and abort behavior.
-
-- `unit_test/voxtral_tts/`: Voxtral-TTS unit tests:
-  - pipeline config and registry contracts
-  - current `StageConfig` schema wiring
-  - SGLang-backed generation and vocoder GPU placement contracts
-  - terminal stage behavior.
-
 - `unit_test/profiler/`: Request-level profiler unit tests:
   - `RequestEvent` schema and JSONL emit/append behavior
   - concurrent emit safety under multiple threads
   - lifecycle (start / stop / run_id mismatch / stage substitution)
   - timeline reconstruction, stage breakdown, hop breakdown, malformed-line tolerance.
-
 - `unit_test/quantization/`: Tests for the compatibility layer on top of
   SGLang's native quantization (`sglang_omni/quantization.py`):
   - `resolve_quant_config` discovery from root/nested sub-configs and
     `compression_config`, plus edge cases (missing/empty quantization_config)
   - FP8 detection (with/without weight_block_size), weight_scale_inv reciprocal
     conversion, and error handling (empty/zero/non-finite/non-float scale tensors)
-  - AutoRound stage-prefix normalization for block_name_to_quantize (string
-    input is rejoined as a string; list input is normalized in place and
-    stays a list) and extra_config regex keys via `normalize_quant_config`
-  - `get_weight_preprocessor` contract: identity by default (native block-FP8,
-    AutoRound), FP8 reciprocal preprocessor only when `fp8_scale_inverted=True`,
-    nested config traversal
-  - model_worker integration: `_apply_omni_quantization_adapters` triggers
-    stage-local normalization from hf_config and nested text_config only when
-    needed
-
-- `unit_test/audar_tts/`: Audar-TTS protocol, pipeline configuration, public
-  speech validation, reference-audio encoding and caching, llama.cpp generation,
-  and 24 kHz vocoder output contracts.
-
+  - `get_weight_preprocessor` contract: identity by default (native block-FP8),
+    FP8 reciprocal preprocessor only when `fp8_scale_inverted=True`, and
+    nested config traversal.
+- `unit_test/config/`: Pipeline config schema, resolver, CLI overrides, config
+  paths, and dotted set/patch behavior.
 - `unit_test/ci/`: CPU unit tests for CI configuration and infrastructure,
-  including CPU allocation and contention accounting, TTS model rotation, and
-  same-GPU MPS launcher, evidence, cleanup, and workflow contracts. These tests
-  use synthetic state and do not launch an MPS workload.
-
+  including CPU allocation and contention accounting, TTS model selection and
+  preset contracts, slash-command labels, and installed-pin verification.
+- `unit_test/mps/`: MPS configuration, decision, device, daemon control,
+  manager, runtime, spawn-environment, and runner-wiring contracts, plus the
+  helpers `test_ci/test_mps_native.py` uses. These use synthetic state and do
+  not launch an MPS workload.
 - `unit_test/cli/`: SGLang backend registration, option forwarding,
   configuration-only launch behavior, and backend-specific help ownership.
-
 - `unit_test/client/`: Audio conversion, resampling, channel preservation, and
-  response decoding for completion, speech, log-probability, and rollout fields.
-
+  speech response decoding.
 - `unit_test/diagnostics/`: GPU inventory and dependency diagnostics using
   mocked NVML and subprocess probes; no physical GPU is required.
-
-- `unit_test/dots_tts/`: dots.tts pipeline and registry contracts, request
-  lowering, reference encoding, model-runner lifecycle, flow matching, bounded
-  acoustic state, vocoder batching, and streaming cleanup. CUDA Graph parity in
-  `test_tail.py` is marked `accelerator`; the remaining tests run on CPU.
-
-- `unit_test/nemotron_voicechat/`: NemotronLabs VoiceChat request frame-count
-  contract (thinker tokens vs talker steps), streaming code2wav equivalence
-  with whole-utterance decoding, and checkpoint-shim isolation across
-  checkpoint switches. Talker rollback tests cover paged KV ownership across
-  stream waits and decode resumption using simulated decode preparation.
-  Tests run on CPU without model weights; request and rollback tests require
-  SGLang, but do not start an engine.
-
-- `unit_test/personaplex/`: PersonaPlex delayed-timeline contract (stream
-  delays, prompt phases, packaged-voice rows and the first generative
-  position), chunked Mimi equivalence with whole-sequence encode/decode on
-  random weights and the ring cache's oldest-entry drop, depformer per-step weight slicing and teacher forcing, the
-  Llama-shaped backbone config and checkpoint shim, checkpoint weight routing
-  and embedding columns, model-runner prefill/decode rows and frame handoff,
-  per-request streaming code2wav and abort cleanup, preprocessing (caller
-  channel, `audios` input, role prompt, voice resolution, `stage_params`),
-  voice-archive unpacking (read-only fallback, no partial folder), and
-  request lowering (decode budget, reference sampling defaults over client
-  filler values, seeds, stream chunks, context limit, input validation). CPU
-  only, no weights; runner and request tests need SGLang but start no engine.
-
-- `unit_test/llada2_uni/`: LLaDA2-Uni request lowering to the upstream
-  diffusion-language-model token-array contract.
-
-- `unit_test/minimax_music3/`: MiniMax Music 3 request validation, placement,
-  acoustic configuration, hidden-frame buffering, deterministic sampling,
-  attention and decoder contracts, abort handling, and relay tensor validation.
-  Kernel and CUDA Graph parity cases in `test_core.py` are marked `accelerator`.
-
-- `unit_test/preprocessing/`: Reference-audio cache identity, bit-exact cached
-  resampling, audio-source resolution (including declared G.711 bytes getting
-  a WAV container), duration validation, fingerprinting, downmixing, and
-  legacy input compatibility. `test_resource_connector.py` covers the
+- `unit_test/preprocessing/`: Reference-audio cache identity and
+  `test_resource_connector.py`, which covers the
   `MultiModalResourceConnector` local-media policy: bare local paths and
   `file://` URLs are both scoped to `allowed_local_media_path` once it is
   configured, and `..` traversal and symlink escapes are rejected before
   MediaIO is called.
-
 - `unit_test/sampling/`: Random, explicit, and deterministically derived
   per-row sampling-seed contracts.
-
 - `unit_test/vendor/`: Server-argument publication boundaries and the vendor
   RMSNorm patch staying on the fused-op dispatch path (dtype fallback,
   zero-token contract, kwargs passthrough).
-
-- `unit_test/whisper_asr/`: Whisper pipeline configuration, encoder CUDA Graph,
-  decoder LayerNorm fast-path placement, and PyTorch fallback behavior
-  policy, pre-LM encoder batching and caching, prompt budgeting, concurrent
-  tokenizer access, and request construction. These tests use fakes and run on
-  CPU despite validating CUDA Graph policy.
-
-- `unit_test/xpu/`: Intel XPU device selection and placement contracts plus
-  installer rollback, interrupted-run recovery, and lock serialization. No
-  accelerator is required.
-
+- `unit_test/platforms/`, `unit_test/cpu/`, `unit_test/npu/`, `unit_test/xpu/`:
+  platform detection, device selection and placement contracts, and installer
+  scripts. No accelerator is required.
+- `unit_test/scripts/`: The repository lint scripts (`check_if_else.py` and
+  `check_leading_underscore.py`).
 - `unit_test/fixtures/`: Shared fakes, plus the runtime accelerator probe
   (`accelerator.py`, `require_cuda(min_devices)`) that `accelerator`-marked
   tests call in the test body. `mini_checkpoint.py` writes a two-layer Llama
   `config.json` for tests that need a record the SGLang resolution pipeline can
   resolve end to end. Single-test helpers should stay local until a second
   test needs them.
-
-- `unit_test/pipeline/test_session_flow.py`: Ordered units, concurrent input/output,
-  EOS receipts, configured routes, replica ownership, and input-clear accounting.
-- `unit_test/pipeline/test_session_lifecycle.py`: Input/output limits, sequence
-  rejection, partial open, slow close, worker failure,
-  and scoped shutdown.
-  These use `unit_test/fixtures/session_pipeline.py` for real spawned Stage workers,
-  ZMQ control messages and shared-memory tensor relay. Tests on one linear
-  topology share those workers for the pytest session; a test that stops a
-  worker starts its own. Only model hooks are synthetic;
-  they do not establish native-model or accelerator correctness.
-- `unit_test/scheduling/test_session.py`: Session value validation, stage usage
-  accounting, exact binary chunk wire sizes and state cleanup without worker processes. Run the session suite with
-  `python -m pytest tests/unit_test/pipeline/test_session_*.py tests/unit_test/scheduling/test_session.py -q`.
-
-- `unit_test/pipeline/test_session_shutdown.py`: Deterministic thread and trace
-  fences cover shutdown during abort/append hooks and the open/append window
-  between the final hook check and owner unlock, requiring exactly-once cleanup
-  after native work returns without blocking shutdown.

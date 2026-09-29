@@ -1,280 +1,86 @@
 # TTS Model Usage
 
-This guide uses [Fish Speech S2-Pro](https://huggingface.co/fishaudio/s2-pro) as the example. The same `/v1/audio/speech` endpoint also serves Higgs TTS, Voxtral TTS, Qwen3-TTS, Ming-Omni-TTS, MOSS-TTS, MOSS-TTS Local, dots.tts, and ZONOS2.
+This guide covers the `/v1/audio/speech` API with [Voicing-TTS](../cookbook/voicing_tts.md), the model SGLang-Omni serves. The examples use the Base checkpoint, which clones a voice from a reference clip; the CustomVoice and VoiceDesign checkpoints use the same endpoint.
 
 ## Prerequisites
 
-Install `sglang-omni` by following [Installation](../get_started/installation.md), then download the model:
+Install `sglang-omni` by following [Installation](../get_started/installation.md). Voicing-TTS needs no extra packages.
+
+Convert a checkpoint before serving it. The converter accepts a Qwen3-TTS 12Hz checkpoint directory or Hugging Face repo id and writes a Voicing-TTS checkpoint:
 
 ```bash
-hf download fishaudio/s2-pro
+python -m sglang_omni.models.voicing_tts.convert_checkpoint \
+  Qwen/Qwen3-TTS-12Hz-1.7B-Base \
+  checkpoints/voicing-tts-12hz-1.7b-base
 ```
 
-Fish Audio requires its model-specific DAC dependencies. Complete the
-[Fish Audio S2-Pro prerequisites](../cookbook/fishaudio_s2_pro.md#prerequisites)
-before starting the server.
+See [Convert a Checkpoint](../cookbook/voicing_tts.md#convert-a-checkpoint) for every variant and its target directory. Keep `voicing-tts` in a Base checkpoint's directory name and end it with `base`; uploaded reference voices are enabled from that path.
 
-Qwen3-TTS uses the upstream `qwen-tts` package. Install it without dependencies
-so the SGLang-Omni Transformers 5.12 / SGLang 0.5.20 stack remains in place:
+## Voicing-TTS Variants
 
-```bash
-apt-get update && apt-get install -y sox
-uv pip install --no-deps sox einops
-uv pip install --no-deps qwen-tts==0.1.1
-```
-
-`--no-deps` is required on both lines. `qwen-tts` 0.1.1 pins Transformers 4.57.3,
-and letting it install that pin replaces the stack the rest of SGLang-Omni is
-built against; resolving `sox` normally pulls `numpy` past the ceiling
-`numba==0.65.1` imposes, which breaks `librosa` and with it `import qwen_tts`.
-SGLang-Omni shims the API differences between the two Transformers versions in
-`sglang_omni/models/qwen3_tts/compat.py`, so the pinned 5.12 stack is the
-supported configuration — see the [Qwen3-TTS cookbook](../cookbook/qwen3_tts.md)
-for details.
-
-## Supported TTS Models
-
-| Model family | Example config | Request notes |
+| Variant | Example config | Request notes |
 |---|---|---|
-| [Fish Speech S2-Pro](../cookbook/fishaudio_s2_pro.md) | `examples/configs/s2pro_tts.yaml` | Supports plain TTS and voice cloning with `references` |
-| [Voxtral TTS](../cookbook/voxtral_tts.md) | `examples/configs/voxtral_tts.yaml` | Uses `input`, `voice`, `response_format`, and `max_new_tokens`. Use `--no-ref-audio` for SeedTTS benchmarking |
-| [Qwen3-TTS Base](../cookbook/qwen3_tts.md) | `examples/configs/qwen3_tts_0_6b.yaml`, `examples/configs/qwen3_tts_1_7b.yaml` | Requires reference audio through `ref_audio` or `references[0].audio_path`. `language` defaults to `auto` |
-| [Qwen3-TTS CustomVoice](../cookbook/qwen3_tts.md#customvoice-checkpoints) | `examples/configs/qwen3_tts_0_6b_customvoice.yaml`, `examples/configs/qwen3_tts_1_7b_customvoice.yaml` | Text-only synthesis with built-in speakers; omit `voice` for Vivian. Both sizes support streaming; use 1.7B for instruction control |
-| [Qwen3-TTS VoiceDesign](../cookbook/qwen3_tts.md) | `examples/configs/qwen3_tts_1_7b_voicedesign.yaml` | Requires `task_type="VoiceDesign"` and non-empty `instructions`. No reference audio is required |
-| [Ming-Omni-TTS](../cookbook/ming_tts.md) | `examples/configs/ming_omni_tts.yaml` | Text-only synthesis or one local reference clip with its transcript; streaming; the provided config uses TP1 |
-| [Fun-CosyVoice3](../cookbook/fun_cosyvoice3.md) | `--model-path` only | Requires one reference audio clip via `ref_audio` or `references`. Supports zero-shot cloning, cross-lingual, instruct mode, causal streaming, and buffered speed control |
-| [MOSS-TTS](../cookbook/moss_tts.md) | `examples/configs/moss_tts.yaml` | Voice cloning via `ref_audio` or `references[0].audio_path` (+ `text`). Duration via `${token:N}` or `token_count`. Benchmark at `--max-concurrency 8` |
-| [MOSS-TTS Local](../cookbook/moss_tts_local.md) | `examples/configs/moss_tts_local.yaml` | 48 kHz stereo local-transformer MOSS-TTS; voice cloning / reference-less; streaming |
-| [Higgs TTS](../cookbook/higgs_tts.md) | `--model-path` only | Voice cloning, streaming; no example YAML required |
-| [dots.tts](../cookbook/dots_tts.md) | `examples/configs/dots_tts.yaml` (MeanFlow), `examples/configs/dots_tts_soar.yaml` (SOAR) | 48 kHz continuous-latent TTS with reference audio. MeanFlow (`dots.tts-mf`) uses continuous batching (`max_running_requests=16` by default) with engine-wide `num_steps=4` and Euler. SOAR (`dots.tts-soar`) and base (`dots.tts-base`) are flow matching and run the single-request solver with CFG at `max_running_requests=1`; both use the SOAR config. All require `ref_audio` + `ref_text`. TP1 only |
-| [ZONOS2](../cookbook/zonos2.md) | `--model-path Zyphra/zonos2` | MoE TTS, 9 DAC codebooks, voice cloning; needs Descript DAC extras (see cookbook) |
-| [AuK](../cookbook/auk.md) | `--model-path` only | `tencent/AuK` and `tencent/AuK-Flash`. Instruction-driven generation and editing at 24 kHz. Reference audio is optional; speech requires `stage_params.auk_engine.gen_seconds`. Downloads the separate Qwen2.5-Omni-3B encoder. Serial, non-streaming engine |
+| [Base](../cookbook/voicing_tts.md#voice-cloning) | `examples/configs/voicing_tts_0_6b.yaml`, `examples/configs/voicing_tts_1_7b.yaml` | Requires reference audio through `ref_audio`, `references[0].audio_path`, or an uploaded voice. `language` defaults to `auto` |
+| [CustomVoice](../cookbook/voicing_tts.md#customvoice-checkpoints) | `examples/configs/voicing_tts_0_6b_customvoice.yaml`, `examples/configs/voicing_tts_1_7b_customvoice.yaml` | Text-only synthesis with built-in speakers; omit `voice` for Vivian. Both sizes support streaming; use 1.7B for instruction control |
+| [VoiceDesign](../cookbook/voicing_tts.md#voicedesign-checkpoint) | `examples/configs/voicing_tts_1_7b_voicedesign.yaml` | Requires `task_type="VoiceDesign"` and non-empty `instructions`. No reference audio is required |
+
+Ascend NPU variants of these configs carry an `_npu` suffix.
 
 ## Launch the Server
 
-See [TTS Process Topology](tts_process_topology.md) for model defaults,
-per-stage `process` overrides, and same-GPU memory requirements.
+See [TTS Process Topology](tts_process_topology.md) for per-stage `process`
+overrides and same-GPU memory requirements.
 
-The reference-audio examples below fetch clips from Hugging Face, so the
-commands include the Hugging Face host and its current download redirect host.
-Omit those flags when your requests use only text, uploaded voices, local/file
-references, or data URLs.
+The reference-audio examples below fetch clips from Hugging Face. Remote
+references from any public host are allowed by default; to restrict them, pass
+`--allowed-media-domain` once per allowed host, as below. Omit those flags when
+your requests use only text, uploaded voices, local/file references, or data
+URLs.
 
 ```bash
 sgl-omni serve \
-  --model-path fishaudio/s2-pro \
-  --config examples/configs/s2pro_tts.yaml \
+  --config examples/configs/voicing_tts_1_7b.yaml \
   --allowed-media-domain huggingface.co \
   --allowed-media-domain cas-bridge.xethub.hf.co \
   --port 8000
 ```
+
+Each example config points `model_path` at its converted checkpoint directory.
+Pass `--model-path` to serve a checkpoint stored elsewhere.
 
 Batch speech requests accept up to 32 items by default. Use
 `--tts-batch-max-items` to change the server-side request envelope limit:
 
 ```bash
 sgl-omni serve \
-  --model-path fishaudio/s2-pro \
-  --config examples/configs/s2pro_tts.yaml \
+  --config examples/configs/voicing_tts_1_7b.yaml \
   --tts-batch-max-items 32 \
-  --allowed-media-domain huggingface.co \
-  --allowed-media-domain cas-bridge.xethub.hf.co \
   --port 8000
 ```
 
-For Voxtral:
+For CustomVoice:
 
 ```bash
 sgl-omni serve \
-  --model-path mistralai/Voxtral-4B-TTS-2603 \
-  --config examples/configs/voxtral_tts.yaml \
-  --allowed-media-domain huggingface.co \
-  --allowed-media-domain cas-bridge.xethub.hf.co \
+  --config examples/configs/voicing_tts_1_7b_customvoice.yaml \
   --port 8000
 ```
 
-For Qwen3-TTS Base:
+For 0.6B CustomVoice, use `examples/configs/voicing_tts_0_6b_customvoice.yaml`.
+
+For VoiceDesign:
 
 ```bash
 sgl-omni serve \
-  --model-path Qwen/Qwen3-TTS-12Hz-0.6B-Base \
-  --config examples/configs/qwen3_tts_0_6b.yaml \
-  --allowed-media-domain huggingface.co \
-  --allowed-media-domain cas-bridge.xethub.hf.co \
-  --port 8000
-```
-
-For Qwen3-TTS CustomVoice:
-
-```bash
-sgl-omni serve \
-  --model-path Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice \
-  --config examples/configs/qwen3_tts_1_7b_customvoice.yaml \
-  --allowed-media-domain huggingface.co \
-  --allowed-media-domain cas-bridge.xethub.hf.co \
-  --port 8000
-```
-
-For 0.6B CustomVoice, use `Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice` with `examples/configs/qwen3_tts_0_6b_customvoice.yaml`.
-
-For Qwen3-TTS VoiceDesign:
-
-```bash
-sgl-omni serve \
-  --model-path Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign \
-  --config examples/configs/qwen3_tts_1_7b_voicedesign.yaml \
-  --allowed-media-domain huggingface.co \
-  --allowed-media-domain cas-bridge.xethub.hf.co \
-  --port 8000
-```
-
-For MOSS-TTS:
-
-```bash
-sgl-omni serve \
-  --model-path OpenMOSS-Team/MOSS-TTS-v1.5 \
-  --config examples/configs/moss_tts.yaml \
-  --allowed-media-domain huggingface.co \
-  --allowed-media-domain cas-bridge.xethub.hf.co \
-  --port 8000
-```
-
-For dots.tts MeanFlow:
-
-```bash
-sgl-omni serve \
-  --model-path dots-studio/dots.tts-mf \
-  --config examples/configs/dots_tts.yaml \
-  --allowed-media-domain huggingface.co \
-  --allowed-media-domain cas-bridge.xethub.hf.co \
-  --allowed-media-domain us.aws.cdn.hf.co \
-  --port 8000
-```
-
-For dots.tts SOAR:
-
-```bash
-sgl-omni serve \
-  --model-path dots-studio/dots.tts-soar \
-  --config examples/configs/dots_tts_soar.yaml \
-  --allowed-media-domain huggingface.co \
-  --allowed-media-domain cas-bridge.xethub.hf.co \
-  --allowed-media-domain us.aws.cdn.hf.co \
-  --port 8000
-```
-
-`dots.tts-base` uses the same config; pass `--model-path dots-studio/dots.tts-base`.
-
-SOAR and base are flow-matching checkpoints, so they run the single-request solver
-(`max_running_requests=1`) with classifier-free guidance. Continuous batching is
-MeanFlow-only for now. `rednote-hilab/dots.tts-*` is the old org name and redirects to
-`dots-studio/dots.tts-*`; both work as `--model-path`.
-
-For Ming-Omni-TTS:
-
-```bash
-sgl-omni serve \
-  --model-path inclusionAI/Ming-omni-tts-16.8B-A3B \
-  --config examples/configs/ming_omni_tts.yaml \
-  --port 8000
-```
-
-For Fun-CosyVoice3:
-
-```bash
-sgl-omni serve \
-  --model-path FunAudioLLM/Fun-CosyVoice3-0.5B-2512 \
-  --allowed-media-domain huggingface.co \
-  --allowed-media-domain cas-bridge.xethub.hf.co \
-  --allowed-media-domain us.aws.cdn.hf.co \
+  --config examples/configs/voicing_tts_1_7b_voicedesign.yaml \
   --port 8000
 ```
 
 ## Use Curl
 
-Generate speech from text without any reference audio. This is valid for
-Qwen3-TTS CustomVoice, Voxtral, and S2-Pro. It is not valid for Qwen3-TTS Base.
+The examples below use a sample clip from [`seed-tts-eval-mini`](https://huggingface.co/datasets/zhaochenyang20/seed-tts-eval-mini). The `references` field accepts `audio_path` (a local path, file URL, data URL, or HTTP URL) and `text` (transcript of that audio). Supplying the transcript enables in-context-learning (ICL) mode, which clones the voice more closely than speaker-embedding (x-vector) mode.
 
-```bash
-curl -X POST http://localhost:8000/v1/audio/speech \
-    -H "Content-Type: application/json" \
-    -d '{
-      "model": "fishaudio/s2-pro",
-      "voice": "default",
-      "input": "Hello, how are you?"
-    }' \
-    --output output.wav
-```
-
-Qwen3-TTS Base requires reference audio:
-
-```bash
-curl -X POST http://localhost:8000/v1/audio/speech \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
-    "voice": "default",
-    "input": "Get the trust fund to the bank early.",
-    "ref_audio": "https://huggingface.co/datasets/zhaochenyang20/seed-tts-eval-mini/resolve/main/en/prompt-wavs/common_voice_en_10119832.wav",
-    "ref_text": "We asked over twenty different people, and they all said it was his."
-  }' \
-  --output output.wav
-```
-
-Qwen3-TTS CustomVoice uses a built-in speaker without reference audio:
-
-```bash
-curl -X POST http://localhost:8000/v1/audio/speech \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
-    "input": "Hello from Qwen CustomVoice.",
-    "voice": "Ryan",
-    "language": "English",
-    "instructions": "Speak clearly and calmly."
-  }' \
-  --output custom-voice.wav
-```
-
-Omit cloning fields (`ref_audio`, `ref_text`, `references`, and `x_vector_only_mode`) and omit `task_type` or set it to `CustomVoice`. For 0.6B, omit `instructions`: it remains accepted for compatibility, but reliable instruction control is not supported. See [CustomVoice checkpoints](../cookbook/qwen3_tts.md#customvoice-checkpoints) for speaker discovery, streaming, and Eric/Dylan language behavior.
-
-Qwen3-TTS VoiceDesign uses text plus voice instructions:
-
-```bash
-curl -X POST http://localhost:8000/v1/audio/speech \
-    -H "Content-Type: application/json" \
-    -d '{
-      "model": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
-      "voice": "default",
-      "input": "Hello, how are you?",
-      "task_type": "VoiceDesign",
-      "instructions": "A warm, natural young adult voice."
-    }' \
-    --output output.wav
-```
-
-dots.tts accepts the same reference fields. The MeanFlow checkpoint is tuned
-for four flow steps:
-
-```bash
-curl -X POST http://localhost:8000/v1/audio/speech \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "dots-studio/dots.tts-mf",
-    "voice": "default",
-    "input": "Get the trust fund to the bank early.",
-    "ref_audio": "https://huggingface.co/datasets/zhaochenyang20/seed-tts-eval-mini/resolve/main/en/prompt-wavs/common_voice_en_10119832.wav",
-    "ref_text": "We asked over twenty different people, and they all said it was his.",
-    "stage_params": {"latent_engine": {"num_steps": 4}}
-  }' \
-  --output dots-output.wav
-```
-
-For natural-sounding Fish Speech S2-Pro results, use Voice Cloning with a reference audio clip.
-
-### Fish Speech Voice Cloning
-
-The examples below use a sample clip from [`seed-tts-eval-mini`](https://huggingface.co/datasets/zhaochenyang20/seed-tts-eval-mini). The `references` field accepts `audio_path` (a local path, file URL, data URL, or HTTP URL) and `text` (transcript of that audio).
+### Voice Cloning (Base)
 
 1. Non-streaming request
 
@@ -282,13 +88,29 @@ The examples below use a sample clip from [`seed-tts-eval-mini`](https://hugging
 curl -X POST http://localhost:8000/v1/audio/speech \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "fishaudio/s2-pro",
+    "model": "voicing-tts",
     "voice": "default",
     "input": "Get the trust fund to the bank early.",
     "references": [{
       "audio_path": "https://huggingface.co/datasets/zhaochenyang20/seed-tts-eval-mini/resolve/main/en/prompt-wavs/common_voice_en_10119832.wav",
       "text": "We asked over twenty different people, and they all said it was his."
     }]
+  }' \
+  --output output.wav
+```
+
+`ref_audio` and `ref_text` are shorthand for `references[0].audio_path` and
+`references[0].text`:
+
+```bash
+curl -X POST http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "voicing-tts",
+    "voice": "default",
+    "input": "Get the trust fund to the bank early.",
+    "ref_audio": "https://huggingface.co/datasets/zhaochenyang20/seed-tts-eval-mini/resolve/main/en/prompt-wavs/common_voice_en_10119832.wav",
+    "ref_text": "We asked over twenty different people, and they all said it was his."
   }' \
   --output output.wav
 ```
@@ -302,7 +124,7 @@ requires both `"stream": true` and `"response_format": "pcm"`:
 curl -N -X POST http://localhost:8000/v1/audio/speech \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "fishaudio/s2-pro",
+    "model": "voicing-tts",
     "voice": "default",
     "input": "Get the trust fund to the bank early.",
     "references": [{
@@ -318,34 +140,67 @@ curl -N -X POST http://localhost:8000/v1/audio/speech \
 Streaming returns 16-bit mono PCM bytes (`audio/pcm`) with sample-rate metadata
 in response headers. It does not include in-band JSON events, final usage, or a
 terminal sentinel. When the client does not set `initial_codec_chunk_frames`,
-the model selects a continuity-safe first vocoder chunk. Set the field explicitly
-to override that default, or set it to `0` to use the model's steady chunk size
-from the start. Ming-Omni-TTS is the only model that rejects the field: its
-initial and steady cadence are the audio_decode stage's `factory` settings, so a
-request that sets it fails.
+Voicing-TTS ramps its first chunks `1 -> 2 -> 4` codec frames before the steady
+stride. Set the field explicitly to override the first chunk, or set it to `0`
+to use the steady chunk size from the start.
+
+### CustomVoice
+
+CustomVoice uses a built-in speaker without reference audio:
+
+```bash
+curl -X POST http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "voicing-tts",
+    "input": "Hello from Voicing-TTS CustomVoice.",
+    "voice": "Ryan",
+    "language": "English",
+    "instructions": "Speak clearly and calmly."
+  }' \
+  --output custom-voice.wav
+```
+
+Omit cloning fields (`ref_audio`, `ref_text`, `references`, and `x_vector_only_mode`) and omit `task_type` or set it to `CustomVoice`. For 0.6B, omit `instructions`: it remains accepted for compatibility, but reliable instruction control is not supported. See [CustomVoice checkpoints](../cookbook/voicing_tts.md#customvoice-checkpoints) for speaker discovery, streaming, and Eric/Dylan language behavior.
+
+### VoiceDesign
+
+VoiceDesign uses text plus voice instructions:
+
+```bash
+curl -X POST http://localhost:8000/v1/audio/speech \
+    -H "Content-Type: application/json" \
+    -d '{
+      "model": "voicing-tts",
+      "voice": "default",
+      "input": "Hello, how are you?",
+      "task_type": "VoiceDesign",
+      "instructions": "A warm, natural young adult voice."
+    }' \
+    --output output.wav
+```
 
 ### Batch Speech
 
 Use `/v1/audio/speech/batch` when one request should synthesize several
 independent utterances. Batch defaults are merged with each item. Item fields
 override the defaults, and each item runs through the normal `/v1/audio/speech`
-path.
+path. With a Base checkpoint, a batch-level reference clip applies to every item
+that does not bring its own:
 
 ```bash
 curl -X POST http://localhost:8000/v1/audio/speech/batch \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "fishaudio/s2-pro",
+    "model": "voicing-tts",
     "voice": "default",
     "response_format": "wav",
+    "ref_audio": "https://huggingface.co/datasets/zhaochenyang20/seed-tts-eval-mini/resolve/main/en/prompt-wavs/common_voice_en_10119832.wav",
+    "ref_text": "We asked over twenty different people, and they all said it was his.",
     "items": [
       {"input": "First sentence."},
       {"input": "Second sentence.", "speed": 1.1},
-      {
-        "input": "Use a reference clip for this item.",
-        "ref_audio": "https://huggingface.co/datasets/zhaochenyang20/seed-tts-eval-mini/resolve/main/en/prompt-wavs/common_voice_en_10119832.wav",
-        "ref_text": "We asked over twenty different people, and they all said it was his."
-      }
+      {"input": "Third sentence.", "language": "English"}
     ]
   }'
 ```
@@ -374,6 +229,9 @@ import json
 
 import websockets
 
+REFERENCE_AUDIO = "https://huggingface.co/datasets/zhaochenyang20/seed-tts-eval-mini/resolve/main/en/prompt-wavs/common_voice_en_10119832.wav"
+REFERENCE_TEXT = "We asked over twenty different people, and they all said it was his."
+
 
 async def main():
     async with websockets.connect(
@@ -382,8 +240,10 @@ async def main():
         await ws.send(json.dumps({
             "type": "session.config",
             "session": {
-                "model": "fishaudio/s2-pro",
+                "model": "voicing-tts",
                 "voice": "default",
+                "ref_audio": REFERENCE_AUDIO,
+                "ref_text": REFERENCE_TEXT,
                 "response_format": "pcm",
                 "stream_audio": True,
                 "split_granularity": "sentence",
@@ -443,12 +303,18 @@ configuration returns an error and closes the session.
 
 ### Uploaded Voices
 
-Use `/v1/audio/voices` to register reference clips once and reuse them by name
-in later `/v1/audio/speech` requests. Uploaded samples are stored as
-`.safetensors` files under `SPEAKER_SAMPLES_DIR` and are restored when the
-server restarts. If `SPEAKER_SAMPLES_DIR` is not set, the server uses
+A Base checkpoint can register reference clips once through `/v1/audio/voices`
+and reuse them by name in later `/v1/audio/speech` requests. Uploaded samples
+are stored as `.safetensors` files under `SPEAKER_SAMPLES_DIR` and are restored
+when the server restarts. If `SPEAKER_SAMPLES_DIR` is not set, the server uses
 `~/.cache/sglang-omni/speakers`. `SPEAKER_MAX_UPLOADED` limits the number of
 stored voices and defaults to `1000`.
+
+The server enables uploaded voices only when the served checkpoint path
+identifies a Base checkpoint: a path component containing `voicing-tts` that
+ends in `base`, such as `checkpoints/voicing-tts-12hz-1.7b-base`. On Base, a
+request without reference fields whose `voice` is neither `default` nor an
+uploaded name returns HTTP 400.
 
 Upload a voice sample:
 
@@ -475,7 +341,7 @@ Use the uploaded voice by name:
 curl -X POST http://localhost:8000/v1/audio/speech \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "fishaudio/s2-pro",
+    "model": "voicing-tts",
     "input": "The uploaded voice can now be reused without resending audio.",
     "voice": "narrator",
     "response_format": "wav"
@@ -497,55 +363,13 @@ removes the persisted sample. The list response includes API-process
 
 ## Use Python
 
-### Basic TTS
-
-This no-reference request applies to Fish Speech S2-Pro and Voxtral TTS.
-
-```python
-import requests
-
-resp = requests.post(
-    "http://localhost:8000/v1/audio/speech",
-    json={
-        "model": "fishaudio/s2-pro",
-        "voice": "default",
-        "input": "Hello, how are you?",
-    },
-)
-resp.raise_for_status()
-with open("output.wav", "wb") as f:
-    f.write(resp.content)
-```
-
-### OpenAI Python SDK
-
-The endpoint is compatible with the OpenAI Python SDK when the client points to
-the SGLang-Omni server:
-
-```python
-from openai import OpenAI
-
-client = OpenAI(
-    base_url="http://localhost:8000/v1",
-    api_key="EMPTY",
-)
-
-response = client.audio.speech.create(
-    model="fishaudio/s2-pro",
-    voice="default",
-    input="Hello, how are you?",
-    response_format="wav",
-)
-response.stream_to_file("output.wav")
-```
-
-### Voice Cloning
-
 ```python
 REFERENCE_AUDIO = "https://huggingface.co/datasets/zhaochenyang20/seed-tts-eval-mini/resolve/main/en/prompt-wavs/common_voice_en_10119832.wav"
 REFERENCE_TEXT = "We asked over twenty different people, and they all said it was his."
 SPEECH_INPUT = "Get the trust fund to the bank early."
 ```
+
+### Voice Cloning
 
 1. Non-streaming Request
 
@@ -555,7 +379,7 @@ import requests
 resp = requests.post(
     "http://localhost:8000/v1/audio/speech",
     json={
-        "model": "fishaudio/s2-pro",
+        "model": "voicing-tts",
         "voice": "default",
         "input": SPEECH_INPUT,
         "references": [{"audio_path": REFERENCE_AUDIO, "text": REFERENCE_TEXT}],
@@ -574,7 +398,7 @@ import wave
 import requests
 
 payload = {
-    "model": "fishaudio/s2-pro",
+    "model": "voicing-tts",
     "voice": "default",
     "input": SPEECH_INPUT,
     "references": [{"audio_path": REFERENCE_AUDIO, "text": REFERENCE_TEXT}],
@@ -602,6 +426,30 @@ with wave.open("output_stream.wav", "wb") as w:
     w.writeframes(b"".join(chunks))
 ```
 
+### OpenAI Python SDK
+
+The endpoint is compatible with the OpenAI Python SDK when the client points to
+the SGLang-Omni server. Pass the reference clip through `extra_body`, or use an
+uploaded voice name as `voice`:
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:8000/v1",
+    api_key="EMPTY",
+)
+
+response = client.audio.speech.create(
+    model="voicing-tts",
+    voice="default",
+    input=SPEECH_INPUT,
+    response_format="wav",
+    extra_body={"ref_audio": REFERENCE_AUDIO, "ref_text": REFERENCE_TEXT},
+)
+response.stream_to_file("output.wav")
+```
+
 ## Request Parameters
 
 The table below lists all parameters accepted by the `/v1/audio/speech` endpoint.
@@ -610,28 +458,26 @@ The table below lists all parameters accepted by the `/v1/audio/speech` endpoint
 |---|---|---|---|
 | `model` | string | served model | Served model identifier |
 | `input` | string | (required) | Text to synthesize |
-| `voice` | string | `"default"` | Preset or uploaded voice identifier |
+| `voice` | string | `"default"` | Built-in CustomVoice speaker or uploaded Base voice |
 | `response_format` | string | `"wav"` | Output audio format: `wav`, `mp3`, `flac`, `pcm`, `aac`, or `opus` |
 | `speed` | float | `1.0` | Playback speed multiplier from `0.25` to `4.0` |
 | `stream` | bool | `false` | Enable raw PCM streaming. When true, `response_format` must be `pcm` |
-| `initial_codec_chunk_frames` | int | `null` | Optional first codec chunk size for streaming TTFA / playback-continuity tuning. When omitted, each model applies its own default: Qwen3-TTS ramps `1 -> 2 -> 4` into the steady stride, Higgs TTS uses `20`, MOSS-TTS Local uses `5`, and ZONOS2 uses `40`. An explicit `0` uses the model's steady chunk size from the start. Ming-Omni-TTS rejects the field entirely |
-| `stream_codec_output` | bool | `true` | Qwen3-TTS only. Forward codec frames to the vocoder as they are generated. Set `false` to restore whole-utterance decoding for CustomVoice / VoiceDesign |
-| `suppress_bootstrap_silence` | bool | `true` | Qwen3-TTS only. Withhold the silent bootstrap codec frame's audio from streamed CustomVoice output on validated voice/language pairs; an audible first frame is always emitted unchanged. Set `false` to keep the leading silence |
+| `initial_codec_chunk_frames` | int | `null` | Optional first codec chunk size for streaming TTFA / playback-continuity tuning. When omitted, Voicing-TTS ramps `1 -> 2 -> 4` into the steady stride. An explicit `0` uses the steady chunk size from the start |
+| `stream_codec_output` | bool | `true` | Forward codec frames to the vocoder as they are generated. Set `false` to restore whole-utterance decoding for CustomVoice / VoiceDesign |
+| `suppress_bootstrap_silence` | bool | `true` | Withhold the silent bootstrap codec frame's audio from streamed CustomVoice output on validated voice/language pairs; an audible first frame is always emitted unchanged. Set `false` to keep the leading silence |
 | `references` | list | `null` | Reference audio for voice cloning. Each item has `audio_path` (local path / file URL / data URL / remote URL) and `text` |
 | `ref_audio` | string | `null` | Reference audio path / URL / base64 string. Equivalent to `references[0].audio_path` |
 | `ref_text` | string | `null` | Transcript for `ref_audio`. Equivalent to `references[0].text` |
 | `language` | string | `null` | Language hint: `Auto`, `Chinese`, `English`, `Japanese`, `Korean`, `German`, `French`, `Russian`, `Portuguese`, `Spanish`, or `Italian` |
-| `task_type` | string | `null` | Qwen3-TTS task type: `Base`, `CustomVoice`, or `VoiceDesign`. Inferred as `Base` when reference audio/text is present, otherwise `CustomVoice` |
-| `instructions` | string | `null` | Qwen3-TTS style or VoiceDesign instructions |
-| `max_new_tokens` | int | `null` | Maximum number of generated tokens |
-| `token_count` | int | `null` | Model-specific duration token target |
-| `duration_tokens` | int | `null` | Alias-style duration token target for models that expose duration control |
-| `x_vector_only_mode` | bool | `null` | Qwen3-TTS Base speaker-embedding mode |
+| `task_type` | string | `null` | `Base`, `CustomVoice`, or `VoiceDesign`. Inferred as `Base` when reference audio/text is present, otherwise `CustomVoice` |
+| `instructions` | string | `null` | CustomVoice style or VoiceDesign instructions |
+| `max_new_tokens` | int | `null` | Maximum number of generated codec tokens |
+| `x_vector_only_mode` | bool | `null` | Base speaker-embedding mode |
 | `temperature` | float | `null` | Sampling temperature |
 | `top_p` | float | `null` | Top-p sampling |
 | `top_k` | int | `null` | Top-k sampling |
 | `repetition_penalty` | float | `null` | Repetition penalty |
-| `seed` | int | `null` | Model-specific. Qwen3-TTS Base accepts request-scoped seed, Voxtral TTS currently rejects seed |
+| `seed` | int | `null` | Request-scoped random seed |
 
 Invalid speech requests return an OpenAI-style error envelope:
 
@@ -654,81 +500,41 @@ Download the full SeedTTS set first:
 python -m benchmarks.dataset.prepare --dataset seedtts
 ```
 
-Run EN and ZH after launching the target server on port 8000. Do not add benchmark results to docs until the full H200 runs complete.
+Run EN and ZH after launching the target server on port 8000. WER scoring needs
+an external OpenAI-compatible ASR server, because this repository no longer
+hosts ASR models; `benchmarks/tasks/asr.py` is the client. Do not add benchmark
+results to docs until the full H200 runs complete.
 
 ```bash
 python -m benchmarks.eval.benchmark_tts_seedtts \
   --meta zhaochenyang20/seed-tts-eval-arrow \
-  --model Qwen/Qwen3-TTS-12Hz-0.6B-Base \
+  --model checkpoints/voicing-tts-12hz-0.6b-base \
   --port 8000 \
-  --output-dir results/qwen3_tts_0_6b_en \
+  --output-dir results/voicing_tts_0_6b_en \
   --lang en \
   --max-concurrency 16
 
 python -m benchmarks.eval.benchmark_tts_seedtts \
   --meta zhaochenyang20/seed-tts-eval-arrow \
-  --model Qwen/Qwen3-TTS-12Hz-0.6B-Base \
+  --model checkpoints/voicing-tts-12hz-0.6b-base \
   --port 8000 \
-  --output-dir results/qwen3_tts_0_6b_zh \
+  --output-dir results/voicing_tts_0_6b_zh \
   --lang zh \
   --max-concurrency 16
 
 python -m benchmarks.eval.benchmark_tts_seedtts \
   --meta zhaochenyang20/seed-tts-eval-arrow \
-  --model Qwen/Qwen3-TTS-12Hz-1.7B-Base \
+  --model checkpoints/voicing-tts-12hz-1.7b-base \
   --port 8000 \
-  --output-dir results/qwen3_tts_1_7b_en \
+  --output-dir results/voicing_tts_1_7b_en \
   --lang en \
   --max-concurrency 16
 
 python -m benchmarks.eval.benchmark_tts_seedtts \
   --meta zhaochenyang20/seed-tts-eval-arrow \
-  --model Qwen/Qwen3-TTS-12Hz-1.7B-Base \
+  --model checkpoints/voicing-tts-12hz-1.7b-base \
   --port 8000 \
-  --output-dir results/qwen3_tts_1_7b_zh \
+  --output-dir results/voicing_tts_1_7b_zh \
   --lang zh \
   --max-concurrency 16
-
-python -m benchmarks.eval.benchmark_tts_seedtts \
-  --meta zhaochenyang20/seed-tts-eval-arrow \
-  --model mistralai/Voxtral-4B-TTS-2603 \
-  --port 8000 \
-  --output-dir results/voxtral_en \
-  --lang en \
-  --max-new-tokens 4096 \
-  --max-concurrency 16 \
-  --no-ref-audio \
-  --voice cheerful_female
-
-python -m benchmarks.eval.benchmark_tts_seedtts \
-  --meta zhaochenyang20/seed-tts-eval-arrow \
-  --model mistralai/Voxtral-4B-TTS-2603 \
-  --port 8000 \
-  --output-dir results/voxtral_zh \
-  --lang zh \
-  --max-new-tokens 4096 \
-  --max-concurrency 16 \
-  --no-ref-audio \
-  --voice cheerful_female
 ```
-
-## Interactive Playground
-
-SGLang-Omni ships with a Gradio-based playground for interactive TTS experimentation:
-
-```bash
-./playground/s2pro/start.sh
-```
-
-The playground now exposes two demo modes against the same S2 Pro backend:
-
-- `Non-Streaming` starts a standard request and shows the final WAV after generation finishes.
-- `Streaming` consumes the `/v1/audio/speech` raw PCM stream, converts incremental chunks for playback, and also writes a final combined WAV artifact for inspection.
-
-The launcher starts the backend first, waits for `/health`, then starts the Gradio UI with:
-
-```bash
-python -m playground.s2pro.app --api-base http://localhost:8000
-```
-
-A demo play video is available [here](https://x.com/lmsysorg/status/2031412267213008984/video/1). We highly recommend using playground since audio data is hard to interact with by CLI.

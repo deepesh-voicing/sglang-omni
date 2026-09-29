@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import collections
 import gc
-import importlib
 import threading
 import time
 import weakref
@@ -23,6 +22,7 @@ from sglang.srt.managers.schedule_batch import ReqKvInfo
 from sglang.srt.runtime_context import get_context
 
 from sglang_omni.admission import QueueFullError
+from sglang_omni.models.voicing_tts.request_builders import VoicingTTSSGLangRequestData
 from sglang_omni.proto import OmniRequest, StagePayload
 from sglang_omni.scheduling import omni_scheduler as omni_scheduler_module
 from sglang_omni.scheduling.message import IncomingMessage
@@ -570,26 +570,13 @@ def test_retracted_request_without_history_is_requeued_untouched() -> None:
     assert retracted.omni_data.decode_input_embeds == []
 
 
-@pytest.mark.parametrize(
-    "module_name, class_name",
-    [
-        ("sglang_omni.models.moss_tts.request_builders", "MossTTSSGLangRequestData"),
-        (
-            "sglang_omni.models.moss_tts_local.request_builders",
-            "MossTTSLocalSGLangRequestData",
-        ),
-    ],
-)
-def test_retracted_request_with_model_owned_data_is_requeued(
-    module_name: str, class_name: str
-) -> None:
-    data_cls = getattr(importlib.import_module(module_name), class_name)
+def test_retracted_request_with_model_owned_data_is_requeued() -> None:
     scheduler = requeue_scheduler()
     retracted = SimpleNamespace(
         rid="req-model-owned",
         priority=None,
         is_retracted=True,
-        omni_data=data_cls(),
+        omni_data=VoicingTTSSGLangRequestData(),
         time_stats=SimpleNamespace(set_wait_queue_entry_time=lambda: None),
     )
 
@@ -952,8 +939,7 @@ def test_omni_scheduler_resolve_drops_retracted_req() -> None:
     """A request retracted (KV freed, back to waiting) while its lagged async
     step was in flight must be dropped from the resolve batch — skip_rids plus
     excluded from process_batch_result and next_token_ids — so upstream never
-    re-frees its already-freed KV (the double-free assertion). Shared crash-fix
-    for the async resolve path used by Higgs and MOSS-TTS-Local.
+    re-frees its already-freed KV (the double-free assertion).
     """
     captured: dict = {}
 
@@ -1341,97 +1327,6 @@ def test_omni_scheduler_flushes_stream_before_terminal_result(monkeypatch) -> No
     assert req.omni_data is None
     assert request_data.req is req
     assert model_path_ends == [("req-finished", "success")]
-
-
-def test_omni_scheduler_fish_abort_during_step_suppresses_chunk_and_result() -> None:
-    """A Fish abort landing mid-step defers per-request cleanup to the
-    upstream FINISH_ABORT path, leaves the buffered codes unconsumed, and
-    ships neither the pending stream chunk nor the terminal result."""
-    from sglang_omni.models.fishaudio_s2_pro.request_builders import (
-        make_tts_scheduler_adapters,
-    )
-    from tests.unit_test.fixtures.fish_fakes import (
-        FakeFishTokenizer,
-        make_s2pro_payload,
-    )
-
-    _, result_adapter, stream_output_builder = make_tts_scheduler_adapters(
-        tokenizer=FakeFishTokenizer()
-    )
-    adapted: list = []
-    cleaned: list = []
-    scheduler = object.__new__(OmniScheduler)
-    scheduler.outbox = Queue()
-    scheduler.inbox = Queue()
-    scheduler.abort_callback = cleaned.append
-    scheduler.request_finished_callback = None
-    scheduler.aborted_request_ids = set()
-    scheduler.aborted_request_id_order = deque()
-    scheduler.completed_request_ids = {}
-    scheduler.pending_stream_ingress = {}
-    scheduler.deferred_request_payloads = {}
-    scheduler.dirty_deferred_request_ids = set()
-    scheduler.first_emit_done = set()
-    scheduler.prefill_start_done = set()
-    scheduler.prefill_end_done = set()
-    scheduler.stream_output_builder = stream_output_builder
-
-    def tracking_result_adapter(data):
-        adapted.append(data)
-        return result_adapter(data)
-
-    scheduler.result_adapter = tracking_result_adapter
-    scheduler.waiting_queue = []
-    init_sync_request_build_state(scheduler)
-
-    codes = torch.full((11, 1), 7, dtype=torch.long)
-    data = SimpleNamespace(
-        stage_payload=make_s2pro_payload(
-            request_id="req-fish", params={"stream": True}
-        ),
-        latest_stream_code_chunk=codes,
-        output_codes=[codes],
-    )
-    req = SimpleNamespace(
-        rid="req-fish",
-        to_finish=None,
-        finished=lambda: False,
-        finished_reason=None,
-        kv=ReqKvInfo(req_pool_idx=1),
-        is_retracted=False,
-        omni_data=data,
-        _omni_terminal_claimed=False,
-    )
-    data.req = req
-    batch = SimpleNamespace(reqs=[req], batch_is_full=True)
-    scheduler.running_batch = batch
-    scheduler.cur_batch = batch
-    scheduler.last_batch = None
-
-    scheduler.abort("req-fish")
-
-    assert req in batch.reqs
-    assert req.to_finish.to_json()["type"] == "abort"
-    assert cleaned == []
-
-    sched_output = SimpleNamespace(
-        requests=[SimpleNamespace(request_id="req-fish", data=data)]
-    )
-    mr_output = SimpleNamespace(outputs={"req-fish": object()})
-    scheduler.emit_stream_output(sched_output, mr_output)
-
-    assert scheduler.outbox.empty()
-    assert data.latest_stream_code_chunk is codes
-    assert len(data.output_codes) == 1 and data.output_codes[0] is codes
-
-    req.finished = lambda: True
-    scheduler.stream_output([req])
-
-    assert adapted == []
-    assert cleaned == ["req-fish"]
-    assert scheduler.outbox.empty()
-    assert req.omni_data is None
-    assert data.req is req
 
 
 def test_stream_output_sets_finish_reason_and_drains_runner_before_terminal() -> None:

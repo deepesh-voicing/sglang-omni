@@ -13,7 +13,8 @@ disjoint seed-tts-eval EN shards within a stage so shared caches cannot
 inflate multi-client numbers.
 
 Environment:
-    BENCH_MODEL   model name passed to benchmark_tts_seedtts (default higgs)
+    BENCH_MODEL   model name passed to benchmark_tts_seedtts
+                  (default checkpoints/voicing-tts-12hz-1.7b-base)
     BENCH_STREAM  1 (default) records TTFC; 0 drops --stream for models that
                   generate the final waveform only (TTFC percentiles null)
     BENCH_REF     1 (default) sends reference audio; 0 text-only synthesis
@@ -61,7 +62,7 @@ def _spawn_client(out, stage_dir, per_client_rate, samples, offset, i):
         "--meta",
         "zhaochenyang20/seed-tts-eval-arrow",
         "--model",
-        os.environ.get("BENCH_MODEL", "higgs"),
+        os.environ.get("BENCH_MODEL", "checkpoints/voicing-tts-12hz-1.7b-base"),
         "--host",
         "127.0.0.1",
         "--port",

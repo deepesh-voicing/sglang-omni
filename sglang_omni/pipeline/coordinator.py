@@ -17,7 +17,6 @@ from sglang_omni.pipeline.replicas import (
     RoundRobinBindingPolicy,
     assign_replica_bindings,
 )
-from sglang_omni.pipeline.sessions import CoordinatorSessions
 from sglang_omni.profiler.event_recorder import emit as _emit_event
 from sglang_omni.proto import (
     AbortMessage,
@@ -35,6 +34,7 @@ from sglang_omni.proto import (
     SubmitMessage,
     is_update_action,
 )
+from sglang_omni.proto.session import SESSION_METADATA_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ class AdminPendingOperation:
     future: asyncio.Future | None = None
 
 
-class Coordinator(CoordinatorSessions):
+class Coordinator:
     """Central coordinator for the multi-stage pipeline.
 
     Responsibilities:
@@ -87,7 +87,6 @@ class Coordinator(CoordinatorSessions):
                 are already tracked. Intended as generation capacity
                 (max_running_requests + max_queued_requests).
         """
-        super().__init__()
         self.entry_stage = entry_stage
         self.terminal_stages: set[str] = (
             set(terminal_stages) if terminal_stages else set()
@@ -152,7 +151,6 @@ class Coordinator(CoordinatorSessions):
 
     async def stop(self) -> None:
         """Stop the coordinator."""
-        await self.stop_sessions()
         self.running = False
         self.control_plane.close()
         logger.info("Coordinator stopped")
@@ -180,13 +178,10 @@ class Coordinator(CoordinatorSessions):
                 pass
         self.requests.clear()
         self.partial_results.clear()
-        # Note (Junnan Li): Session pumps await request futures; wake them before waiting for cleanup.
-        await self.fail_sessions(message)
 
     async def shutdown_stages(self, stage_names: Sequence[str] | None = None) -> None:
         """Send shutdown to registered stages, or only to *stage_names*."""
         selected = None if stage_names is None else set(stage_names)
-        await self.shutdown_stage_sessions(selected)
         for name, info in self.stages.items():
             if selected is not None and name not in selected:
                 continue
@@ -364,6 +359,17 @@ class Coordinator(CoordinatorSessions):
             stages=stages,
             timeout_s=timeout_s,
         )
+
+    def reject_session_metadata(self, request: object) -> None:
+        if (
+            isinstance(request, OmniRequest)
+            and SESSION_METADATA_KEY in request.metadata
+        ):
+            raise ValueError(
+                f"request metadata key {SESSION_METADATA_KEY!r} is reserved"
+            )
+        else:
+            pass
 
     async def submit(self, request_id: str, request: OmniRequest | Any) -> Any:
         """Submit a request to the pipeline and wait for completion."""
@@ -823,12 +829,6 @@ class Coordinator(CoordinatorSessions):
     async def handle_stream(self, msg: StreamMessage) -> None:
         """Handle a stream chunk from a stage."""
         request_id = msg.request_id
-        handler = self.session_stream_handlers.get(request_id)
-        if handler is not None:
-            handler(msg)
-            return
-        else:
-            pass
         if request_id not in self.stream_queues:
             return
         else:

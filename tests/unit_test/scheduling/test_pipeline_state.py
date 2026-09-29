@@ -86,30 +86,10 @@ def test_serialize_value_detaches_tensor_to_cpu() -> None:
 def test_tts_pipeline_states_share_base_usage_contract() -> None:
     import dataclasses
 
-    from sglang_omni.models.audar_tts.payload_types import AudarTTSState
-    from sglang_omni.models.dots_tts.payload_types import DotsTTSState
-    from sglang_omni.models.fishaudio_s2_pro.payload_types import S2ProState
-    from sglang_omni.models.higgs_tts.payload_types import HiggsTtsState
-    from sglang_omni.models.ming_tts.payload_types import MingTTSState
-    from sglang_omni.models.moss_tts.payload_types import MossTTSState
-    from sglang_omni.models.moss_tts_local.payload_types import MossTTSLocalState
-    from sglang_omni.models.qwen3_tts.payload_types import Qwen3TTSState
-    from sglang_omni.models.voxtral_tts.io import VoxtralTTSState
-    from sglang_omni.models.zonos2.payload_types import Zonos2State
+    from sglang_omni.models.voicing_tts.payload_types import VoicingTTSState
 
-    # Every in-scope TTS model routes its state through PipelineStateBase.
-    state_classes = (
-        AudarTTSState,
-        DotsTTSState,
-        S2ProState,
-        HiggsTtsState,
-        MingTTSState,
-        MossTTSState,
-        MossTTSLocalState,
-        Qwen3TTSState,
-        VoxtralTTSState,
-        Zonos2State,
-    )
+    # The Voicing-TTS state routes through PipelineStateBase.
+    state_classes = (VoicingTTSState,)
     base_fields = {
         "sample_rate",
         "prompt_tokens",
@@ -183,165 +163,19 @@ def assert_restored_fields(
 
 
 def test_tts_pipeline_state_round_trips_preserve_payload_fields() -> None:
-    from sglang_omni.models.audar_tts.payload_types import AudarTTSState
-    from sglang_omni.models.dots_tts.payload_types import DotsTTSState
-    from sglang_omni.models.fishaudio_s2_pro.payload_types import S2ProState
-    from sglang_omni.models.higgs_tts.payload_types import HiggsTtsState
-    from sglang_omni.models.ming_tts.payload_types import MingTTSState
-    from sglang_omni.models.moss_tts.payload_types import MossTTSState
-    from sglang_omni.models.moss_tts_local.payload_types import MossTTSLocalState
-    from sglang_omni.models.qwen3_tts.payload_types import Qwen3TTSState
-    from sglang_omni.models.voxtral_tts.io import VoxtralTTSState
-    from sglang_omni.models.zonos2.payload_types import Zonos2State
+    from sglang_omni.models.voicing_tts.payload_types import VoicingTTSState
 
     # Each (state, overrides) pair is checked two ways: the
     # to_dict()-vs-to_dict() comparison (wire-format stability across a
     # double round trip), and a field-complete attribute check on the
     # restored object against the constructed values. overrides names only
-    # the intentional representation changes: Qwen3-TTS flattens tensors to
-    # lists in to_dict() and never rebuilds them in from_dict(); Voxtral does
-    # the same only for audio_samples (audio_codes round-trips as a tensor
-    # via typed_tensor bytes); MOSS / MOSS-Local / S2-Pro / Higgs round-trip
-    # their tensor fields natively. Note the float32 tensor -> Python list
-    # conversions derive expected values through the same precision path.
+    # the intentional representation changes: Voicing-TTS flattens tensors to
+    # lists in to_dict() and never rebuilds them in from_dict(). Note the
+    # float32 tensor -> Python list conversions derive expected values through
+    # the same precision path.
     cases: list[tuple[PipelineStateBase, dict[str, Any]]] = [
         (
-            AudarTTSState(
-                target_text="target",
-                reference_text="reference",
-                reference_audio={"bytes": b"wav"},
-                prompt="prompt",
-                audio_codes=[1, 2, 3],
-                generation_kwargs={"temperature": 0.7},
-                prompt_tokens=4,
-                completion_tokens=6,
-                engine_time_s=0.125,
-            ),
-            {},
-        ),
-        (
-            DotsTTSState(
-                prompt_audio_path="ref.wav",
-                use_prompt_prefill=True,
-                speaker_scale=1.5,
-                ode_method="euler",
-                num_steps=4,
-                guidance_scale=1.2,
-                seed=7,
-                stream=True,
-                sample_rate=48000,
-                prompt_tokens=3,
-                completion_tokens=5,
-                engine_time_s=0.25,
-            ),
-            {},
-        ),
-        (
-            S2ProState(
-                input_ids=[1, 2, 3],
-                vq_mask_tokens=[False, True, False],
-                vq_parts=[torch.tensor([[1, 2], [3, 4]])],
-                output_codes=torch.tensor([[0, 1], [2, 3]]),
-                prompt_tokens=3,
-                completion_tokens=5,
-                engine_time_s=0.125,
-                finish_reason="stop",
-                audio_samples=[0.1, 0.2],
-            ),
-            {},
-        ),
-        (
-            HiggsTtsState(
-                prompt_token_ids=[10, 11],
-                reference_codes_delayed=[[1, 2], [3, 4]],
-                target_text="target",
-                reference_text="reference",
-                reference_waveform=torch.tensor([[[0.1, 0.2]]]),
-                reference_code_cache_key="cache-key",
-                uploaded_voice_name="voice",
-                uploaded_voice_created_at=123,
-                top_p=0.9,
-                top_k=10,
-                seed=7,
-                return_logprob=True,
-                return_omni_rollout=True,
-                output_codes_delayed=[[5, 6], [7, 8]],
-                omni_rollout={"tokens": [1, 2], "logprobs": [-0.1, -0.2]},
-                prompt_tokens=2,
-                completion_tokens=4,
-                engine_time_s=0.25,
-                audio_samples=torch.tensor([0.3, 0.4]),
-            ),
-            {},
-        ),
-        (
-            MingTTSState(
-                text="hello",
-                prompt="prompt",
-                instructions="calm",
-                language="en",
-                voice="voice",
-                ref_audio={"path": "ref.wav"},
-                ref_text="reference",
-                input_ids=[1, 2, 3, 4, 5, 6],
-                spk_injection_positions=[2],
-                prompt_latent_start_position=4,
-                prompt_latent_token_count=2,
-                spk_emb=torch.zeros(1, 2),
-                prompt_latent=torch.zeros(1, 1, 2),
-                max_decode_steps=16,
-                cfg=1.5,
-                sigma=0.2,
-                temperature=0.7,
-                generated_latents=torch.tensor(
-                    [[[0.5, -1.25]], [[2.0, 0.0]]],
-                    dtype=torch.float32,
-                ),
-                stop_step=1,
-                finish_reason="stop",
-                prompt_tokens=6,
-                completion_tokens=2,
-                engine_time_s=0.125,
-                sample_rate=44100,
-                duration_s=0.5,
-            ),
-            {},
-        ),
-        (
-            MossTTSState(
-                text="hello",
-                ref_audio={"path": "ref.wav"},
-                ref_text="ref",
-                language="en",
-                instructions="calm",
-                token_count=6,
-                generation_kwargs={"temperature": 0.7},
-                delayed_audio_codes=torch.tensor([[1, 2], [3, 4]]),
-                assistant_start_length=2,
-                prompt_tokens=6,
-                completion_tokens=8,
-                engine_time_s=0.375,
-            ),
-            {},
-        ),
-        (
-            MossTTSLocalState(
-                text="hello",
-                ref_audio={"path": "ref.wav"},
-                ref_text="ref",
-                language="en",
-                instructions="bright",
-                token_count=5,
-                generation_kwargs={"top_p": 0.8},
-                audio_codes=torch.tensor([[1, 2, 3], [4, 5, 6]]),
-                prompt_tokens=5,
-                completion_tokens=7,
-                engine_time_s=0.5,
-            ),
-            {},
-        ),
-        (
-            Qwen3TTSState(
+            VoicingTTSState(
                 text="hello",
                 task_type="Instruct",
                 task_type_explicit=True,
@@ -367,42 +201,6 @@ def test_tts_pipeline_state_round_trips_preserve_payload_fields() -> None:
                 "audio_codes": [[1, 2], [3, 4]],
                 "audio_samples": torch.tensor([0.5, 0.6]).tolist(),
             },
-        ),
-        (
-            VoxtralTTSState(
-                input_ids=[1, 2],
-                voice="voice",
-                max_new_tokens=16,
-                audio_codes=torch.tensor([[1, 2], [3, 4]]),
-                prompt_tokens=2,
-                completion_tokens=3,
-                engine_time_s=0.75,
-                audio_samples=torch.tensor([0.7, 0.8]),
-            ),
-            {
-                "audio_samples": torch.tensor([0.7, 0.8]).tolist(),
-            },
-        ),
-        (
-            Zonos2State(
-                text="hello",
-                ref_audio={"path": "ref.wav"},
-                ref_text="reference",
-                language="en",
-                speaking_rate=1.2,
-                conditioning={"emotion": "calm"},
-                input_ids=torch.zeros((3, 10), dtype=torch.long),
-                speaker_token_positions=[0],
-                speaker_emb=torch.tensor([0.1, 0.2, 0.3]),
-                speaker_fingerprint="wav:abc",
-                audio_codes=torch.tensor([[1, 2], [3, 4]]),
-                eos_frame=2,
-                generation_kwargs={"cfg_scale": 2.0},
-                prompt_tokens=3,
-                completion_tokens=2,
-                engine_time_s=0.125,
-            ),
-            {},
         ),
     ]
 
@@ -551,11 +349,3 @@ def test_declarative_default_factory_is_lazy() -> None:
 def test_declarative_wire_rejects_unknown_emit_mode(emit: str) -> None:
     with pytest.raises(ValueError, match="unknown wire emit mode"):
         wire(None, emit=emit)
-
-
-def test_higgs_sample_rate_emission_stays_model_local() -> None:
-    from sglang_omni.models.higgs_tts.payload_types import HiggsTtsState
-
-    assert "sample_rate" not in HiggsTtsState().to_dict()
-    data = HiggsTtsState(sample_rate=16000, audio_samples=torch.tensor([0.1])).to_dict()
-    assert data["sample_rate"] == 16000

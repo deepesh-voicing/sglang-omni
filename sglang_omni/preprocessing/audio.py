@@ -3,17 +3,14 @@
 
 from __future__ import annotations
 
-import asyncio
 import base64
 import struct
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 import numpy.typing as npt
-import torch
 
-from .base import MediaIO, is_url
+from .base import MediaIO
 
 
 def decode_audio_bytes_av(data: bytes) -> tuple[np.ndarray, int]:
@@ -170,16 +167,6 @@ def resample_linear(audio: np.ndarray, orig_sr: int, target_sr: int) -> np.ndarr
     return np.interp(new_idx, old_idx, audio).astype(np.float32)
 
 
-def load_audio_path(path: str | Path, *, target_sr: int = 16000) -> np.ndarray:
-    with open(path, "rb") as f:
-        data = f.read()
-    try:
-        audio, sr = parse_wav_bytes(data, source=str(path))
-    except ValueError:
-        audio, sr = decode_audio_bytes_av(data)
-    return resample_linear(audio, sr, target_sr)
-
-
 class AudioMediaIO(MediaIO[tuple[npt.NDArray, float]]):
     """MediaIO implementation for audio files."""
 
@@ -221,100 +208,3 @@ class AudioMediaIO(MediaIO[tuple[npt.NDArray, float]]):
             audio, sr = decode_audio_bytes_av(data)
         resampled = resample_linear(audio, sr, self.target_sr)
         return resampled, float(self.target_sr)
-
-
-async def ensure_audio_list_async(
-    audios: Any,
-    *,
-    target_sr: int = 16000,
-    resource_connector: Any | None = None,
-) -> list[Any]:
-    """Asynchronously normalize audio inputs into a list.
-
-    Args:
-        audios: Audio input(s) - can be a path, URL, numpy array, or list.
-        target_sr: Target sample rate for resampling.
-        media_connector: Optional MultiModalResourceConnector instance. If None, uses
-                        the global connector.
-
-    Returns:
-        List of normalized audio arrays.
-    """
-    if audios is None:
-        return []
-    else:
-        pass
-    items = audios if isinstance(audios, list) else [audios]
-
-    # Import here to avoid circular dependency
-    if resource_connector is None:
-        from .resource_connector import get_global_resource_connector
-
-        resource_connector = get_global_resource_connector()
-    else:
-        pass
-
-    # Collect coroutines for URL items
-    coroutines: list[asyncio.Task[tuple[npt.NDArray, float]] | None] = []
-    url_indices: list[int] = []
-    normalized: list[Any] = []
-
-    # First pass: identify URL items and create coroutines
-    for idx, item in enumerate(items):
-        if isinstance(item, (str, Path)):
-            if is_url(item):
-                # Create coroutine for async URL fetching
-                coro = resource_connector.fetch_audio_async(
-                    str(item), target_sr=target_sr
-                )
-                task = asyncio.create_task(coro)
-                coroutines.append(task)
-                url_indices.append(idx)
-                normalized.append(None)  # Placeholder
-            else:
-                # Local path - can be loaded synchronously
-                normalized.append(load_audio_path(item, target_sr=target_sr))
-        else:
-            # Already processed (numpy array, etc.)
-            normalized.append(item)
-
-    # Wait for all URL fetches to complete
-    if coroutines:
-        results = await asyncio.gather(*coroutines)
-        # Fill in the results at the correct indices (extract audio array, ignore sample rate)
-        for url_idx, (audio, _) in zip(url_indices, results):
-            normalized[url_idx] = audio
-    else:
-        pass
-
-    return normalized
-
-
-def build_audio_mm_inputs(hf_inputs: dict[str, Any]) -> dict[str, Any]:
-    """Extract standard audio tensors from HF processor outputs."""
-    feature_attention_mask = hf_inputs.get("feature_attention_mask")
-    audio_feature_lengths = hf_inputs.get("audio_feature_lengths")
-    if audio_feature_lengths is None and isinstance(
-        feature_attention_mask, torch.Tensor
-    ):
-        audio_feature_lengths = torch.sum(feature_attention_mask, dim=1).to(
-            dtype=torch.long
-        )
-    else:
-        pass
-    return {
-        "input_features": hf_inputs.get("input_features"),
-        "feature_attention_mask": feature_attention_mask,
-        "audio_feature_lengths": audio_feature_lengths,
-    }
-
-
-def compute_audio_cache_key(audios: Any) -> str | None:
-    """Compute cache key from raw audio inputs (paths, numpy arrays).
-
-    This should be called BEFORE ensure_audio_list() to capture original
-    paths which are much cheaper to hash than audio data.
-    """
-    from .cache_key import compute_media_cache_key
-
-    return compute_media_cache_key(audios, prefix="audio")

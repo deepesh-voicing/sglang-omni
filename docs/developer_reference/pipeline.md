@@ -11,8 +11,7 @@ Key responsibilities:
 - route new requests to `entry_stage`
 - track request state: pending, running, completed, failed, aborted
 - collect terminal stage completions
-- merge results when a pipeline has multiple terminal stages, such as `decode`
-  and `code2wav`
+- merge results when a pipeline has multiple terminal stages
 - broadcast abort messages to all stages
 
 The coordinator is stage-implementation agnostic. In a tensor
@@ -99,8 +98,8 @@ outside the upstream scheduler. (Overlap scheduling is explicitly unsupported:
 
 #### SimpleScheduler
 
-`SimpleScheduler` is for non-AR stages such as preprocessing, encoders,
-aggregation, and decode. It has no KV cache and no SGLang batching. The loop is:
+`SimpleScheduler` is for non-AR stages such as preprocessing and encoders. It
+has no KV cache and no SGLang batching. The loop is:
 
 ```text
 inbox.get() -> compute function -> outbox.put(result or error)
@@ -109,9 +108,12 @@ inbox.get() -> compute function -> outbox.put(result or error)
 It supports a batch compute function for stages where local batching is
 useful.
 
-#### Code2WavScheduler
+#### Streaming vocoder schedulers
 
-`Code2WavScheduler` is a streaming vocoder scheduler. It handles:
+Streaming vocoder schedulers, such as the Voicing-TTS `vocoder` stage's
+`VoicingTTSStreamingVocoderScheduler`, turn codec chunks from an AR stage into
+audio. They build on `StreamingVocoderBase` in
+`sglang_omni/scheduling/streaming_vocoder.py` and handle:
 
 - `new_request`: initialize per-request state
 - `stream_chunk`: accumulate and decode code chunks
@@ -125,24 +127,21 @@ The model runner layer owns the AR forward path. The design target is:
 ForwardBatch -> before/custom forward hooks -> model forward -> post hook -> output processing
 ```
 
-The shared base runner owns common mechanics: `ForwardBatch` construction,
-sampling, logit processing, repetition penalty handling, output processing, and
-conversion into scheduler output.
+The shared base runner (`ModelRunner` in `sglang_omni/model_runner/base.py`)
+owns common mechanics: `ForwardBatch` construction, sampling, logit processing,
+repetition penalty handling, output processing, and conversion into scheduler
+output. Subclasses override the phase hooks: `before_prefill`,
+`before_decode`, `post_prefill`, and `post_decode`.
 
-#### ThinkerModelRunner
+#### Feedback AR runners
 
-`ThinkerModelRunner` is for Qwen-omni thinker-style AR models. Its model-specific job is
-to prepare the forward batch by injecting multimodal embeddings such as image,
-video, audio, and deepstack inputs before the model forward.
+Some AR models need feedback produced by the previous step inside the same
+model runner before they can run the next decode step.
+`VoicingTTSModelRunner` in `sglang_omni/models/voicing_tts/model_runner.py`
+has this shape: each AR step produces a codec frame, and that frame is
+written back into the model's decode buffers before the next step.
 
-#### FeedbackARModelRunner
-
-The refactor design identifies a shared `FeedbackARModelRunner` role for AR
-models whose next decode step depends on feedback produced by the previous step
-inside the same model runner. Qwen3-Omni talker and Fish Audio S2-Pro both fit
-this shape; Qwen3 currently implements the pattern in its talker runner.
-
-The abstraction covers self-contained feedback loops only:
+The pattern covers self-contained feedback loops only:
 
 - write previous-step feedback into model buffers before forward
 - run the AR backbone and secondary head inside model `forward()`
@@ -151,12 +150,3 @@ The abstraction covers self-contained feedback loops only:
 
 Cross-stage feedback, where the producer and consumer live in different
 schedulers and communicate through relay, is out of scope for this runner.
-
-The design groups model-specific feedback behavior into a small strategy:
-
-```python
-class FeedbackStrategy:
-    def write_buffers(self, model, schedule_batch, requests) -> None: ...
-    def extract_output(self, model, schedule_batch, requests, outbox) -> None: ...
-    def prefill_forward(self, tp_worker, forward_batch, ...) -> object | None: ...
-```

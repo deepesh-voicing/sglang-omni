@@ -5,7 +5,6 @@ import dataclasses
 import logging
 from collections.abc import Iterator
 from dataclasses import dataclass
-from threading import Lock
 from typing import Any
 
 from sglang.srt.configs.model_config import ModelConfig
@@ -13,7 +12,7 @@ from sglang.srt.distributed.parallel_state_wrapper import ParallelState
 from sglang.srt.layers.dp_attention import compute_dp_attention_world_info
 from sglang.srt.mem_cache.kv_cache_configurator import KVCacheConfigurator
 from sglang.srt.model_executor.model_runner import ModelRunner
-from sglang.srt.runtime_context import get_exec, get_parallel, get_schedule
+from sglang.srt.runtime_context import get_parallel, get_schedule
 from sglang.srt.server_args import PortArgs, ServerArgs
 
 from sglang_omni.model_runner.prefill_inputs import get_omni_prefill_inputs
@@ -26,29 +25,6 @@ from sglang_omni.utils.gpu_memory import (
 )
 
 logger = logging.getLogger(__name__)
-_PREFILL_RUNNER_DISPATCH_LOCK = Lock()
-_PREFILL_RUNNER_DISPATCH_DEFAULT: type | None = None
-
-
-def install_prefill_runner_dispatch() -> None:
-    """Let each model runner pick its own prefill graph runner class."""
-    global _PREFILL_RUNNER_DISPATCH_DEFAULT
-    from sglang.srt.model_executor.model_runner_components import cuda_graph_setup
-
-    with _PREFILL_RUNNER_DISPATCH_LOCK:
-        if _PREFILL_RUNNER_DISPATCH_DEFAULT is not None:
-            return
-        else:
-            pass
-        default_cls = cuda_graph_setup.PrefillCudaGraphRunner
-
-        def _dispatch_prefill_runner(model_runner):
-            select = getattr(model_runner, "prefill_cuda_graph_runner_cls", None)
-            runner_cls = select() if select is not None else None
-            return (runner_cls or default_cls)(model_runner)
-
-        cuda_graph_setup.PrefillCudaGraphRunner = _dispatch_prefill_runner
-        _PREFILL_RUNNER_DISPATCH_DEFAULT = default_cls
 
 
 def filter_weights_by_prefix(
@@ -276,9 +252,6 @@ class SGLModelRunner(ModelRunner):
         self.total_gpu_memory_fraction = total_gpu_memory_fraction
         self.kv_cache_bytes = kv_cache_bytes
         self.model_arch_override = model_arch_override
-        self.weight_share_config = None
-        self.weight_share_record = None
-        self.weight_ipc_leader_monitor = None
         self.register_omni_model()
 
         port_args = PortArgs.init_new(server_args)
@@ -369,124 +342,8 @@ class SGLModelRunner(ModelRunner):
             pass
         return kwargs
 
-    def _resolve_draft_load_format(self) -> str | None:
-        """A weight-share follower builds its module tree with dummy weights.
-
-        This is the runner's own load format, which upstream resolves in
-        ModelRunner.__init__ and feeds to the loader, so the published
-        load_format record is never touched.
-        """
-        from sglang_omni.utils import ipc_weights
-
-        ws = ipc_weights.get_weight_share_config()
-        if ws is not None and ws.role == "follower":
-            return "dummy"
-        else:
-            pass
-        return super()._resolve_draft_load_format()
-
-    def load_model(self):
-        """Load weights, honoring the same-GPU weight-share role, if any.
-
-        Leader: normal checkpoint load, then publish CUDA-IPC handles for all
-        parameters/buffers. Follower: wait for the leader's handle file, build
-        the module tree with dummy weights (no checkpoint I/O), then alias
-        every parameter/buffer onto the leader's storage. Tensors the
-        architecture's share policy marks replica-private keep the follower's
-        own storage. Both paths finish inside load_model, strictly before
-        KV-pool profiling, warmup forwards, and CUDA graph capture.
-        """
-        from sglang_omni.utils import ipc_weights
-
-        ws = ipc_weights.get_weight_share_config()
-        self.weight_share_config = ws
-        self.weight_share_record = None
-        if ws is None:
-            return super().load_model()
-        else:
-            pass
-
-        # Note (Jiaxin Deng): TP/PP ranks are separate processes inheriting the
-        # env var, and their shards share names/shapes/dtypes across ranks, so
-        # the handle file would collide and followers would silently attach
-        # another rank's shard. Refuse until the handle path is rank-qualified.
-        if get_parallel().tp_size != 1 or get_parallel().pp_size != 1:
-            raise ipc_weights.WeightShareError(
-                "SGLANG_OMNI_WEIGHT_SHARE requires tp_size == pp_size == 1, got "
-                f"tp={get_parallel().tp_size} pp={get_parallel().pp_size}"
-            )
-        else:
-            pass
-
-        architectures = (
-            [self.model_arch_override]
-            if self.model_arch_override is not None
-            else self.model_config.hf_config.architectures
-        )
-        policy = ipc_weights.validate_weight_share_architecture(architectures)
-
-        # Note (Jiaxin Deng): a follower frees its dummy weights before KV
-        # profiling, so it must pin an explicit cap or it over-budgets KV.
-        if ws.role == "follower" and self.server_args.max_total_tokens is None:
-            raise ipc_weights.WeightShareError(
-                "SGLANG_OMNI_WEIGHT_SHARE follower requires an explicit "
-                "--max-total-tokens: post-alias memory profiling cannot derive "
-                "a stable KV budget"
-            )
-        else:
-            pass
-
-        if ws.role == "leader":
-            super().load_model()
-            self.weight_share_record = ipc_weights.leader_export(
-                self.model,
-                ws.dir_path,
-                model_path=str(self.server_args.model_path),
-                model_revision=self.server_args.revision,
-                run_id=ws.run_id,
-                private_names=policy.private_tensor_names,
-            )
-            return
-        else:
-            pass
-
-        # Note (Jiaxin Deng): wait for the leader BEFORE allocating dummy
-        # weights so we never hold a full transient dummy copy while blocked.
-        # The exact handle file name needs the constructed model's class, so
-        # this pre-wait polls for any export in the directory; follower_attach
-        # below still waits on (and validates) the engine's own file.
-        import torch
-
-        ipc_weights.wait_for_any_export(ws.dir_path, timeout_s=ws.attach_timeout_s)
-        super().load_model()
-        self.weight_share_record, self.weight_ipc_leader_monitor = (
-            ipc_weights.follower_attach(
-                self.model,
-                ws.dir_path,
-                timeout_s=ws.attach_timeout_s,
-                model_path=str(self.server_args.model_path),
-                model_revision=self.server_args.revision,
-                run_id=ws.run_id,
-                private_names=policy.private_tensor_names,
-            )
-        )
-        # Note (Jiaxin Deng): a model that folds several tensors into one buffer
-        # must re-derive that view here, or replicas diverge on the kernel path.
-        attached_hook = getattr(self.model, "on_weight_share_attached", None)
-        if callable(attached_hook):
-            attached_hook()
-        else:
-            pass
-        # Note (Jiaxin Deng): return the dropped dummy-weight blocks to the
-        # driver so KV-pool profiling and later replicas see the freed memory.
-        torch.cuda.empty_cache()
-
     def init_cuda_graphs(self, capture_decode_cuda_graph: bool = True):
-        """Re-verify shared weights and finish post-capture KV sizing.
-
-        Followers: catches any load-path step that re-created a parameter
-        after attach (would silently serve dummy weights). Leader: catches a
-        post-export .data rebind (would silently orphan the followers).
+        """Finish post-capture KV sizing.
 
         SGLang optionally reserves the KV pool as virtual memory and
         backs its serving span only after CUDA graph capture. Omni has several
@@ -497,19 +354,11 @@ class SGLModelRunner(ModelRunner):
         On XPU the capture is wrapped to pin SDPA, which the engines reach through
         model code SGLang's capture does not wrap.
         """
-        record = self.weight_share_record
-        if record is not None:
-            from sglang_omni.utils import ipc_weights
-
-            ipc_weights.verify_attachment(self.model, record)
-        else:
-            pass
         # Engine builders turn enable_torch_compile off on the exec bag after the
         # capture flags were seeded at publish; re-seed so capture honors that.
         from sglang.srt.runtime_context import get_exec, get_flags
 
         get_flags().capture.enable_torch_compile = get_exec().graph.enable_torch_compile
-        install_prefill_runner_dispatch()
 
         from sglang_omni.platforms import current_platform
 
@@ -557,65 +406,16 @@ class SGLModelRunner(ModelRunner):
             pass
         return result
 
-    def prefill_cuda_graph_runner_cls(self):
-        from sglang.srt.model_executor.cuda_graph_config import (
-            Backend as CudaGraphBackend,
-        )
-
-        if (
-            self.model_arch_override == "WhisperForConditionalGeneration"
-            and get_exec().graph.cuda_graph_config.prefill.backend
-            == CudaGraphBackend.BREAKABLE
-        ):
-            from sglang_omni.model_runner.whisper_prefill_cuda_graph_runner import (
-                WhisperPrefillCudaGraphRunner,
-            )
-
-            return WhisperPrefillCudaGraphRunner
-        else:
-            pass
-        return None
-
-    def weight_update_blocked_reason(self) -> str | None:
-        ws = self.weight_share_config
-        if ws is None:
-            return None
-        else:
-            pass
-        return (
-            f"weight updates are disabled while same-GPU weight sharing is "
-            f"active (role={ws.role}): replicas alias the leader's storage, "
-            "so an in-place update would corrupt every replica; restart the "
-            "whole replica group with new weights instead"
-        )
-
-    # Kept on the runner so ModelWorker has one call target and the weight-share
-    # guard applies to every update path.
+    # Kept on the runner so ModelWorker has one call target for every update path.
     def update_weights_from_disk(self, *args, **kwargs):
-        reason = self.weight_update_blocked_reason()
-        if reason is not None:
-            return False, reason
-        else:
-            pass
         return self.weight_updater.update_weights_from_disk(*args, **kwargs)
 
     def update_weights_from_tensor(self, *args, **kwargs):
-        reason = self.weight_update_blocked_reason()
-        if reason is not None:
-            return False, reason
-        else:
-            pass
         return self.weight_updater.update_weights_from_tensor(*args, **kwargs)
 
     def update_weights_from_distributed(self, *args, **kwargs):
-        reason = self.weight_update_blocked_reason()
-        if reason is not None:
-            return False, reason
-        else:
-            pass
         return self.weight_updater.update_weights_from_distributed(*args, **kwargs)
 
-    # Process-group lifecycle does not mutate weights, so it stays unguarded.
     def init_weights_update_group(self, *args, **kwargs):
         return self.weight_updater.init_weights_update_group(*args, **kwargs)
 
@@ -629,30 +429,7 @@ class SGLModelRunner(ModelRunner):
         from sglang.srt.models.registry import ModelRegistry
 
         sglang_omni_models = {
-            "S2ProSGLangTextModel": "sglang_omni.models.fishaudio_s2_pro.sglang_model:S2ProSGLangTextModel",
-            "Qwen3OmniTalker": "sglang_omni.models.qwen3_omni.components.talker:Qwen3OmniTalker",
-            "Qwen3OmniThinkerForCausalLM": "sglang_omni.models.qwen3_omni.components.sglang_thinker:Qwen3OmniThinkerForCausalLM",
-            "HiggsMultimodalQwen3ForConditionalGeneration": "sglang_omni.models.higgs_tts.model:HiggsTTSModel",
-            "Qwen3TTSTalker": "sglang_omni.models.qwen3_tts.sglang_model:Qwen3TTSTalker",
             "VoicingTTSTalker": "sglang_omni.models.voicing_tts.sglang_model:VoicingTTSTalker",
-            "MiniCPMOTalkerForCausalLM": "sglang_omni.models.minicpm_o.components.sglang_talker:MiniCPMOTalkerForCausalLM",
-            "MingTTSSGLangModel": "sglang_omni.models.ming_tts.sglang_model:MingTTSSGLangModel",
-            "MossTTSDelaySGLangModel": "sglang_omni.models.moss_tts.sglang_model:MossTTSDelaySGLangModel",
-            "MossTTSLocalSGLangModel": "sglang_omni.models.moss_tts_local.sglang_model:MossTTSLocalSGLangModel",
-            "MossTranscribeDiarizeForConditionalGeneration": "sglang_omni.models.moss_transcribe_diarize.sglang_model:MossTranscribeDiarizeForConditionalGeneration",
-            "VoxtralSGLangTTSModel": "sglang_omni.models.voxtral_tts.sglang_model:VoxtralSGLangTTSModel",
-            "Zonos2SGLangModel": "sglang_omni.models.zonos2.sglang_model:Zonos2SGLangModel",
-            "LLaDA2MoeModelLM": "sglang_omni.models.llada2_uni.components.thinker:LLaDA2MoeModelLM",
-            "WhisperForConditionalGeneration": "sglang_omni.models.whisper_asr.sglang_model:WhisperForConditionalGeneration",
-            "Qwen3ASRForConditionalGeneration": "sglang_omni.models.qwen3_asr.sglang_model:Qwen3ASRForConditionalGeneration",
-            "FunAsrNanoForConditionalGeneration": "sglang_omni.models.fun_asr.sglang_model:FunAsrNanoForConditionalGeneration",
-            "ArkasrForConditionalGeneration": "sglang_omni.models.arkasr.sglang_model:ArkasrForConditionalGeneration",
-            "DotsTTSForConditionalGeneration": "sglang_omni.models.dots_tts.sglang_model:DotsTTSSGLangModel",
-            "FunCosyVoice3SGLangModel": "sglang_omni.models.fun_cosyvoice3.sglang_model:FunCosyVoice3SGLangModel",
-            "NemotronVoiceChatForCausalLM": "sglang_omni.models.nemotron_voicechat.thinker:NemotronVoiceChatForCausalLM",
-            "NemotronVoiceChatTalker": "sglang_omni.models.nemotron_voicechat.talker:NemotronVoiceChatTalker",
-            "PersonaPlexForCausalLM": "sglang_omni.models.personaplex.sglang_model:PersonaPlexForCausalLM",
-            "MiniCPMO": "sglang_omni.models.minicpm_o.components.sglang_thinker:MiniCPMOThinkerForCausalLM",
         }
         for arch, path in sglang_omni_models.items():
             module_path, _, attr = path.partition(":")
@@ -662,17 +439,6 @@ class SGLModelRunner(ModelRunner):
                 )
             except Exception as exc:
                 logger.warning(f"sglang-omni: skipping model {arch} ({exc})")
-
-        try:
-            from sglang_omni.models.ming_omni.registration import (
-                register_ming_hf_config,
-                register_ming_model_registry,
-            )
-
-            register_ming_hf_config()
-            register_ming_model_registry()
-        except Exception as exc:
-            logger.warning(f"sglang-omni: skipping Ming-Omni registration ({exc})")
 
     def init_kv_cache_configurator(self):
         """Swap in the Omni configurator so the colocated budget stays hooked.

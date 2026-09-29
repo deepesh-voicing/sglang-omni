@@ -28,8 +28,6 @@ GPU_IDLE_THRESHOLD_MB = 2048
 GPU_IDLE_WAIT_SECONDS = 600
 GPU_IDLE_POLL_SECONDS = 5
 WAV_HEADER_SIZE = 44
-SSE_DATA_PREFIX = "data: "
-SSE_DONE_MARKER = "data: [DONE]"
 STREAM_SERVER_LOGS_ENV = "OMNI_CI_STREAM_SERVER_LOGS"
 
 
@@ -380,13 +378,6 @@ def get_wav_duration(wav_bytes: bytes) -> float:
     bytes_per_sample = num_channels * bits_per_sample // 8
     pcm_size = len(wav_bytes) - WAV_HEADER_SIZE
     return pcm_size / (sample_rate * bytes_per_sample)
-
-
-def parse_sse_event(line: str) -> dict | None:
-    """Parse one Server-Sent Event (SSE) JSON line."""
-    if not line.startswith(SSE_DATA_PREFIX) or line == SSE_DONE_MARKER:
-        return None
-    return json.loads(line[len(SSE_DATA_PREFIX) :])
 
 
 def wait_for_service(

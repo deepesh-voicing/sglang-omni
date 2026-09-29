@@ -1,10 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """Shared ASR task layer: transcription, WER scoring, and ASR speed assembly.
 
-Owns the ASR/WER primitives shared by the standalone ASR benchmark
-(benchmarks/eval/benchmark_asr_seedtts.py), the ASR CI gate
-(tests/test_model/test_asr_ci_seedtts.py), the TTS WER stage
-(benchmarks.tasks.tts.run_seedtts_transcribe), and the talker WER paths.
+Transcription goes through an external OpenAI-compatible
+/v1/audio/transcriptions server; this repository does not serve ASR models.
+Used by the TTS WER stage (benchmarks.tasks.tts.run_seedtts_transcribe).
 """
 
 from __future__ import annotations
@@ -42,14 +41,13 @@ OMNI_WHISPER_MODEL_PATH = "openai/whisper-large-v3"
 OMNI_WHISPER_REQUEST_TIMEOUT_S = 300
 # note (aaron): the Whisper encoder accepts at most ~30 s per request
 # (nb_max_frames=3000). The transformers pipeline uses chunk_length_s=30 and
-# long talker audio mirrors that.
+# long generated audio mirrors that.
 OMNI_WHISPER_CHUNK_LENGTH_S = 30
 OMNI_WHISPER_CHUNK_STRIDE_S = 25
 OMNI_WHISPER_SAMPLE_RATE = 16000
 
 QWEN3_ASR_MODEL_PATH = "Qwen/Qwen3-ASR-1.7B"
 QWEN3_ASR_REQUEST_TIMEOUT_S = 300
-FUN_ASR_MODEL_PATH = "FunAudioLLM/Fun-ASR-Nano-2512-hf"
 # note (aaron): ASR transcription fan-out for WER, not TTS generation concurrency.
 DEFAULT_ASR_TRANSCRIBE_CONCURRENCY = 32
 # note (aaron): warmup requests sent before the timed window, per unit of concurrency.
@@ -119,7 +117,7 @@ def _wav_bytes_from_mono_16k(audio: torch.Tensor) -> bytes:
     return buffer.getvalue()
 
 
-def _post_omni_whisper_transcription(
+def _post_whisper_transcription(
     asr: dict,
     audio_bytes: bytes,
     filename: str,
@@ -146,12 +144,12 @@ def _post_omni_whisper_transcription(
     return str(response.json()["text"])
 
 
-def _transcribe_omni_whisper(asr: dict, wav_path: str, lang: str) -> str:
+def _transcribe_chunked_whisper(asr: dict, wav_path: str, lang: str) -> str:
     audio = _load_wav_mono_16k(wav_path)
     duration_s = float(audio.shape[0]) / OMNI_WHISPER_SAMPLE_RATE
     if duration_s <= OMNI_WHISPER_CHUNK_LENGTH_S:
         with open(wav_path, "rb") as audio_file:
-            return _post_omni_whisper_transcription(
+            return _post_whisper_transcription(
                 asr,
                 audio_file.read(),
                 os.path.basename(wav_path),
@@ -167,7 +165,7 @@ def _transcribe_omni_whisper(asr: dict, wav_path: str, lang: str) -> str:
             break
         chunk_bytes = _wav_bytes_from_mono_16k(chunk)
         chunk_texts.append(
-            _post_omni_whisper_transcription(
+            _post_whisper_transcription(
                 asr,
                 chunk_bytes,
                 f"{os.path.basename(wav_path)}.chunk{start // stride_samples}.wav",
@@ -179,25 +177,25 @@ def _transcribe_omni_whisper(asr: dict, wav_path: str, lang: str) -> str:
     return " ".join(text for text in chunk_texts if text)
 
 
-def load_omni_whisper_asr(
+def load_chunked_whisper_asr(
     router_port: int,
     model_path: str = OMNI_WHISPER_MODEL_PATH,
 ) -> dict:
-    """Return an ASR handle that transcribes via SGLang Omni Whisper router."""
+    """Return an ASR handle for an external Whisper transcription server."""
     return {
-        "type": "omni_whisper",
+        "type": "chunked_whisper",
         "router_port": router_port,
         "model_path": model_path,
     }
 
 
-def load_qwen3_asr(
+def load_single_request_asr(
     router_port: int,
     model_path: str = QWEN3_ASR_MODEL_PATH,
 ) -> dict:
-    """Return an ASR handle that transcribes via a Qwen3-ASR sglang-omni router."""
+    """Return an ASR handle for an external OpenAI-compatible ASR server."""
     return {
-        "type": "qwen3_asr",
+        "type": "single_request",
         "router_port": router_port,
         "model_path": model_path,
     }
@@ -211,18 +209,20 @@ def load_router_asr(
     router_port: int,
     model_path: str = QWEN3_ASR_MODEL_PATH,
 ) -> dict:
-    """Return an ASR handle backed by a running SGLang Omni ASR server."""
+    """Return an ASR handle backed by a running external ASR server."""
     if _is_whisper_asr_model(model_path):
-        return load_omni_whisper_asr(router_port, model_path=model_path)
-    return load_qwen3_asr(router_port, model_path=model_path)
+        return load_chunked_whisper_asr(router_port, model_path=model_path)
+    else:
+        pass
+    return load_single_request_asr(router_port, model_path=model_path)
 
 
-def _transcribe_qwen3_asr(asr: dict, wav_path: str, lang: str) -> str:
-    """Transcribe one wav via the Qwen3-ASR server's /v1/audio/transcriptions.
+def _transcribe_single_request_asr(asr: dict, wav_path: str, lang: str) -> str:
+    """Transcribe one wav via the external server's /v1/audio/transcriptions.
 
-    note (Xinyu): Qwen3-ASR uses its greedy server default unless the caller
-    sends an explicit sampling temperature. The language field selects the
-    forced prefix. max_new_tokens comes from the Qwen3 ASR pipeline config.
+    note (Xinyu): the server's greedy default applies unless the caller sends
+    an explicit sampling temperature. The language field selects the forced
+    prefix.
     """
     with open(wav_path, "rb") as audio_file:
         response = requests.post(
@@ -256,28 +256,27 @@ def _resolve_asr_backend(
 def load_asr_model(lang: str, device: str, generation_mode: str | None = None):
     """Legacy local ASR entry point.
 
-    WER now runs through SGLang Omni's OpenAI-compatible transcription endpoint.
-    Start an ASR server with sglang_omni.cli serve and pass its port instead
-    of loading local ASR backends in-process.
+    WER runs through an external OpenAI-compatible transcription endpoint;
+    pass its port instead of loading local ASR backends in-process.
     """
     mode_suffix = f" for {generation_mode} generation" if generation_mode else ""
     del device
     if lang not in {"en", "zh"}:
         raise ValueError(f"Unsupported language: {lang}")
     raise ValueError(
-        "WER transcription requires a running SGLang Omni ASR server"
-        f"{mode_suffix}. Start Qwen3-ASR (default "
-        f"{QWEN3_ASR_MODEL_PATH}) or {OMNI_WHISPER_MODEL_PATH} and pass "
-        "asr_router_port."
+        "WER transcription requires a running external OpenAI-compatible ASR "
+        f"server{mode_suffix} (e.g. serving {QWEN3_ASR_MODEL_PATH} or "
+        f"{OMNI_WHISPER_MODEL_PATH}); pass asr_router_port."
     )
 
 
 def transcribe(asr: dict, wav_path: str, lang: str, device: str) -> str:
-    if asr["type"] == "qwen3_asr":
-        return _transcribe_qwen3_asr(asr, wav_path, lang)
-    if asr["type"] == "omni_whisper":
-        return _transcribe_omni_whisper(asr, wav_path, lang)
-    raise ValueError(f"Unknown ASR type: {asr['type']}")
+    if asr["type"] == "single_request":
+        return _transcribe_single_request_asr(asr, wav_path, lang)
+    elif asr["type"] == "chunked_whisper":
+        return _transcribe_chunked_whisper(asr, wav_path, lang)
+    else:
+        raise ValueError(f"Unknown ASR type: {asr['type']}")
 
 
 def apply_wer(output: SampleOutput, hyp_text: str, lang: str) -> SampleOutput:
@@ -323,11 +322,11 @@ def make_asr_send_fn(
     stream: bool = False,
 ) -> SendFn:
     """Return a send_fn(session, sample) -> RequestResult that transcribes one
-    SeedTTS reference clip via the Omni /v1/audio/transcriptions endpoint.
+    SeedTTS clip via the external /v1/audio/transcriptions endpoint.
 
-    note (Xinyu): Qwen3-ASR uses its greedy server default unless the caller
-    sends an explicit sampling temperature. The language field selects the
-    forced prefix. max_new_tokens comes from the Qwen3 ASR pipeline config.
+    note (Xinyu): the server's greedy default applies unless the caller sends
+    an explicit sampling temperature. The language field selects the forced
+    prefix.
     """
 
     async def send_fn(
@@ -435,7 +434,7 @@ async def run_asr_transcription(
     disable_tqdm: bool = True,
     stream: bool = False,
 ) -> tuple[list[RequestResult], float]:
-    """Transcribe samples against a running ASR router at one concurrency.
+    """Transcribe samples against a running external ASR server at one concurrency.
 
     Returns (outputs, wall_clock_s) via the shared BenchmarkRunner.
     """
@@ -465,8 +464,8 @@ def build_asr_eval_results(
     """Score transcriptions and assemble WER + speed metrics.
 
     Returns {"summary": wer, "speed": speed, "per_sample": [...]} with the
-    exact summary.* and speed.* keys the Qwen3-ASR gate writes and the
-    tune-ci-thresholds config reads. WER/speed reuse benchmarks.metrics.
+    summary.* and speed.* keys the tune-ci-thresholds config reads. WER/speed
+    reuse benchmarks.metrics.
     """
     result_by_id = {result.request_id: result for result in outputs}
     sample_outputs: list[SampleOutput] = []

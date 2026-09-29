@@ -11,20 +11,11 @@ from typing import Any, AsyncIterator, Callable
 
 import numpy as np
 
-from sglang_omni.client.audio import (
-    DEFAULT_SAMPLE_RATE,
-    FORMAT_MIME_TYPES,
-    audio_to_base64,
-    encode_audio,
-    to_numpy,
-)
+from sglang_omni.client.audio import FORMAT_MIME_TYPES, encode_audio, to_numpy
 from sglang_omni.client.types import (
     AbortLevel,
     AbortResult,
     ClientError,
-    CompletionAudio,
-    CompletionResult,
-    CompletionStreamChunk,
     GenerateChunk,
     GenerateRequest,
     SpeechResult,
@@ -33,12 +24,6 @@ from sglang_omni.client.types import (
 from sglang_omni.pipeline.coordinator import Coordinator
 from sglang_omni.proto import OmniRequest, RequestState, StreamMessage
 from sglang_omni.proto.request import EXPLICIT_STAGE_SAMPLING_PARAMS_KEY
-from sglang_omni.proto.session import (
-    OutputChunk,
-    SessionIdentity,
-    SessionLimits,
-    TimedChunk,
-)
 
 
 class Client:
@@ -53,32 +38,6 @@ class Client:
         self.coordinator = coordinator
         self.result_builder = result_builder or self.default_result_builder
         self.stream_builder = stream_builder or self.default_stream_builder
-
-    async def open_session(
-        self,
-        request: OmniRequest,
-        *,
-        stages: list[str],
-        limits: SessionLimits | None = None,
-        session_id: str | None = None,
-    ) -> SessionIdentity:
-        """Open an explicitly configured stateful pipeline route."""
-        return await self.coordinator.open_session(
-            request, stages=stages, limits=limits, session_id=session_id
-        )
-
-    async def append_session(
-        self, session_identity: SessionIdentity, chunk: TimedChunk
-    ) -> int:
-        return await self.coordinator.append_session(session_identity, chunk)
-
-    def session_outputs(
-        self, session_identity: SessionIdentity
-    ) -> AsyncIterator[OutputChunk]:
-        return self.coordinator.session_outputs(session_identity)
-
-    async def close_session(self, session_identity: SessionIdentity) -> None:
-        await self.coordinator.close_session(session_identity)
 
     # ------------------------------------------------------------------
     # Low-level generate (backward compatible)
@@ -110,160 +69,9 @@ class Client:
     # High-level: non-streaming completion
     # ------------------------------------------------------------------
 
-    async def completion(
-        self,
-        request: GenerateRequest,
-        *,
-        request_id: str,
-        audio_format: str = "wav",
-    ) -> CompletionResult:
-        """Run a non-streaming completion and return an aggregated result.
-
-        Iterates ``generate()``, accumulates text, concatenates audio chunks,
-        and encodes audio to base64.
-
-        Raises:
-            ClientError: If the pipeline produces no response at all.
-        """
-        text_parts: list[str] = []
-        audio_chunks: list[Any] = []
-        sample_rate: int | None = None
-        last_chunk: GenerateChunk | None = None
-        finish_reason: str | None = None
-        logprobs_parts: list[Any] = []
-        saw_output_token_logprobs = False
-        omni_rollout: dict[str, Any] | None = None
-        weight_version: str | None = None
-        language: str | None = None
-
-        async for chunk in self.generate(request, request_id=request_id):
-            last_chunk = chunk
-            if chunk.text:
-                text_parts.append(chunk.text)
-            else:
-                pass
-            if chunk.audio_data is not None:
-                audio_chunks.append(chunk.audio_data)
-            else:
-                pass
-            if chunk.sample_rate is not None:
-                sample_rate = chunk.sample_rate
-            else:
-                pass
-            if chunk.finish_reason is not None:
-                finish_reason = chunk.finish_reason
-            else:
-                pass
-            if chunk.output_token_logprobs is not None:
-                saw_output_token_logprobs = True
-                logprobs_parts.extend(chunk.output_token_logprobs)
-            else:
-                pass
-            if chunk.omni_rollout is not None:
-                omni_rollout = chunk.omni_rollout
-            else:
-                pass
-            if chunk.weight_version is not None:
-                weight_version = chunk.weight_version
-            else:
-                pass
-            if chunk.language is not None:
-                language = chunk.language
-            else:
-                pass
-
-        if last_chunk is None:
-            raise ClientError("No response from pipeline")
-        else:
-            pass
-
-        full_text = "".join(text_parts)
-
-        audio: CompletionAudio | None = None
-        if audio_chunks:
-            if len(audio_chunks) == 1:
-                combined = audio_chunks[0]
-            else:
-                arrays = [to_numpy(c) for c in audio_chunks]
-                axis = -1 if arrays[0].ndim > 1 else 0
-                combined = np.concatenate(arrays, axis=axis)
-            audio_b64 = audio_to_base64(
-                combined,
-                sample_rate=sample_rate or DEFAULT_SAMPLE_RATE,
-                output_format=audio_format,
-            )
-            audio = CompletionAudio(
-                id=f"audio-{request_id}",
-                data=audio_b64,
-                transcript=full_text if full_text else None,
-            )
-        else:
-            pass
-
-        return CompletionResult(
-            request_id=request_id,
-            text=full_text,
-            audio=audio,
-            finish_reason=finish_reason or "stop",
-            usage=last_chunk.usage,
-            output_token_logprobs=(
-                logprobs_parts if saw_output_token_logprobs else None
-            ),
-            omni_rollout=omni_rollout,
-            weight_version=weight_version,
-            language=language,
-        )
-
     # ------------------------------------------------------------------
     # High-level: streaming completion
     # ------------------------------------------------------------------
-
-    async def completion_stream(
-        self,
-        request: GenerateRequest,
-        *,
-        request_id: str,
-        audio_format: str = "wav",
-    ) -> AsyncIterator[CompletionStreamChunk]:
-        """Iterate ``generate()`` and yield high-level stream chunks.
-
-        Audio data is base64-encoded before yielding so that callers never
-        need to touch numpy / raw bytes.
-        """
-        streamed_text = ""
-        generate_stream = self.generate(request, request_id=request_id)
-        async with aclosing(generate_stream):
-            async for chunk in generate_stream:
-                audio_b64: str | None = None
-                if chunk.modality == "audio" and chunk.audio_data is not None:
-                    audio_b64 = audio_to_base64(
-                        chunk.audio_data,
-                        sample_rate=chunk.sample_rate or DEFAULT_SAMPLE_RATE,
-                        output_format=audio_format,
-                    )
-                else:
-                    pass
-
-                text = chunk.text
-                if chunk.modality == "text" and text:
-                    if chunk.finish_reason is None:
-                        streamed_text += text
-                    elif streamed_text and text.startswith(streamed_text):
-                        text = text[len(streamed_text) :] or None
-                    else:
-                        pass
-                else:
-                    pass
-
-                yield CompletionStreamChunk(
-                    request_id=request_id,
-                    text=text,
-                    modality=chunk.modality,
-                    audio_b64=audio_b64,
-                    finish_reason=chunk.finish_reason,
-                    usage=chunk.usage,
-                    stage_name=chunk.stage_name,
-                )
 
     # ------------------------------------------------------------------
     # High-level: text-to-speech
@@ -583,52 +391,6 @@ class Client:
         else:
             pass
         if isinstance(result, dict):
-            # Multi-terminal merged result, e.g. decode + code2wav/talker/
-            # talker_stream.
-            audio_result = None
-            if "decode" in result:
-                for audio_stage in ("code2wav", "talker", "talker_stream"):
-                    if audio_stage in result:
-                        audio_result = result[audio_stage] or {}
-                        break
-                    else:
-                        pass
-            else:
-                pass
-            if audio_result is not None:
-                decode_result = result["decode"] or {}
-                text = decode_result.get("text")
-                if isinstance(text, str):
-                    chunk.text = text
-                else:
-                    pass
-                finish_reason = decode_result.get("finish_reason")
-                if finish_reason is not None:
-                    chunk.finish_reason = finish_reason
-                else:
-                    pass
-                output_token_logprobs = decode_result.get("output_token_logprobs")
-                if output_token_logprobs is not None:
-                    chunk.output_token_logprobs = output_token_logprobs
-                else:
-                    pass
-                omni_rollout = decode_result.get("omni_rollout")
-                if omni_rollout is not None:
-                    chunk.omni_rollout = omni_rollout
-                else:
-                    pass
-                weight_version = decode_result.get("weight_version")
-                if weight_version is not None:
-                    chunk.weight_version = weight_version
-                else:
-                    pass
-                Client.set_audio_data(chunk, audio_result)
-                chunk.usage = Client.build_usage_info(
-                    decode_result
-                ) or Client.build_usage_info(audio_result)
-                return chunk
-            else:
-                pass
             text = result.get("text")
             if isinstance(text, str):
                 chunk.text = text
@@ -796,81 +558,11 @@ class Client:
 
 
 def extract_inputs(request: GenerateRequest) -> Any:
-    choices = [
-        request.prompt is not None,
-        request.prompt_token_ids is not None,
-        request.messages is not None,
-    ]
-    if sum(choices) != 1:
-        raise ValueError(
-            "GenerateRequest requires exactly one input: "
-            "prompt, prompt_token_ids, or messages."
-        )
+    if request.prompt is None:
+        raise ValueError("GenerateRequest requires a prompt.")
     else:
         pass
-    if request.multimodal_train_inputs is not None:
-        if request.prompt_token_ids is None:
-            raise ValueError(
-                "multimodal_train_inputs requires prompt_token_ids "
-                "(the processor-expanded input_ids)"
-            )
-        else:
-            pass
-        return {
-            "input_ids": list(request.prompt_token_ids),
-            "multimodal_train_inputs": request.multimodal_train_inputs,
-        }
-    else:
-        pass
-    if request.prompt is not None:
-        return request.prompt
-    else:
-        pass
-    if request.prompt_token_ids is not None:
-        return list(request.prompt_token_ids)
-    else:
-        pass
-
-    # Build messages list
-    messages = [msg.to_dict() for msg in request.messages or []]
-
-    # Check if we have audios, images, or videos in metadata
-    audios = request.metadata.get("audios")
-    images = request.metadata.get("images")
-    videos = request.metadata.get("videos")
-
-    # If we have any media, return a dict with messages and media
-    # Otherwise, return just the messages list (for backward compatibility)
-    if audios or images or videos:
-        result = {"messages": messages}
-        if images:
-            result["images"] = images
-        else:
-            pass
-        if audios:
-            result["audios"] = audios
-        else:
-            pass
-        if videos:
-            result["videos"] = videos
-        else:
-            pass
-        for key in (
-            "video_fps",
-            "video_max_frames",
-            "video_min_pixels",
-            "video_max_pixels",
-            "video_total_pixels",
-        ):
-            value = request.metadata.get(key)
-            if value is not None:
-                result[key] = value
-            else:
-                pass
-        return result
-    else:
-        pass
-    return messages
+    return request.prompt
 
 
 def build_params(request: GenerateRequest) -> dict[str, Any]:

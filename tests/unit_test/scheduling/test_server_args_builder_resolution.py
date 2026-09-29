@@ -21,7 +21,6 @@ from sglang_omni.scheduling.generation_batch_policy import (
     get_prefill_cuda_graph_backend,
 )
 from sglang_omni.scheduling.sglang_backend.server_args_builder import (
-    apply_encoder_mem_reserve,
     build_sglang_server_args,
 )
 from sglang_omni.utils.gpu_compat import (
@@ -70,22 +69,6 @@ def test_accessors_read_the_declared_cuda_graph_config(tmp_path: Path) -> None:
     assert get_prefill_cuda_graph_backend(server_args) == Backend.DISABLED
     assert declared.decode.max_bs is not None
     assert get_decode_cuda_graph_max_bs(server_args) == declared.decode.max_bs
-
-
-def test_encoder_mem_reserve_reads_the_declared_fraction(tmp_path: Path) -> None:
-    server_args = build_sglang_server_args(
-        write_mini_llama_checkpoint(tmp_path), context_length=2048, device="cuda"
-    )
-    declared = resolution_result(server_args, "mem_fraction_static")
-
-    assert server_args.mem_fraction_static is None
-    assert declared is not None
-
-    apply_encoder_mem_reserve(server_args, 0.1)
-
-    assert resolution_result(server_args, "mem_fraction_static") == round(
-        declared - 0.1, 3
-    )
 
 
 def test_builder_enables_torch_compile_by_default(tmp_path: Path) -> None:

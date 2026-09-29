@@ -26,48 +26,16 @@ from sglang_omni.utils.gpu_compat import should_disable_custom_all_reduce_for_gp
 logger = logging.getLogger(__name__)
 
 
-_QWEN_COLOCATED_CONFIG_CLASS = "Qwen3OmniSpeechColocatedPipelineConfig"
-
-
 def launch_server(*args: object, **kwargs: object) -> object:
     from sglang_omni.serve.launcher import launch_server as _launch_server
 
     return _launch_server(*args, **kwargs)
 
 
-def validate_colocate_cli_request(
-    *,
-    colocate: bool,
-    config: str | None,
-    text_only: bool,
-) -> None:
-    if not colocate:
-        return
-    else:
-        pass
-    if text_only:
-        raise typer.BadParameter("--colocate cannot be combined with --text-only")
-    else:
-        pass
-    if not config:
-        raise typer.BadParameter("--colocate requires --config")
-    else:
-        pass
-
-
-def validate_colocate_config(pipeline_config: PipelineConfig) -> None:
-    if type(pipeline_config).__name__ != _QWEN_COLOCATED_CONFIG_CLASS:
-        raise typer.BadParameter(
-            f"--colocate requires a {_QWEN_COLOCATED_CONFIG_CLASS} config file"
-        )
-    else:
-        pass
-
-
-def should_print_merged_config(*, colocate: bool, log_level: str) -> bool:
+def should_print_merged_config(*, log_level: str) -> bool:
     """Return whether to print the full resolved pipeline config."""
 
-    return colocate or log_level.lower() == "debug"
+    return log_level.lower() == "debug"
 
 
 def print_merged_config(pipeline_config: PipelineConfig) -> None:
@@ -187,7 +155,7 @@ def gate_custom_all_reduce_on_topology(
 ) -> dict[str, object]:
     """Relax a TP ``disable_custom_all_reduce=True`` override on a P2P-capable topology.
 
-    The config-level overrides disable custom all-reduce for every TP thinker.
+    The config-level overrides disable custom all-reduce for every TP engine stage.
     Custom (P2P/NVLink) all-reduce is faster than NCCL and safe when the TP GPUs
     form a P2P mesh, so re-enable it when the caller's topology probe confirms one
     (``should_disable`` is False); otherwise keep it disabled. SGLang still performs
@@ -297,20 +265,6 @@ def serve(
     config: Annotated[
         str | None, typer.Option(help="Path to a pipeline config file.")
     ] = None,
-    text_only: Annotated[
-        bool,
-        typer.Option(
-            "--text-only",
-            help="Use thinker-only pipeline (1 GPU, no talker/speech output).",
-        ),
-    ] = False,
-    colocate: Annotated[
-        bool,
-        typer.Option(
-            "--colocate",
-            help="Run Qwen speech with GPU stages colocated on one GPU.",
-        ),
-    ] = False,
     host: Annotated[
         str, typer.Option(help="Server bind address (default: 0.0.0.0).")
     ] = "0.0.0.0",
@@ -366,32 +320,18 @@ def serve(
         Literal["debug", "info", "warning", "error", "critical"],
         typer.Option(help="Log level (default: info)."),
     ] = "info",
-    enable_realtime: Annotated[
-        bool,
-        typer.Option(
-            "--enable-realtime",
-            "--enable_realtime",
-            help="Mount the OpenAI Realtime WebSocket endpoint at /v1/realtime.",
-        ),
-    ] = False,
 ) -> None:
     """Serve the pipeline.
 
     Per-stage settings are dotted flags mirroring the YAML ``stages:``
     mapping, with the ``stages.`` prefix implied:
-    ``--thinker.engine.mem_fraction_static 0.6``,
-    ``--vocoder.factory.max_concurrency 8``, ``--talker_ar.gpu 1``,
-    ``--thinker.process thinker``.
+    ``--tts_engine.engine.mem_fraction_static 0.6``,
+    ``--vocoder.factory.max_concurrency 8``, ``--tts_engine.gpu 1``,
+    ``--preprocessing.process preprocessing``.
     """
     logging.basicConfig(
         level=getattr(logging, log_level.upper()),
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    )
-
-    validate_colocate_cli_request(
-        colocate=colocate,
-        config=config,
-        text_only=text_only,
     )
 
     # --- Resolve config ---
@@ -403,12 +343,6 @@ def serve(
             # two entries disagreeing about one path: all of these carry a
             # message written to be read, not a traceback.
             raise typer.BadParameter(str(exc)) from exc
-    elif text_only:
-        if model_path is None:
-            raise typer.BadParameter("--model-path is required unless --config is set")
-        else:
-            pass
-        config_manager = ConfigManager.from_model_path(model_path, variant="text")
     else:
         if model_path is None:
             raise typer.BadParameter("--model-path is required unless --config is set")
@@ -452,13 +386,9 @@ def serve(
         # carries a message written to be read; a traceback would bury it
         # under the merge internals.
         raise typer.BadParameter(str(exc)) from exc
-    if colocate:
-        validate_colocate_config(merged_config)
-    else:
-        pass
     merged_config = apply_tensor_parallel_engine_overrides(merged_config)
 
-    if should_print_merged_config(colocate=colocate, log_level=log_level):
+    if should_print_merged_config(log_level=log_level):
         print_merged_config(merged_config)
     else:
         pass
@@ -469,7 +399,6 @@ def serve(
         port=port,
         model_name=model_name,
         log_level=log_level,
-        enable_realtime=enable_realtime,
         allowed_local_media_path=validate_allowed_local_media_path(
             allowed_local_media_path
         ),

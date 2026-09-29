@@ -1,11 +1,12 @@
-# Qwen3-TTS Base: Leading Silence in X-Vector Voice Cloning
+# Voicing-TTS Base: Leading Silence in X-Vector Voice Cloning
 
 A Base voice clone without a reference transcript (x-vector mode) often opens with
 several frames of silence before any speech. The silence is part of the generated
 codec, so it adds directly to the time to first audible sample, in streaming and
 non-streaming output alike. The engine now excludes silence codec ids from the first
 two frames of x-vector-only requests. This page records how the cause was found,
-how the default was chosen, and what it costs.
+how the default was chosen, and what it costs. The measurements were taken on the
+same weights and pipeline before the package was renamed to Voicing-TTS.
 
 ## Where the silence comes from
 
@@ -46,7 +47,7 @@ Hardware: 4x H200, one server per GPU. Each row is one server.
   `zhaochenyang20/seed-tts-eval-mini`, 12 prompts, seeds 0 to 9, concurrency 8).
 - **SeedTTS**: the full SeedTTS EN set (1088 clips) through
   `benchmarks/eval/benchmark_tts_seedtts.py --no-ref-text --seed 0 --concurrency 16`,
-  WER from the CI ASR model, speaker similarity from the CI WavLM scorer.
+  WER from an external ASR model, speaker similarity from the WavLM scorer.
 - **Onset**: the first 5 ms frame whose peak reaches 0.02 (-34 dBFS). A 10 ms RMS
   detector at -40 dBFS gives medians within 25 ms of it.
 - **Runaways**: clips that ran to `max_new_tokens` (163.84 s).

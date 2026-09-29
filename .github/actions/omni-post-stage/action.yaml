@@ -11,8 +11,8 @@ inputs:
   artifact-search-root:
     description: >
       Directory that `find` descends into when resolving `artifact-path-globs`.
-      Qwen3-Omni tests write to `/tmp` via pytest `tmp_path`; staged TTS CI
-      tests write under `stage-results/<name>/` inside `$GITHUB_WORKSPACE`.
+      Tests using pytest `tmp_path` write to `/tmp`; staged TTS CI tests write
+      under `stage-results/<name>/` inside `$GITHUB_WORKSPACE`.
       Set accordingly.
     required: false
     default: "/tmp"

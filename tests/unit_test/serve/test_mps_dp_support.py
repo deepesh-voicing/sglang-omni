@@ -1,9 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Claim-to-execution checks for the mps_dp weight-share support registry.
+"""Claim-to-execution checks for the mps_dp launcher preflight.
 
-Every model advertised as weight-share supported must resolve through the real
-launcher preflight, every unsupported topology must fail before any resource
-is created, and the docs table must agree with the code registries.
+Every topology the launcher accepts must resolve through the real preflight,
+and every unsupported one must fail before any resource is created.
 """
 
 from __future__ import annotations
@@ -17,39 +16,15 @@ from pathlib import Path
 
 import pytest
 
-from sglang_omni.models.fun_asr.config import FunASRPipelineConfig
-from sglang_omni.models.higgs_tts.config import HiggsTtsPipelineConfig
-from sglang_omni.models.moss_transcribe_diarize.config import (
-    MossTranscribeDiarizePipelineConfig,
-)
-from sglang_omni.models.moss_tts.config import (
-    MossTTSPipelineConfig,
-    MossTTSSingleProcessPipelineConfig,
-)
-from sglang_omni.models.moss_tts_local.config import MossTTSLocalPipelineConfig
-from sglang_omni.models.qwen3_asr.config import Qwen3ASRPipelineConfig
-from sglang_omni.models.whisper_asr.config import WhisperASRPipelineConfig
-from sglang_omni.utils import ipc_weights
+from sglang_omni.models.voicing_tts.config import VoicingTTSPipelineConfig
 from sglang_omni.utils.gpu_memory import GpuDeviceInfo
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 MPS_DP_DIR = REPO_ROOT / "examples" / "mps_dp"
-DOCS_PAGE = REPO_ROOT / "docs" / "basic_usage" / "mps_dp.md"
 
 spec = importlib.util.spec_from_file_location("mps_dp_config", MPS_DP_DIR / "config.py")
 mps_dp_config = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mps_dp_config)
-
-VALIDATED_CONFIG_CLASSES = {
-    "HiggsTtsPipelineConfig": HiggsTtsPipelineConfig,
-    "MossTTSLocalPipelineConfig": MossTTSLocalPipelineConfig,
-    "MossTTSPipelineConfig": MossTTSPipelineConfig,
-    "MossTTSSingleProcessPipelineConfig": MossTTSSingleProcessPipelineConfig,
-    "MossTranscribeDiarizePipelineConfig": MossTranscribeDiarizePipelineConfig,
-    "Qwen3ASRPipelineConfig": Qwen3ASRPipelineConfig,
-    "WhisperASRPipelineConfig": WhisperASRPipelineConfig,
-    "FunASRPipelineConfig": FunASRPipelineConfig,
-}
 
 
 def write_yaml(tmp_path: Path, config_cls: str, name: str = "probe") -> Path:
@@ -68,77 +43,28 @@ def strict_budget(*args, **kwargs):
     )
 
 
-def test_registry_matches_weight_share_policies():
-    # Note (Jiaxin Deng): implications, not an identity: every validated
-    # config's architecture must be gate-enabled and never audit-only, and
-    # (under today's binary support rule) every gate-enabled architecture must
-    # have at least one validated config. One architecture may back several
-    # configs.
-    registry = mps_dp_config.WEIGHT_SHARE_VALIDATED_CONFIGS
-    assert set(registry) == set(VALIDATED_CONFIG_CLASSES)
-    assert set(registry.values()) <= set(ipc_weights.WEIGHT_SHARE_POLICIES)
-    assert set(ipc_weights.WEIGHT_SHARE_POLICIES) <= set(registry.values())
-    assert not set(registry.values()) & set(
-        ipc_weights.AUDIT_ONLY_WEIGHT_SHARE_POLICIES
+def test_voicing_tts_has_a_drivable_topology():
+    cls = VoicingTTSPipelineConfig
+    config = cls(model_path="dummy")
+    engine_stages = [
+        stage.name
+        for stage in config.stages
+        if cls.stage_config_cls(stage.name).engine_stage
+    ]
+    assert engine_stages == ["tts_engine"]
+
+
+def test_single_engine_pipeline_resolves_but_pins_nothing(tmp_path):
+    """Voicing-TTS drives one SGLang engine, which is the launcher's structural
+    requirement; with no max_total_tokens pinned it resolves to (stage, None),
+    and launch.sh refuses an unpinned KV budget for N > 1 before creating any
+    state."""
+    yaml_path = write_yaml(tmp_path, "VoicingTTSPipelineConfig")
+    stage_name, value = mps_dp_config.resolve_max_total_tokens(
+        yaml_path, require_single_sglang_engine=True
     )
-
-
-def test_every_validated_config_class_has_a_drivable_topology():
-    for name, cls in VALIDATED_CONFIG_CLASSES.items():
-        config = cls(model_path="dummy")
-        engine_stages = [
-            stage.name
-            for stage in config.stages
-            if cls.stage_config_cls(stage.name).engine_stage
-        ]
-        assert (
-            len(engine_stages) == 1
-        ), f"{name} is not a single-SGLang-engine pipeline: {engine_stages}"
-
-
-def test_every_shipped_example_config_resolves_with_sharing(tmp_path):
-    yamls = sorted((MPS_DP_DIR / "configs").glob("*.yaml"))
-    assert yamls, "no example configs shipped"
-    for yaml_path in yamls:
-        stage_name, value = mps_dp_config.resolve_max_total_tokens(
-            yaml_path, require_single_sglang_engine=True, weight_share=True
-        )
-        assert stage_name
-        assert (
-            isinstance(value, int) and value > 0
-        ), f"{yaml_path.name} does not pin a positive max_total_tokens"
-
-
-@pytest.mark.parametrize(
-    "config_cls", ["LLaDA2UniPipelineConfig", "Qwen3OmniPipelineConfig"]
-)
-def test_single_engine_pipelines_resolve_but_pin_nothing(tmp_path, config_cls):
-    """These pipelines drive one SGLang engine (the thinker), which is the
-    launcher's structural requirement; with no max_total_tokens pinned they
-    resolve to (stage, None), and launch.sh refuses an unpinned KV budget for
-    N > 1 before creating any state."""
-    yaml_path = write_yaml(tmp_path, config_cls)
-    stage_name, value = mps_dp_config.resolve_max_total_tokens(yaml_path)
-    assert stage_name == "thinker"
+    assert stage_name == "tts_engine"
     assert value is None
-
-
-def test_multi_engine_pipeline_fails_the_singleton_check(tmp_path):
-    yaml_path = write_yaml(tmp_path, "Qwen3OmniSpeechPipelineConfig")
-    with pytest.raises(ValueError, match="one SGLang engine stage"):
-        mps_dp_config.resolve_max_total_tokens(
-            yaml_path, require_single_sglang_engine=True
-        )
-
-
-@pytest.mark.parametrize(
-    "config_cls",
-    ["VoxtralTTSPipelineConfig", "Qwen3TTSPipelineConfig", "MingTTSPipelineConfig"],
-)
-def test_weight_share_rejected_for_unvalidated_configs(tmp_path, config_cls):
-    yaml_path = write_yaml(tmp_path, config_cls)
-    with pytest.raises(ValueError, match="not passed end-to-end validation"):
-        mps_dp_config.resolve_max_total_tokens(yaml_path, weight_share=True)
 
 
 def write_budget_yaml(
@@ -149,11 +75,11 @@ def write_budget_yaml(
 ) -> Path:
     path = tmp_path / "budget-probe.yaml"
     lines = [
-        "config_cls: Qwen3ASRPipelineConfig",
+        "config_cls: VoicingTTSPipelineConfig",
         "name: budget-probe",
         "model_path: dummy/none",
         "stages:",
-        "  asr:",
+        "  tts_engine:",
         "    engine:",
         f"      kv_cache_bytes: {kv_cache_bytes}",
     ]
@@ -181,12 +107,6 @@ def test_budget_rejects_kv_pools_over_physical_vram(tmp_path, gpu_with_16gib):
     yaml_path = write_budget_yaml(tmp_path, kv_cache_bytes="9GiB")
     with pytest.raises(ValueError, match="18.00GiB of KV pools"):
         strict_budget(yaml_path, gpu_id=0, replicas=2)
-
-
-def test_kv_hard_bound_applies_with_weight_share_too(tmp_path, gpu_with_16gib):
-    yaml_path = write_budget_yaml(tmp_path, kv_cache_bytes="9GiB")
-    with pytest.raises(ValueError, match="KV pools"):
-        strict_budget(yaml_path, gpu_id=0, replicas=2, weight_share=True)
 
 
 def test_budget_rejects_declared_reserve_total_over_physical_vram(
@@ -247,41 +167,16 @@ def test_kv_error_only_cites_user_written_numbers(tmp_path, gpu_with_16gib):
     assert "even split" not in message
 
 
-def test_weight_share_budget_skips_reserve_total_check(
-    tmp_path, gpu_with_16gib, capsys
-):
-    yaml_path = write_budget_yaml(
-        tmp_path, kv_cache_bytes="6GiB", total_reserve_bytes="9GiB"
-    )
-
-    budget = strict_budget(yaml_path, gpu_id=0, replicas=2, weight_share=True)
-
-    assert budget["per_replica_total_reserve_bytes"] == 9 * 1024**3
-    assert "requested_total_bytes" not in budget
-    assert "2-way total is NOT validated" in capsys.readouterr().err
-
-
-def test_weight_share_still_bounds_one_replica_reserve(tmp_path, gpu_with_16gib):
-    """The weight-share warning claims one replica's reservation was checked
-    against VRAM; the check must actually exist."""
-    yaml_path = write_budget_yaml(
-        tmp_path, kv_cache_bytes="6GiB", total_reserve_bytes="20GiB"
-    )
-
-    with pytest.raises(ValueError, match="one replica"):
-        strict_budget(yaml_path, gpu_id=0, replicas=2, weight_share=True)
-
-
 def write_reserve_only_yaml(tmp_path: Path) -> Path:
     path = tmp_path / "reserve-only.yaml"
     path.write_text(
         "\n".join(
             [
-                "config_cls: Qwen3ASRPipelineConfig",
+                "config_cls: VoicingTTSPipelineConfig",
                 "name: reserve-only",
                 "model_path: dummy/none",
                 "stages:",
-                "  asr:",
+                "  tts_engine:",
                 "    total_reserve_bytes: 9GiB",
             ]
         )
@@ -317,7 +212,7 @@ def test_reserve_only_config_within_vram_passes_without_kv_fields(
 
 
 def test_missing_kv_budget_is_required_but_may_be_skipped(tmp_path, gpu_with_16gib):
-    yaml_path = write_yaml(tmp_path, "Qwen3ASRPipelineConfig")
+    yaml_path = write_yaml(tmp_path, "VoicingTTSPipelineConfig")
 
     with pytest.raises(ValueError, match="kv_cache_bytes"):
         strict_budget(yaml_path, gpu_id=0, replicas=2)
@@ -341,23 +236,6 @@ def test_budget_manifest_serialization_has_single_vram_key(tmp_path, gpu_with_16
     )  # noqa: leading-underscore  # production name
 
     assert "mps_budget_total_vram_bytes=" in manifest
-
-
-def test_docs_table_matches_the_code_registries():
-    text = DOCS_PAGE.read_text(encoding="utf-8")
-    supported_rows = [
-        line
-        for line in text.splitlines()
-        if line.startswith("|") and "| Supported" in line
-    ]
-    for arch in ipc_weights.WEIGHT_SHARE_POLICIES:
-        assert any(
-            arch in row for row in supported_rows
-        ), f"{arch} is gate-supported but has no Supported row in {DOCS_PAGE.name}"
-    for arch in ipc_weights.AUDIT_ONLY_WEIGHT_SHARE_POLICIES:
-        assert not any(
-            arch in row for row in supported_rows
-        ), f"{arch} is audit-only but {DOCS_PAGE.name} lists it as Supported"
 
 
 @pytest.mark.skipif(os.name != "posix", reason="launch.sh needs a POSIX shell")
@@ -385,23 +263,14 @@ class TestLaunchFailsClosedBeforeResources:
         return proc, state_root
 
     def test_unpinned_kv_budget_leaves_no_state(self, tmp_path):
-        yaml_path = write_yaml(tmp_path, "LLaDA2UniPipelineConfig")
+        yaml_path = write_yaml(tmp_path, "VoicingTTSPipelineConfig")
         proc, state_root = self.run_cli(tmp_path, yaml_path)
         assert proc.returncode != 0
         assert "MAX_TOTAL_TOKENS is required" in proc.stdout + proc.stderr
         assert not state_root.exists()
 
-    def test_unvalidated_weight_share_leaves_no_state(self, tmp_path):
-        yaml_path = write_yaml(tmp_path, "VoxtralTTSPipelineConfig")
-        proc, state_root = self.run_cli(tmp_path, yaml_path, WEIGHT_SHARE="1")
-        assert proc.returncode != 0
-        assert "not passed end-to-end validation" in proc.stdout + proc.stderr
-        assert not state_root.exists()
-
     def test_run_id_traversal_is_rejected(self, tmp_path):
-        yaml_path = (
-            REPO_ROOT / "examples" / "mps_dp" / "configs" / "higgs_h100_dp3.yaml"
-        )
+        yaml_path = write_yaml(tmp_path, "VoicingTTSPipelineConfig")
         proc, state_root = self.run_cli(
             tmp_path,
             yaml_path,
@@ -428,10 +297,10 @@ def engine_stage_name(config_cls) -> str:
 
 
 def test_kv_budget_rejects_a_second_token_cap_knob(tmp_path):
-    stage = engine_stage_name(WhisperASRPipelineConfig)
+    stage = engine_stage_name(VoicingTTSPipelineConfig)
     yaml_path = tmp_path / "probe.yaml"
     yaml_path.write_text(
-        "config_cls: WhisperASRPipelineConfig\n"
+        "config_cls: VoicingTTSPipelineConfig\n"
         "name: probe\n"
         "model_path: dummy/none\n"
         "stages:\n"
@@ -445,10 +314,10 @@ def test_kv_budget_rejects_a_second_token_cap_knob(tmp_path):
 
 
 def test_kv_only_config_resolves_unpinned(tmp_path):
-    stage = engine_stage_name(WhisperASRPipelineConfig)
+    stage = engine_stage_name(VoicingTTSPipelineConfig)
     yaml_path = tmp_path / "probe.yaml"
     yaml_path.write_text(
-        "config_cls: WhisperASRPipelineConfig\n"
+        "config_cls: VoicingTTSPipelineConfig\n"
         "name: probe\n"
         "model_path: dummy/none\n"
         "stages:\n"

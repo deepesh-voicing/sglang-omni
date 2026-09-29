@@ -435,27 +435,6 @@ class TestEntryProcessReplicas:
         }
 
 
-class TestColocatedReplicaRejection:
-    def test_colocated_rejects_replicated_process(self):
-        from sglang_omni.models.qwen3_omni.config import (
-            Qwen3OmniSpeechColocatedPipelineConfig,
-        )
-
-        config_data = Qwen3OmniSpeechColocatedPipelineConfig(
-            model_path="m"
-        ).model_dump()
-        config_data["processes"] = {
-            "talker_ar": {
-                "num_replicas": 2,
-                "replica_devices": [0, 0],
-            }
-        }
-        config = Qwen3OmniSpeechColocatedPipelineConfig(**config_data)
-
-        with pytest.raises(ValueError, match="does not support process replicas"):
-            build_placement(config)
-
-
 def build_placement(config: PipelineConfig):
     _, expanded, topology = expand(config)
     return build_stage_placement_plan(
@@ -463,77 +442,6 @@ def build_placement(config: PipelineConfig):
         stages_cfg=expanded,
         replica_instances=topology.replicas,
     )
-
-
-def qwen_speech_replica_config(talker_devices: list[int]) -> PipelineConfig:
-    from sglang_omni.models.qwen3_omni.config import Qwen3OmniSpeechPipelineConfig
-
-    config_data = Qwen3OmniSpeechPipelineConfig(model_path="m").model_dump()
-    thinker = next(
-        stage for stage in config_data["stages"] if stage["name"] == "thinker"
-    )
-    thinker["gpu"] = [0, 1]
-    thinker["tp_size"] = 2
-    config_data["processes"] = {
-        "talker_ar": {
-            "num_replicas": 2,
-            "replica_devices": talker_devices,
-        }
-    }
-    return Qwen3OmniSpeechPipelineConfig(**config_data)
-
-
-class TestQwenReplicaPlacementPolicy:
-    def test_accepts_single_talker_overlapping_thinker_tp_rank(self):
-        from sglang_omni.config.placement import StagePlacement, StagePlacementPlan
-        from sglang_omni.models.qwen3_omni.placement import Qwen3OmniPlacementPolicy
-
-        config = build_pipeline_config(
-            [
-                build_stage_config(name)
-                for name in (
-                    "preprocessing",
-                    "image_encoder",
-                    "audio_encoder",
-                    "thinker",
-                    "decode",
-                    "talker_ar",
-                    "code2wav",
-                )
-            ]
-        )
-        plan = StagePlacementPlan(
-            stages={
-                "thinker": StagePlacement("thinker", (0, 1), 2, None),
-                "talker_ar": StagePlacement("talker_ar", (1,), 1, None),
-            },
-            gpus={},
-        )
-
-        Qwen3OmniPlacementPolicy().validate(config, plan)
-
-    def test_rejects_talker_replica_overlapping_thinker_tp_rank(self):
-        config = qwen_speech_replica_config([1, 2])
-
-        with pytest.raises(ValueError, match="talker_ar@r0"):
-            build_placement(config)
-
-    def test_accepts_talker_replicas_disjoint_from_thinker_tp(self):
-        config = qwen_speech_replica_config([2, 3])
-
-        plan = build_placement(config)
-
-        assert [
-            (placement.stage_name, placement.gpu_ids)
-            for placement in plan.instances_of("talker_ar")
-        ] == [
-            ("talker_ar@r0", (2,)),
-            ("talker_ar@r1", (3,)),
-        ]
-        assert [
-            (placement.stage_name, placement.gpu_ids)
-            for placement in plan.instances_of("thinker")
-        ] == [("thinker", (0, 1))]
 
 
 class TestRemovedStageLevelReplicaConfig:

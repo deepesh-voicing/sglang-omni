@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """SimpleScheduler — lightweight scheduler for non-AR stages.
 
-For stages that just run a function (preprocessing, encoders, decode, code2wav).
+For stages that just run a function (preprocessing, non-streaming vocoder).
 No KV cache, no batching. Just: inbox.get() → run function → outbox.put().
 
 Same inbox/outbox interface as OmniScheduler so Stage doesn't need branching.
@@ -27,7 +27,7 @@ class SimpleScheduler:
 
     Supports sync and async callables for ``new_request`` messages only.
     Streaming stages should provide a dedicated scheduler implementation
-    (for example ``Code2WavScheduler``) rather than rely on SimpleScheduler.
+    (for example the streaming vocoder scheduler) rather than rely on SimpleScheduler.
     """
 
     def __init__(

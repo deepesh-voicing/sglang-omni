@@ -99,10 +99,9 @@ Rules for the body:
 - **Random weights are fine only where shapes follow the graph.** For a fixed
   dataflow stage - conv, attention, GEMM on a known shape - attribution and
   kernel shapes come from the module graph and the input shape, not the values.
-  They do not where routing is value dependent: MoE expert selection
-  (`ming_omni`, `qwen3_omni`'s thinker, `ming_tts`, `zonos2`) picks which experts
-  run, so random weights give a per-expert token distribution, and therefore a
-  grouped-GEMM shape mix, that nobody serves. Use real weights for those, and
+  They do not where routing is value dependent: MoE expert selection picks
+  which experts run, so random weights give a per-expert token distribution,
+  and therefore a grouped-GEMM shape mix, that nobody serves. Use real weights for those, and
   say in the report which kind of stage it was.
 - **Capture and compile *before* `capture_pair`.** One-time work inside the
   profiled window is what the gate exists to reject.
@@ -116,9 +115,9 @@ To capture from a running omni server instead:
 - **Use the graph toggle the profiled stage declares.** `engine.*` exists only on
   stages that drive an SGLang engine, so `<stage>.engine.disable_cuda_graph` is a
   `ConfigPathError` anywhere else. A non-engine stage keeps its own switch under
-  `factory.*`: Fun-CosyVoice3's vocoder is
-  `--vocoder.factory.enable_flow_cuda_graph false`, while its AR stage is
-  `--tts-engine.engine.disable_cuda_graph true`. Read the stage's config class
+  `factory.*`: the Voicing-TTS vocoder is
+  `--vocoder.factory.initial_cuda_graph false --vocoder.factory.followup_cuda_graph false`,
+  while its AR stage is `--tts_engine.engine.disable_cuda_graph true`. Read the stage's config class
   before assuming a name.
 - Export `SGLANG_TORCH_PROFILER_WITH_STACK=1` before the server starts, and
   `SGLANG_TORCH_PROFILER_DIR` unless the request carries `trace_path_template`.

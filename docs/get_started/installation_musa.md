@@ -109,10 +109,6 @@ cd "${omni_root}"
     --index-url https://dl.mthreads.com/repo/api/pypi/pypi/simple \
     --extra-index-url https://pypi.org/simple \
     --trusted-host dl.mthreads.com
-
-  # qwen-tts pins Transformers 4.57.3 and accelerate 1.12.0, so install it
-  # without dependencies to preserve the inherited MUSA stack.
-  python -m pip install --no-cache-dir --no-deps qwen-tts==0.1.1
 )
 ```
 

@@ -12,11 +12,8 @@ TTS_SERVING_BATCH_ADMISSION = CI_ROUTER_MAX_INFLIGHT * TTS_SERVING_WORKER_BATCH_
 
 
 class CiRouterTopology(StrEnum):
-    ASR = "asr"
     TTS = "tts"
     TTS_SERVING = "tts_serving"
-    OMNI_TEXT = "omni_text"
-    OMNI_AUDIO = "omni_audio"
 
 
 def render_router_config(
@@ -25,14 +22,13 @@ def render_router_config(
     router_port: int,
     worker_urls: list[str],
     model_name: str,
-    generation_streaming: bool = True,
     named_voice: bool = False,
 ) -> str:
     """Render one current-schema router config for a homogeneous CI worker pool.
 
-    ``named_voice`` describes a TTS pool whose checkpoint serves preset voices
-    from the text alone; the speech profiles then advertise ``text_to_speech``
-    without a reference instead of ``voice_clone``.
+    named_voice describes a TTS pool whose checkpoint serves preset voices
+    from the text alone; the speech profiles then advertise text_to_speech
+    without a reference instead of voice_clone.
     """
     preamble = router_preamble(topology, router_port)
     worker_blocks = [
@@ -41,7 +37,6 @@ def render_router_config(
             ordinal=ordinal,
             worker_url=worker_url,
             model_name=model_name,
-            generation_streaming=generation_streaming,
             named_voice=named_voice,
         )
         for ordinal, worker_url in enumerate(worker_urls, start=1)
@@ -50,12 +45,7 @@ def render_router_config(
 
 
 def router_preamble(topology: CiRouterTopology, router_port: int) -> str:
-    strategy = "round_robin" if topology is CiRouterTopology.ASR else "least_requests"
     admission = {
-        CiRouterTopology.ASR: (
-            f"global = {CI_ROUTER_MAX_INFLIGHT}",
-            f"transcription_http = {CI_ROUTER_MAX_INFLIGHT}",
-        ),
         CiRouterTopology.TTS: (
             f"global = {CI_ROUTER_MAX_INFLIGHT}",
             f"speech_http = {CI_ROUTER_MAX_INFLIGHT}",
@@ -65,14 +55,6 @@ def router_preamble(topology: CiRouterTopology, router_port: int) -> str:
             f"speech_http = {CI_ROUTER_MAX_INFLIGHT}",
             f"speech_batch = {TTS_SERVING_BATCH_ADMISSION}",
             f"speech_websocket = {CI_ROUTER_MAX_INFLIGHT}",
-        ),
-        CiRouterTopology.OMNI_TEXT: (
-            f"global = {CI_ROUTER_MAX_INFLIGHT}",
-            f"generation_http = {CI_ROUTER_MAX_INFLIGHT}",
-        ),
-        CiRouterTopology.OMNI_AUDIO: (
-            f"global = {CI_ROUTER_MAX_INFLIGHT}",
-            f"generation_http = {CI_ROUTER_MAX_INFLIGHT}",
         ),
     }[topology]
     lines = [
@@ -89,10 +71,16 @@ def router_preamble(topology: CiRouterTopology, router_port: int) -> str:
         'filter = "info"',
         "",
         "[router]",
-        f"strategy = {toml_string(strategy)}",
+        'strategy = "least_requests"',
     ]
     if topology is CiRouterTopology.TTS_SERVING:
         lines.append('voice_owner_worker_id = "tts-serving-1"')
+    else:
+        pass
+    routes = {
+        CiRouterTopology.TTS: ["speech"],
+        CiRouterTopology.TTS_SERVING: ["speech", "speech_batch"],
+    }[topology]
     lines.extend(
         [
             "",
@@ -101,24 +89,6 @@ def router_preamble(topology: CiRouterTopology, router_port: int) -> str:
             "",
             "[health]",
             "",
-        ]
-    )
-    if topology in {CiRouterTopology.OMNI_TEXT, CiRouterTopology.OMNI_AUDIO}:
-        lines.extend(
-            [
-                "[http_generation]",
-                'trust_domain = "local"',
-            ]
-        )
-        return "\n".join(lines)
-
-    routes = {
-        CiRouterTopology.ASR: ["transcription"],
-        CiRouterTopology.TTS: ["speech"],
-        CiRouterTopology.TTS_SERVING: ["speech", "speech_batch"],
-    }[topology]
-    lines.extend(
-        [
             "[http_media]",
             f"routes = {toml_array(routes)}",
             'trust_domain = "local"',
@@ -126,6 +96,8 @@ def router_preamble(topology: CiRouterTopology, router_port: int) -> str:
     )
     if topology is CiRouterTopology.TTS_SERVING:
         lines.extend(["", "[websocket.speech]", 'trust_domain = "local"'])
+    else:
+        pass
     return "\n".join(lines)
 
 
@@ -135,15 +107,11 @@ def worker_block(
     ordinal: int,
     worker_url: str,
     model_name: str,
-    generation_streaming: bool,
     named_voice: bool,
 ) -> str:
     prefix = {
-        CiRouterTopology.ASR: "asr",
         CiRouterTopology.TTS: "tts",
         CiRouterTopology.TTS_SERVING: "tts-serving",
-        CiRouterTopology.OMNI_TEXT: "omni",
-        CiRouterTopology.OMNI_AUDIO: "omni",
     }[topology]
     worker_id = f"{prefix}-{ordinal}"
     lines = [
@@ -161,17 +129,9 @@ def worker_block(
                 f"speech_websocket = {CI_ROUTER_MAX_INFLIGHT}",
             ]
         )
-    lines.extend(
-        [
-            "",
-            service_profiles(
-                topology,
-                model_name,
-                named_voice,
-                generation_streaming=generation_streaming,
-            ),
-        ]
-    )
+    else:
+        pass
+    lines.extend(["", service_profiles(topology, model_name, named_voice)])
     return "\n".join(lines)
 
 
@@ -179,16 +139,8 @@ def service_profiles(
     topology: CiRouterTopology,
     model_name: str,
     named_voice: bool,
-    *,
-    generation_streaming: bool,
 ) -> str:
     model_ids = toml_array([model_name])
-    if topology is CiRouterTopology.ASR:
-        return transcription_profile(
-            model_ids,
-            task="transcribe",
-            formats=["json", "verbose_json", "sse"],
-        )
     if topology is CiRouterTopology.TTS:
         if named_voice:
             tasks = ["text_to_speech"]
@@ -220,15 +172,17 @@ def service_profiles(
                 ),
             ]
         )
-    if topology is CiRouterTopology.TTS_SERVING:
+    else:
+        serving_tasks = ["text_to_speech", "voice_clone", "voice_design"]
+        serving_reference_forms = ["none", "direct", "list"]
         profiles = [
             speech_profile(
                 service="speech_http",
                 model_ids=model_ids,
                 response_formats=["mp3", "opus", "aac", "flac", "wav"],
                 stream_modes=["non_streaming"],
-                tasks=["text_to_speech", "voice_clone", "voice_design"],
-                reference_forms=["none", "direct", "list"],
+                tasks=serving_tasks,
+                reference_forms=serving_reference_forms,
                 voice_name_policy="uploaded",
             ),
             speech_profile(
@@ -236,8 +190,8 @@ def service_profiles(
                 model_ids=model_ids,
                 response_formats=["pcm"],
                 stream_modes=["non_streaming", "streaming"],
-                tasks=["text_to_speech", "voice_clone", "voice_design"],
-                reference_forms=["none", "direct", "list"],
+                tasks=serving_tasks,
+                reference_forms=serving_reference_forms,
                 voice_name_policy="uploaded",
             ),
             speech_batch_profile(model_ids),
@@ -246,35 +200,12 @@ def service_profiles(
                 model_ids=model_ids,
                 response_formats=["pcm"],
                 stream_modes=["non_streaming", "streaming"],
-                tasks=["text_to_speech", "voice_clone", "voice_design"],
-                reference_forms=["none", "direct", "list"],
+                tasks=serving_tasks,
+                reference_forms=serving_reference_forms,
                 voice_name_policy="uploaded",
             ),
         ]
         return "\n\n".join(profiles)
-    return generation_profile(
-        model_ids=model_ids,
-        audio_output=topology is CiRouterTopology.OMNI_AUDIO,
-        streaming=generation_streaming,
-    )
-
-
-def transcription_profile(
-    model_ids: str,
-    *,
-    task: str,
-    formats: list[str],
-) -> str:
-    return "\n".join(
-        [
-            "[[workers.service_profiles]]",
-            'service = "transcription_http"',
-            f"model_ids = {model_ids}",
-            f"task = {toml_string(task)}",
-            f"response_formats = {toml_array(formats)}",
-            'stream_modes = ["non_streaming", "streaming"]',
-        ]
-    )
 
 
 def speech_profile(
@@ -312,25 +243,6 @@ def speech_batch_profile(model_ids: str) -> str:
             'reference_forms = ["none", "direct", "list"]',
             'voice_name_policy = "uploaded"',
             f"max_batch_size = {TTS_SERVING_WORKER_BATCH_LIMIT}",
-        ]
-    )
-
-
-def generation_profile(*, model_ids: str, audio_output: bool, streaming: bool) -> str:
-    output_modalities = ["text", "audio"] if audio_output else ["text"]
-    audio_formats = ["wav", "mp3", "flac", "pcm", "aac", "opus"] if audio_output else []
-    stream_modes = ["non_streaming", "streaming"] if streaming else ["non_streaming"]
-    return "\n".join(
-        [
-            "[[workers.service_profiles]]",
-            'service = "generation_http"',
-            f"model_ids = {model_ids}",
-            'message_content_forms = ["string", "typed_parts"]',
-            'media_placements = ["top_level", "typed_parts"]',
-            'input_modalities = ["text", "image", "audio", "video"]',
-            f"output_modalities = {toml_array(output_modalities)}",
-            f"chat_audio_formats = {toml_array(audio_formats)}",
-            f"stream_modes = {toml_array(stream_modes)}",
         ]
     )
 

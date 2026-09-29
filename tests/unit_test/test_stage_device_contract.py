@@ -7,7 +7,6 @@ import ast
 import importlib
 import inspect
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 from huggingface_hub.errors import LocalEntryNotFoundError, RepositoryNotFoundError
@@ -17,13 +16,9 @@ from sglang_omni.utils.imports import import_string
 
 MODELS_DIR = Path(importlib.import_module("sglang_omni.models").__file__).parent
 
-# note (lennox): zonos2's preprocessing is CPU-only but declares gpu=0 to share
-# the pipeline process with tts_engine; qwen3_omni's mm_aggregate is an identity
-# stage placed on a GPU in the "text" topology for pure colocation.
-CPU_ONLY_GPU_PLACED = {
-    ("qwen3_omni", "mm_aggregate"),
-    ("zonos2", "preprocessing"),
-}
+# note (lennox): a CPU-only stage that declares gpu to share a GPU process
+# belongs here; Voicing-TTS has none.
+CPU_ONLY_GPU_PLACED: set[tuple[str, str]] = set()
 
 
 def iter_stages():
@@ -74,16 +69,9 @@ def factory_parameters(dotted: str) -> dict[str, object]:
     raise AssertionError(f"factory {dotted} not found in {module_name}")
 
 
-# note (lennox): these factories raise on torch.cuda.is_available() before
-# this test's mocks run, so they need a static accelerator mark (tests/README.md).
-REQUIRES_REAL_ACCELERATOR = {
-    ("dots_tts", "reference_encode"),
-    ("dots_tts", "latent_engine"),
-    ("dots_tts", "vocoder"),
-    ("minimax_music3", "minimax_music3_ar"),
-    ("minimax_music3", "dit_dav"),
-    ("zonos2", "tts_engine"),
-}
+# note (lennox): factories that raise on torch.cuda.is_available() before
+# this test's mocks run need a static accelerator mark (tests/README.md).
+REQUIRES_REAL_ACCELERATOR: set[tuple[str, str]] = set()
 
 
 def gpu_stage_ids(*, mark_accelerator=False, include_exempt=False):
@@ -232,93 +220,16 @@ def test_gpu_stage_factories_forward_gpu_id_into_device_spec_resolution(
 # note (lennox): forwarding into resolve_device_spec isn't the same as binding
 # its result -- this drives the real build() chain and checks what it fixed.
 ENGINE_FACTORIES = {
-    "arkasr": (
-        "sglang_omni.models.arkasr.stages.create_sglang_arkasr_executor",
-        "sglang_omni.models.arkasr.engine_builder",
-        "ArkasrEngineBuilder",
-    ),
-    "whisper_asr": (
-        "sglang_omni.models.whisper_asr.stages.create_sglang_whisper_asr_executor",
-        "sglang_omni.models.whisper_asr.engine_builder",
-        "WhisperASREngineBuilder",
-    ),
-    "fun_asr": (
-        "sglang_omni.models.fun_asr.stages.create_sglang_fun_asr_executor",
-        "sglang_omni.models.fun_asr.engine_builder",
-        "FunASREngineBuilder",
-    ),
-    "moss_transcribe_diarize": (
-        "sglang_omni.models.moss_transcribe_diarize.stages."
-        "create_sglang_moss_transcribe_diarize_executor",
-        "sglang_omni.models.moss_transcribe_diarize.engine_builder",
-        "MossTranscribeDiarizeEngineBuilder",
-    ),
-    "qwen3_asr": (
-        "sglang_omni.models.qwen3_asr.stages.create_sglang_qwen3_asr_executor",
-        "sglang_omni.models.qwen3_asr.engine_builder",
-        "Qwen3ASREngineBuilder",
-    ),
-    "dots_tts": (
-        "sglang_omni.models.dots_tts.stages.create_sglang_latent_engine_executor",
-        "sglang_omni.models.dots_tts.engine_builder",
-        "DotsTTSEngineBuilder",
-    ),
-    "moss_tts": (
-        "sglang_omni.models.moss_tts.stages.create_sglang_tts_engine_executor",
-        "sglang_omni.models.moss_tts.engine_builder",
-        "MossTtsEngineBuilder",
-    ),
-    "moss_tts_local": (
-        "sglang_omni.models.moss_tts_local.stages.create_sglang_tts_engine_executor",
-        "sglang_omni.models.moss_tts_local.engine_builder",
-        "MossTtsLocalEngineBuilder",
-    ),
-    "ming_tts": (
-        "sglang_omni.models.ming_tts.stages.create_sglang_tts_engine_executor",
-        "sglang_omni.models.ming_tts.engine_builder",
-        "MingTtsEngineBuilder",
-    ),
-    "voxtral_tts": (
-        "sglang_omni.models.voxtral_tts.pipeline.stages.create_generation_executor",
-        "sglang_omni.models.voxtral_tts.pipeline.engine_builder",
-        "VoxtralTtsEngineBuilder",
-    ),
-    "fishaudio_s2_pro": (
-        "sglang_omni.models.fishaudio_s2_pro.stages.create_sglang_tts_engine_executor",
-        "sglang_omni.models.fishaudio_s2_pro.engine_builder",
-        "FishS2ProEngineBuilder",
-    ),
-    "higgs_tts": (
-        "sglang_omni.models.higgs_tts.stages.create_sglang_tts_engine_executor",
-        "sglang_omni.models.higgs_tts.engine_builder",
-        "HiggsTtsEngineBuilder",
-    ),
-    "minimax_music3": (
-        "sglang_omni.models.minimax_music3.stages.create_ar_executor",
-        "sglang_omni.models.minimax_music3.engine_builder",
-        "MiniMaxMusic3EngineBuilder",
-    ),
-    "fun_cosyvoice3": (
-        "sglang_omni.models.fun_cosyvoice3.stages.create_sglang_tts_engine_executor",
-        "sglang_omni.models.fun_cosyvoice3.engine_builder",
-        "FunCosyVoice3EngineBuilder",
-    ),
-    "qwen3_tts": (
-        "sglang_omni.models.qwen3_tts.stages.create_sglang_tts_engine_executor",
-        "sglang_omni.models.qwen3_tts.engine_builder",
-        "Qwen3TtsEngineBuilder",
-    ),
-    "zonos2": (
-        "sglang_omni.models.zonos2.stages.create_sglang_omni_tts_engine_executor",
-        "sglang_omni.models.zonos2.engine_builder",
-        "Zonos2EngineBuilder",
+    "voicing_tts": (
+        "sglang_omni.models.voicing_tts.stages.create_sglang_tts_engine_executor",
+        "sglang_omni.models.voicing_tts.engine_builder",
+        "VoicingTtsEngineBuilder",
     ),
 }
 
 
-# note (lennox): same three CUDA-only models as REQUIRES_REAL_ACCELERATOR,
-# at this test's per-model (not per-stage) granularity.
-ACCELERATOR_ONLY_ENGINE_MODELS = {"dots_tts", "minimax_music3", "zonos2"}
+# note (lennox): CUDA-only models at this test's per-model granularity.
+ACCELERATOR_ONLY_ENGINE_MODELS: set[str] = set()
 
 
 def engine_factory_ids():
@@ -375,179 +286,12 @@ def test_engine_factories_bind_the_placed_gpu(monkeypatch, model):
     assert final == {"device": "cuda:2", "gpu_id": 2}
 
 
-# note (lennox): these AR factories build ServerArgs themselves instead of going
-# through SGLangGenerationEngineBuilder.build(), so the builder-level test above
-# cannot see whether they pin the resolved device type into ServerArgs.
-SELF_BUILT_SERVER_ARGS_FACTORIES = [
-    "sglang_omni.models.llada2_uni.stages.create_sglang_dllm_thinker_executor_from_config",
-    "sglang_omni.models.ming_omni.stages.create_sglang_thinker_executor_from_config",
-    "sglang_omni.models.qwen3_omni.stages.create_sglang_thinker_executor_from_config",
-    "sglang_omni.models.qwen3_omni.stages.create_talker_ar_executor_from_config",
-]
-
-
-@pytest.mark.parametrize(
-    "factory_path",
-    [
-        pytest.param(p, id=p.split(".")[2] + "-" + p.rsplit(".", 1)[-1])
-        for p in SELF_BUILT_SERVER_ARGS_FACTORIES
-    ],
-)
-def test_self_built_server_args_carry_the_resolved_device_type(
-    monkeypatch, factory_path
-):
-    try:
-        factory = import_string(factory_path)
-    except ImportError as exc:
-        pytest.skip(f"optional dependency missing: {exc}")
-
-    from sglang_omni.scheduling import sglang_backend
-
-    captured: dict[str, object] = {}
-
-    class Stop(Exception):
-        pass
-
-    def fake_build(model_path, **kwargs):
-        del model_path
-        captured.update(kwargs)
-        raise Stop
-
-    monkeypatch.setattr(sglang_backend, "build_sglang_server_args", fake_build)
-    factory_module = importlib.import_module(factory_path.rsplit(".", 1)[0])
-    if "build_sglang_server_args" in vars(factory_module):
-        monkeypatch.setattr(factory_module, "build_sglang_server_args", fake_build)
-    # note (lennox): pinned to "cuda" so the assertion below is host-independent.
-    monkeypatch.setattr(
-        platforms.current_platform, "device_type", "cuda", raising=False
-    )
-
-    with pytest.raises(Stop):
-        factory("unused", device=None, gpu_id=2)
-    assert captured["device"] == "cuda"
-
-    with pytest.raises(ValueError, match="stage placement"):
-        factory(
-            "unused", device=None, gpu_id=2, server_args_overrides={"device": "xpu"}
-        )
-
-
 MODELS = sorted(p.parent.name for p in MODELS_DIR.glob("*/config.py"))
 
 
-@pytest.mark.parametrize("factory_name", ["image_encoder", "audio_encoder"])
-def test_qwen3_omni_encoder_stages_resolve_none_to_the_platform(
-    monkeypatch: pytest.MonkeyPatch, factory_name: str
-) -> None:
-    from sglang_omni.models.qwen3_omni import stages
-    from sglang_omni.scheduling import simple_scheduler
-
-    built: dict[str, object] = {}
-
-    class Encoder:
-        def __init__(
-            self,
-            *,
-            model_path,
-            device,
-            dtype,
-            enable_layer_cuda_graph: bool | None = None,
-        ):
-            del model_path, dtype
-            built["device"] = device
-            built["enable_layer_cuda_graph"] = enable_layer_cuda_graph
-
-        def __getattr__(self, name):
-            del name
-            return 2
-
-    encoder_attr = {
-        "image_encoder": "Qwen3OmniImageEncoder",
-        "audio_encoder": "Qwen3OmniAudioEncoder",
-    }[factory_name]
-    monkeypatch.setattr(stages, encoder_attr, Encoder)
-    monkeypatch.setattr(
-        simple_scheduler, "SimpleScheduler", lambda *a, **k: SimpleNamespace()
-    )
-
-    getattr(stages, f"create_{factory_name}_executor")("unused", device=None)
-
-    import torch
-
-    built_device = torch.device(built["device"])
-    assert built_device.type == platforms.current_platform.device_type
-    if built_device.type != "cpu":
-        # Placement was not requested, so the backend's current card is bound.
-        assert built_device.index is not None
-    assert built["enable_layer_cuda_graph"] is (
-        False if factory_name == "audio_encoder" else None
-    )
-
-
-def test_qwen3_omni_code2wav_resolves_none_to_a_concrete_device(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    import torch
-
-    from sglang_omni.models.qwen3_omni.components import code2wav_scheduler
-
-    model = SimpleNamespace(
-        total_upsample=1,
-        config=SimpleNamespace(num_quantizers=4),
-        decoder=torch.nn.Module(),
-        eval=lambda: None,
-    )
-    model.eval = lambda: model
-    monkeypatch.setattr(
-        code2wav_scheduler, "load_code2wav_model", lambda *a, **k: model
-    )
-
-    scheduler = code2wav_scheduler.create_code2wav_scheduler("unused", device=None)
-
-    assert scheduler.device.type == platforms.current_platform.device_type
-    if platforms.current_platform.device_type != "cpu":
-        # Placement was not requested, so the backend's current card is bound.
-        # A cpu device correctly carries no index.
-        assert scheduler.device.index is not None
-
-
-def test_qwen3_asr_stage_forwards_none_to_the_shared_builder(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """The factory must hand None down rather than substitute a literal.
-
-    Patching the base builder's build() also proves it is the builder in play: a
-    factory using an unrelated builder would leave this spy untouched. What build()
-    then does with None is covered in test_server_args_builder_device.py.
-    """
-    from sglang_omni.models.qwen3_asr import stages
-    from sglang_omni.scheduling import engine_factory
-
-    seen: dict[str, object] = {}
-
-    def spy_build(self, model_path, **kwargs):
-        del self, model_path
-        seen.update(kwargs)
-        return SimpleNamespace()
-
-    monkeypatch.setattr(
-        engine_factory.SGLangGenerationEngineBuilder, "build", spy_build
-    )
-
-    stages.create_sglang_qwen3_asr_executor("unused", device=None, gpu_id=1)
-
-    assert "device" in seen, "the factory did not route through the shared builder"
-    assert seen["device"] is None
-    # Placement injects gpu_id only when the signature declares it. Without it the
-    # builder resolved a bare accelerator and told SGLang card 0.
-    assert seen["gpu_id"] == 1
-
-
-# note (lennox): this topology's own placement policy rejects process replicas
-# (models/qwen3_omni/placement.py).
-REPLICA_REJECTED_TOPOLOGIES = {
-    ("qwen3_omni", "speech-colocated"),
-}
+# note (lennox): topologies whose own placement policy rejects process
+# replicas belong here; Voicing-TTS has none.
+REPLICA_REJECTED_TOPOLOGIES: set[tuple[str, str]] = set()
 
 
 def config_with_one_replicated_process(config_cls, model):

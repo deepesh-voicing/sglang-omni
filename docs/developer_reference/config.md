@@ -22,46 +22,40 @@ Example:
 
 ```python
 # Every non-TP stage must declare `process` explicitly — there is no implicit
-# default. Each stage below runs in its own OS process; multiple stages can
-# share an OS process by giving them the same `process` value (see
-# `Qwen3OmniSpeechColocatedPipelineConfig` for that pattern).
+# default. Stages with the same `process` value share one OS process; the
+# Voicing-TTS pipeline below runs all three stages in the `pipeline` process.
 stages = [
     StageConfig(
         name="preprocessing",
-        process="preprocessing",
+        process="pipeline",
         factory_path="...create_preprocessing_executor",
-        next=["image_encoder", "audio_encoder", "mm_aggregate"],
-        project_payload={
-            "image_encoder": "...project_preprocessing_to_image_encoder",
-            "audio_encoder": "...project_preprocessing_to_audio_encoder",
-            "mm_aggregate": "...project_preprocessing_to_mm_aggregate",
-        },
+        next="tts_engine",
     ),
     StageConfig(
-        name="mm_aggregate",
-        process="mm_aggregate",
-        factory_path="...create_aggregate_executor",
-        wait_for=["preprocessing", "image_encoder", "audio_encoder"],
-        merge_fn="...merge_for_thinker",
-        next="thinker",
+        name="vocoder",
+        process="pipeline",
+        factory_path="...create_vocoder_executor",
+        factory=FactoryArgs(dtype="bfloat16"),
+        gpu=0,
+        terminal=True,
+        can_accept_stream_before_payload=True,
     ),
     EngineStageConfig(               # drives an SGLang engine, so engine.* exists
-        name="thinker",
-        process="thinker",
-        factory_path="...create_sglang_thinker_executor_from_config",
-        factory=FactoryArgs(max_seq_len=8192),
+        name="tts_engine",
+        process="pipeline",
+        factory_path="...create_sglang_tts_engine_executor",
+        factory=FactoryArgs(dtype="bfloat16"),
         gpu=0,
-        next=["decode", "talker_ar"],
-        stream_to=["talker_ar"],
-    ),
-    StageConfig(
-        name="decode",
-        process="decode",
-        factory_path="...create_decode_executor",
-        terminal=True,
+        next="vocoder",
+        stream_to=["vocoder"],
     ),
 ]
 ```
+
+This is an abridged copy of `VoicingTTSPipelineConfig` in
+`sglang_omni/models/voicing_tts/config.py`. Stages are built in list order, so
+the vocoder is listed before the engine to make its weights resident before the
+engine sizes its KV pool.
 
 ## Consumer Groups
 
@@ -83,10 +77,11 @@ to be a `factory_args` entry is now written under `factory.*`:
 
 ```yaml
 stages:
-  latent_engine:
+  vocoder:
     factory:
-      num_steps: 4          # not a declared FactoryArgs field; passed to the
-                            # factory as num_steps=4, validated by its signature
+      followup_worker_count: 2   # not a declared FactoryArgs field; passed to the
+                                 # factory as followup_worker_count=2, validated
+                                 # by its signature
 ```
 
 A value the factory does not accept is an error at stage construction, not a
@@ -99,8 +94,8 @@ There are exactly two user-facing spellings of one path language.
 **YAML** — the `stages:` mapping, keyed by stage name:
 
 ```yaml
-config_cls: MossTTSPipelineConfig
-model_path: OpenMOSS-Team/MOSS-TTS
+config_cls: VoicingTTSPipelineConfig
+model_path: checkpoints/voicing-tts-12hz-1.7b-base
 
 stages:
   tts_engine:
@@ -120,7 +115,7 @@ lists the real stage names.
 from the stage name exactly as the mapping does:
 
 ```bash
-sgl-omni serve --config omni.yaml \
+sgl-omni serve --config examples/configs/voicing_tts_1_7b.yaml \
     --tts_engine.tp_size 2 \
     --tts_engine.engine.mem_fraction_static 0.7 \
     --vocoder.factory.dtype bfloat16 \
@@ -139,9 +134,9 @@ stages at once:
 ```yaml
 shared:
   - select:
-      stages: [preprocessing, latent_engine]   # or engine: true, exclude: [...]
+      stages: [vocoder, tts_engine]   # or engine: true, exclude: [...]
     factory:
-      num_steps: 4
+      dtype: bfloat16
 ```
 
 The entry expands to one patch per matched stage before resolution. An
@@ -316,7 +311,8 @@ Tensor parallelism inside a stage is orthogonal to pipeline parallelism between
 stages.
 
 ```bash
-sgl-omni serve --model-path ... --thinker.tp_size 4 --thinker.gpu "[0, 1, 2, 3]"
+sgl-omni serve --config examples/configs/voicing_tts_1_7b.yaml \
+    --tts_engine.tp_size 2 --tts_engine.gpu "[0, 1]"
 ```
 
 For `tp_size > 1`, the runner derives one process per TP rank. Each process runs

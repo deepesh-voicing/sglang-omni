@@ -3,8 +3,8 @@
 
 Author: chenyang zhang https://github.com/zhaochenyang20
 
-In short, if having labels like run-higgs, our CI workflow will
-pick the Higgs model for TTS. This file aim to test the logic.
+In short, if having labels like run-voicing-tts, our CI workflow will
+pick that Voicing-TTS preset for TTS. This file aim to test the logic.
 """
 
 from __future__ import annotations
@@ -22,40 +22,26 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 OMNI_WORKFLOW = REPO_ROOT / ".github/workflows/omni-ci.yaml"
-OMNI_MODEL_WORKFLOW = REPO_ROOT / ".github/workflows/test-qwen3-omni-ci.yaml"
 
 TTS_LABELS = {
-    "higgs": "RUN_HIGGS_LABEL",
-    "moss": "RUN_MOSS_LABEL",
-    "qwen3-tts": "RUN_QWEN3_TTS_LABEL",
-    "cosyvoice3": "RUN_COSYVOICE3_LABEL",
-    "qwen3-tts-custom-voice": "RUN_QWEN3_TTS_CUSTOM_VOICE_LABEL",
-}
-ASR_LABELS = {
-    "fun": "RUN_FUN_ASR_LABEL",
-    "qwen3": "RUN_QWEN3_ASR_LABEL",
-    "whisper": "RUN_WHISPER_ASR_LABEL",
+    "voicing-tts": "RUN_VOICING_TTS_LABEL",
+    "voicing-tts-custom-voice": "RUN_VOICING_TTS_CUSTOM_VOICE_LABEL",
 }
 
 
-def pick_scripts() -> tuple[str, str, str]:
+def tts_pick_script() -> str:
     jobs = yaml.load(OMNI_WORKFLOW.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)[
         "jobs"
     ]
-    tts = next(
+    return next(
         step["run"]
         for step in jobs["pick-tts-model"]["steps"]
         if step.get("id") == "tts"
     )
-    return (
-        jobs["pick-asr-model"]["steps"][0]["run"],
-        tts,
-        jobs["pick-omni-model"]["steps"][0]["run"],
-    )
 
 
-def run_one(
-    script: str, tmp_path: Path, labels: dict[str, str]
+def run_tts_pick(
+    tmp_path: Path, labels: dict[str, str]
 ) -> subprocess.CompletedProcess[str]:
     github_output = tmp_path / "github_output"
     github_output.touch()
@@ -71,23 +57,12 @@ def run_one(
         "GITHUB_REPOSITORY": "sgl-project/sglang-omni",
         "EXACT_SHA": "deadbeef",
         "TTS_CI_MODEL_OVERRIDE": "",
-        "ASR_CI_MODEL_OVERRIDE": "",
-        "OMNI_CI_MODEL_OVERRIDE": "",
-        "PR_LABELS": "[]",
-        "RUN_HIGGS_LABEL": "false",
-        "RUN_MOSS_LABEL": "false",
-        "RUN_QWEN3_TTS_LABEL": "false",
-        "RUN_COSYVOICE3_LABEL": "false",
-        "RUN_QWEN3_TTS_CUSTOM_VOICE_LABEL": "false",
-        "RUN_FUN_ASR_LABEL": "false",
-        "RUN_QWEN3_ASR_LABEL": "false",
-        "RUN_WHISPER_ASR_LABEL": "false",
-        "RUN_QWEN3_OMNI_LABEL": "false",
-        "RUN_MINICPMO_LABEL": "false",
+        "RUN_VOICING_TTS_LABEL": "false",
+        "RUN_VOICING_TTS_CUSTOM_VOICE_LABEL": "false",
         **labels,
     }
     return subprocess.run(
-        ["bash", "-c", script],
+        ["bash", "-c", tts_pick_script()],
         cwd=REPO_ROOT,
         env=env,
         capture_output=True,
@@ -96,143 +71,32 @@ def run_one(
     )
 
 
-def run_both(
-    tmp_path: Path, labels: dict[str, str]
-) -> tuple[subprocess.CompletedProcess[str], subprocess.CompletedProcess[str]]:
-    asr_script, tts_script, _ = pick_scripts()
-    asr_home = tmp_path / "asr"
-    tts_home = tmp_path / "tts"
-    asr_home.mkdir()
-    tts_home.mkdir()
-    return run_one(asr_script, asr_home, labels), run_one(tts_script, tts_home, labels)
-
-
-def assert_asr_random(result: subprocess.CompletedProcess[str]) -> None:
-    assert result.returncode == 0, result.stderr + result.stdout
-    assert "Random seed for ASR CI model:" in result.stdout
-    assert "Selected ASR CI model:" in result.stdout
-
-
-def assert_tts_random(result: subprocess.CompletedProcess[str]) -> None:
+def test_tts_pick_rotates_without_labels(tmp_path: Path) -> None:
+    result = run_tts_pick(tmp_path, {})
     assert result.returncode == 0, result.stderr + result.stdout
     assert "Selection digest for TTS CI model:" in result.stdout
-    assert "Selected TTS CI model:" in result.stdout
+    assert "Selected TTS CI model: voicing-tts" in result.stdout
 
 
-def assert_asr_specified(result: subprocess.CompletedProcess[str], model: str) -> None:
+@pytest.mark.parametrize("tts_model,tts_label", list(TTS_LABELS.items()))
+def test_tts_pick_honors_labels(tmp_path: Path, tts_model: str, tts_label: str) -> None:
+    result = run_tts_pick(tmp_path, {tts_label: "true"})
     assert result.returncode == 0, result.stderr + result.stdout
-    assert f"Selected ASR CI model: {model}" in result.stdout
-    assert "Random seed for ASR CI model:" not in result.stdout
-
-
-def assert_tts_specified(result: subprocess.CompletedProcess[str], model: str) -> None:
-    assert result.returncode == 0, result.stderr + result.stdout
-    assert f"Selected TTS CI model: {model}" in result.stdout
+    assert f"Selected TTS CI model: {tts_model}" in result.stdout
     assert "Selection digest for TTS CI model:" not in result.stdout
+    assert f"selected_model={tts_model}\n" in (tmp_path / "github_output").read_text()
 
 
-def test_both_picks_are_random_without_labels(tmp_path: Path) -> None:
-    asr, tts = run_both(tmp_path, {})
-    assert_asr_random(asr)
-    assert_tts_random(tts)
-
-
-@pytest.mark.parametrize("asr_model,asr_label", list(ASR_LABELS.items()))
-@pytest.mark.parametrize("tts_model,tts_label", list(TTS_LABELS.items()))
-def test_both_picks_honor_labels(
-    tmp_path: Path,
-    asr_model: str,
-    asr_label: str,
-    tts_model: str,
-    tts_label: str,
-) -> None:
-    asr, tts = run_both(tmp_path, {asr_label: "true", tts_label: "true"})
-    assert_asr_specified(asr, asr_model)
-    assert_tts_specified(tts, tts_model)
-
-
-@pytest.mark.parametrize("tts_model,tts_label", list(TTS_LABELS.items()))
-def test_specified_tts_leaves_asr_random(
-    tmp_path: Path, tts_model: str, tts_label: str
-) -> None:
-    asr, tts = run_both(tmp_path, {tts_label: "true"})
-    assert_asr_random(asr)
-    assert_tts_specified(tts, tts_model)
-
-
-@pytest.mark.parametrize("asr_model,asr_label", list(ASR_LABELS.items()))
-def test_specified_asr_leaves_tts_random(
-    tmp_path: Path, asr_model: str, asr_label: str
-) -> None:
-    asr, tts = run_both(tmp_path, {asr_label: "true"})
-    assert_asr_specified(asr, asr_model)
-    assert_tts_random(tts)
-
-
-@pytest.mark.parametrize(
-    "labels,expected",
-    [
-        ({}, "qwen3-omni"),
-        ({"RUN_QWEN3_OMNI_LABEL": "true"}, "qwen3-omni"),
-        ({"RUN_MINICPMO_LABEL": "true"}, "minicpmo"),
-        ({"OMNI_CI_MODEL_OVERRIDE": "minicpmo"}, "minicpmo"),
-        ({"OMNI_CI_MODEL_OVERRIDE": "QWEN3-OMNI"}, "qwen3-omni"),
-        (
-            {"RUN_MINICPMO_LABEL": "true", "OMNI_CI_MODEL_OVERRIDE": "qwen3-omni"},
-            "qwen3-omni",
-        ),
-    ],
-)
-def test_omni_pick_honors_default_labels_and_override(
-    tmp_path: Path, labels: dict[str, str], expected: str
-) -> None:
-    result = run_one(pick_scripts()[2], tmp_path, labels)
-    assert result.returncode == 0, result.stderr + result.stdout
-    assert (tmp_path / "github_output").read_text() == f"omni_ci_model={expected}\n"
-
-
-@pytest.mark.parametrize(
-    "labels",
-    [
-        {"OMNI_CI_MODEL_OVERRIDE": "unknown"},
-        {"RUN_QWEN3_OMNI_LABEL": "true", "RUN_MINICPMO_LABEL": "true"},
+def test_tts_pick_rejects_conflicting_labels(tmp_path: Path) -> None:
+    result = run_tts_pick(
+        tmp_path,
         {
-            "RUN_QWEN3_OMNI_LABEL": "true",
-            "RUN_MINICPMO_LABEL": "true",
-            "OMNI_CI_MODEL_OVERRIDE": "minicpmo",
+            "RUN_VOICING_TTS_LABEL": "true",
+            "RUN_VOICING_TTS_CUSTOM_VOICE_LABEL": "true",
         },
-    ],
-)
-def test_omni_pick_rejects_invalid_or_conflicting_selection(
-    tmp_path: Path, labels: dict[str, str]
-) -> None:
-    result = run_one(pick_scripts()[2], tmp_path, labels)
+    )
     assert result.returncode != 0
     assert (tmp_path / "github_output").read_text() == ""
-
-
-def test_omni_label_does_not_change_asr_or_tts_selection(tmp_path: Path) -> None:
-    asr, tts = run_both(tmp_path, {"RUN_MINICPMO_LABEL": "true"})
-    assert_asr_random(asr)
-    assert_tts_random(tts)
-
-
-def test_workflow_passes_selected_model_and_keeps_pcm_qwen_only() -> None:
-    workflow = yaml.load(OMNI_WORKFLOW.read_text(), Loader=yaml.BaseLoader)
-    job = workflow["jobs"]["qwen3-omni-ci"]
-    assert "pick-omni-model" in job["needs"]
-    assert "needs.pick-omni-model.result == 'success'" in job["if"]
-    assert job["with"]["omni_ci_model"] == (
-        "${{ needs.pick-omni-model.outputs.omni_ci_model }}"
-    )
-    child = yaml.load(OMNI_MODEL_WORKFLOW.read_text(), Loader=yaml.BaseLoader)
-    assert child["env"]["OMNI_CI_MODEL"] == "${{ inputs.omni_ci_model }}"
-    assert child["on"]["workflow_call"]["inputs"]["omni_ci_model"]["default"] == (
-        "qwen3-omni"
-    )
-    assert "inputs.omni_ci_model == 'qwen3-omni'" in (
-        child["jobs"]["stage-11-process-replicas"]["if"]
-    )
 
 
 @pytest.fixture
@@ -254,38 +118,34 @@ def slash_handler(monkeypatch: pytest.MonkeyPatch) -> ModuleType:
     return module
 
 
-def test_slash_targets_support_all_three_families(slash_handler: ModuleType) -> None:
+def test_slash_targets_select_a_tts_preset(slash_handler: ModuleType) -> None:
     assert slash_handler.parse_model_targets(
-        "/tag-and-rerun-ci moss qwen3-asr minicpmo".split()
-    ) == ("moss", "qwen3-asr", "minicpmo", None)
+        "/tag-and-rerun-ci voicing-tts-custom-voice".split()
+    ) == ("voicing-tts-custom-voice", None)
 
 
-@pytest.mark.parametrize(
-    "targets", ["higgs moss", "fun-asr qwen3-asr", "minicpmo qwen3-omni"]
-)
-def test_slash_targets_reject_conflicting_models(
-    slash_handler: ModuleType, targets: str
-) -> None:
-    *models, error = slash_handler.parse_model_targets(
-        f"/tag-run-ci-label {targets}".split()
+def test_slash_targets_reject_conflicting_models(slash_handler: ModuleType) -> None:
+    model, error = slash_handler.parse_model_targets(
+        "/tag-run-ci-label voicing-tts voicing-tts-custom-voice".split()
     )
-    assert models == [None, None, None]
+    assert model is None
     assert error is not None
 
 
 @pytest.mark.parametrize(
-    "selected,previous", [("minicpmo", "qwen3-omni"), ("qwen3-omni", "minicpmo")]
+    "selected,previous",
+    [
+        ("voicing-tts", "voicing-tts-custom-voice"),
+        ("voicing-tts-custom-voice", "voicing-tts"),
+    ],
 )
-def test_slash_tag_replaces_only_omni_label(
+def test_slash_tag_replaces_the_other_tts_label(
     slash_handler: ModuleType, selected: str, previous: str
 ) -> None:
     pr, comment = Mock(), Mock()
-    pr.get_labels.return_value = [
-        SimpleNamespace(name=label)
-        for label in (f"run-{previous}", "run-moss", "run-qwen3-asr")
-    ]
+    pr.get_labels.return_value = [SimpleNamespace(name=f"run-{previous}")]
     assert slash_handler.handle_tag_run_ci(
-        pr, comment, {"can_tag_run_ci_label": True}, omni_model_target=selected
+        pr, comment, {"can_tag_run_ci_label": True}, tts_model_target=selected
     )
     pr.remove_from_labels.assert_called_once_with(f"run-{previous}")
     assert pr.add_to_labels.call_args_list == [call("run-ci"), call(f"run-{selected}")]
@@ -293,7 +153,7 @@ def test_slash_tag_replaces_only_omni_label(
 
 
 @pytest.mark.parametrize("command", ["/tag-run-ci-label", "/tag-and-rerun-ci"])
-def test_slash_commands_forward_omni_target(
+def test_slash_commands_forward_tts_target(
     slash_handler: ModuleType, monkeypatch: pytest.MonkeyPatch, command: str
 ) -> None:
     environment = {
@@ -301,7 +161,7 @@ def test_slash_commands_forward_omni_target(
         "REPO_FULL_NAME": "owner/repo",
         "PR_NUMBER": "1",
         "COMMENT_ID": "2",
-        "COMMENT_BODY": f"{command} minicpmo",
+        "COMMENT_BODY": f"{command} voicing-tts-custom-voice",
         "USER_LOGIN": "contributor",
     }
     for name, value in environment.items():
@@ -317,7 +177,7 @@ def test_slash_commands_forward_omni_target(
     monkeypatch.setattr(slash_handler, "handle_rerun_failed_ci", rerun)
     monkeypatch.setattr(slash_handler.time, "sleep", Mock())
     slash_handler.main()
-    assert tagged.call_args.kwargs["omni_model_target"] == "minicpmo"
+    assert tagged.call_args.kwargs["tts_model_target"] == "voicing-tts-custom-voice"
     if command == "/tag-and-rerun-ci":
         assert rerun.call_args.kwargs["force_full_omni_ci_rerun"] is True
     else:

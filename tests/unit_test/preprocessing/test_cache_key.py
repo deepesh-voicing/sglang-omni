@@ -81,7 +81,7 @@ def test_reference_path_cache_key_trust_stat_skips_sentinel_on_hit(
     monkeypatch.setattr(cache_key, "reference_path_sentinel", counting_sentinel)
 
     # First call (memo miss) must still compute the sentinel once so the memo
-    # entry stays valid for default (trust_stat=False) callers like Higgs.
+    # entry stays valid for default (trust_stat=False) callers.
     first = cache_key.reference_path_cache_key(ref_audio, trust_stat=True)
     assert sentinel_calls == 1
     # Second call (memo hit) takes the fast path: no further sentinel read.

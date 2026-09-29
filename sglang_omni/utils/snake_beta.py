@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Shared fused SnakeBeta for the Qwen3-TTS and Qwen3-Omni vocoders.
+"""Fused SnakeBeta for the Voicing-TTS vocoder.
 
-The qwen-tts SnakeBeta.forward evaluates, on a [B, C, T] bf16 tensor::
+The reference SnakeBeta.forward evaluates, on a [B, C, T] bf16 tensor::
 
     alpha = torch.exp(self.alpha[None, :, None])
     beta = torch.exp(self.beta[None, :, None])

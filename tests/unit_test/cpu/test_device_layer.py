@@ -61,7 +61,7 @@ def test_a_cpu_srt_platform_resolves_to_the_cpu_omni_platform():
 
 
 def test_get_device_ignores_the_rank_and_returns_an_index_free_device():
-    """Stages carry a placement id — the Qwen3-Omni talker is handed 1 — but a CPU
+    """Stages carry a placement id — a second stage is handed 1 — but a CPU
     torch.device may only have index -1 or 0 (c10 Device::validate), so the rank
     must not become an index. Per-rank isolation is NUMA/OpenMP binding, not the
     device object.

@@ -4,7 +4,7 @@
 The knobs live in the stage's ``factory`` group, so they are set with the
 same dotted spelling as everything else (``--<stage>.factory.prefill_coalesce_requests``)
 or under the stage's ``stages:`` entry in YAML. These tests pin that the
-values reach the AR stage factories of every supported pipeline, and that
+values reach the Voicing-TTS AR stage factory, and that
 the schema rejects nonsense eagerly.
 """
 
@@ -21,15 +21,7 @@ from sglang_omni.config.runtime import (
     resolve_stage_factory_kwargs,
     resolve_stage_typed_kwargs,
 )
-from sglang_omni.models.fun_asr.config import FunASRPipelineConfig
-from sglang_omni.models.higgs_tts.config import HiggsTtsPipelineConfig
-from sglang_omni.models.moss_transcribe_diarize.config import (
-    MossTranscribeDiarizePipelineConfig,
-)
-from sglang_omni.models.moss_tts_local.config import MossTTSLocalPipelineConfig
-from sglang_omni.models.qwen3_asr.config import Qwen3ASRPipelineConfig
-from sglang_omni.models.qwen3_omni.config import Qwen3OmniPipelineConfig
-from sglang_omni.models.qwen3_tts.config import Qwen3TTSPipelineConfig
+from sglang_omni.models.voicing_tts.config import VoicingTTSPipelineConfig
 from sglang_omni.utils.imports import import_string
 
 
@@ -55,13 +47,7 @@ def ar_stage_args(config: PipelineConfig, stage_name: str) -> dict[str, object]:
 @pytest.mark.parametrize(
     ("config_cls", "stage_name"),
     [
-        (HiggsTtsPipelineConfig, "tts_engine"),
-        (MossTTSLocalPipelineConfig, "tts_engine"),
-        (Qwen3TTSPipelineConfig, "tts_engine"),
-        (MossTranscribeDiarizePipelineConfig, "asr"),
-        (FunASRPipelineConfig, "asr"),
-        (Qwen3ASRPipelineConfig, "asr"),
-        (Qwen3OmniPipelineConfig, "thinker"),
+        (VoicingTTSPipelineConfig, "tts_engine"),
     ],
 )
 def test_dotted_flags_set_coalesce_args(config_cls, stage_name):
@@ -78,10 +64,10 @@ def test_dotted_flags_set_coalesce_args(config_cls, stage_name):
 
 
 def test_per_stage_yaml_settings_reach_the_factory(tmp_path):
-    config_path = tmp_path / "moss_local.yaml"
+    config_path = tmp_path / "voicing_tts.yaml"
     config_path.write_text(
         """
-config_cls: MossTTSLocalPipelineConfig
+config_cls: VoicingTTSPipelineConfig
 model_path: dummy
 stages:
   tts_engine:
@@ -99,7 +85,7 @@ stages:
 
 
 def test_a_flag_for_one_stage_leaves_the_other_settings_alone():
-    config = MossTTSLocalPipelineConfig(model_path="dummy")
+    config = VoicingTTSPipelineConfig(model_path="dummy")
     before = ar_stage_args(config, "tts_engine")
 
     merged = ConfigManager(config).merge_config(
@@ -116,7 +102,7 @@ def test_a_flag_for_one_stage_leaves_the_other_settings_alone():
 def test_a_stage_without_the_knob_refuses_the_flag():
     """Writing the knob on a stage whose factory cannot take it fails at
     launch with the path named, instead of silently dropping the value."""
-    config = MossTTSLocalPipelineConfig(model_path="dummy")
+    config = VoicingTTSPipelineConfig(model_path="dummy")
     merged = ConfigManager(config).merge_config(
         [("vocoder.factory.prefill_coalesce_requests", "32")]
     )
@@ -125,7 +111,7 @@ def test_a_stage_without_the_knob_refuses_the_flag():
 
 
 def test_rejects_invalid_values_eagerly():
-    config = HiggsTtsPipelineConfig(model_path="dummy")
+    config = VoicingTTSPipelineConfig(model_path="dummy")
     manager = ConfigManager(config)
     with pytest.raises(ValueError, match="prefill_coalesce_requests"):
         manager.merge_config([("tts_engine.factory.prefill_coalesce_requests", "-1")])

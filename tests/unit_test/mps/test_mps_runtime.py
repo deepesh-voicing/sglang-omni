@@ -590,7 +590,6 @@ def test_process_pipe_dir_is_rejected_before_state_creation(short_root):
     ("name", "value"),
     [
         ("CUDA_MPS_PIPE_DIRECTORY", "/parent/mps"),
-        ("SGLANG_OMNI_WEIGHT_SHARE", "invalid-but-enabled"),
     ],
 )
 def test_parent_mps_conflict_is_reported_before_state_creation(

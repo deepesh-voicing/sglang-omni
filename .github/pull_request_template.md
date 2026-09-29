@@ -32,12 +32,7 @@
 
 CI runs on self-hosted GPU runners and requires a maintainer to add the
 `run-ci` label. Once labeled, every subsequent push re-triggers CI as
-long as the label remains. Use `/tag-and-rerun-ci higgs` or
-`/tag-and-rerun-ci moss` or `/tag-and-rerun-ci qwen3-tts` or
-`/tag-and-rerun-ci cosyvoice3` to select a TTS CI model, and
-`/tag-and-rerun-ci fun-asr`, `/tag-and-rerun-ci qwen3-asr` or
-`/tag-and-rerun-ci whisper-asr` to select an ASR CI model. Use
-`/tag-and-rerun-ci qwen3-omni` or `/tag-and-rerun-ci minicpmo` to select
-the Omni CI model (Qwen3-Omni by default). One selector from each family
-can be combined, for example `/tag-and-rerun-ci moss fun-asr minicpmo`.
+long as the label remains. Use `/tag-and-rerun-ci voicing-tts` or
+`/tag-and-rerun-ci voicing-tts-custom-voice` to select the Voicing-TTS CI
+preset (the Base preset runs by default).
 Draft PRs are skipped even if labeled.

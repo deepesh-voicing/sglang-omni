@@ -11,7 +11,7 @@ from sglang_omni.utils import snake_beta
 
 
 class StubSnakeBeta(torch.nn.Module):
-    """Stand-in with the qwen-tts SnakeBeta attribute layout."""
+    """Stand-in with the vendored Voicing-TTS SnakeBeta attribute layout."""
 
     def __init__(self, channels: int) -> None:
         super().__init__()

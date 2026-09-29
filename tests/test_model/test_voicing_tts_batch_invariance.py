@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Qwen3-TTS deterministic inference checks."""
+"""Voicing-TTS deterministic inference checks."""
 
 from __future__ import annotations
 
@@ -23,22 +23,24 @@ from benchmarks.dataset.prepare import DATASETS, download_dataset
 from benchmarks.dataset.seedtts import load_seedtts_samples
 from tests.test_model.omni_router_utils import find_available_port_range
 
+# Converted checkpoints: python -m sglang_omni.models.voicing_tts.convert_checkpoint
+# <source> <destination>.
 MODEL_PATH = os.environ.get(
-    "QWEN3_TTS_TEST_MODEL",
-    "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+    "VOICING_TTS_TEST_MODEL",
+    "checkpoints/voicing-tts-12hz-0.6b-base",
 )
 CUSTOM_VOICE_MODEL_PATH = os.environ.get(
-    "QWEN3_TTS_TEST_CUSTOM_VOICE_MODEL",
-    "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+    "VOICING_TTS_TEST_CUSTOM_VOICE_MODEL",
+    "checkpoints/voicing-tts-12hz-1.7b-customvoice",
 )
-CUSTOM_VOICE = os.environ.get("QWEN3_TTS_TEST_CUSTOM_VOICE", "Ryan")
-CUSTOM_VOICE_LANGUAGE = os.environ.get("QWEN3_TTS_TEST_CUSTOM_LANGUAGE", "English")
-DATASET = os.environ.get("QWEN3_TTS_TEST_DATASET", DATASETS["seedtts-50"])
+CUSTOM_VOICE = os.environ.get("VOICING_TTS_TEST_CUSTOM_VOICE", "Ryan")
+CUSTOM_VOICE_LANGUAGE = os.environ.get("VOICING_TTS_TEST_CUSTOM_LANGUAGE", "English")
+DATASET = os.environ.get("VOICING_TTS_TEST_DATASET", DATASETS["seedtts-50"])
 SEED = 123456
 STARTUP_TIMEOUT = 600
 
 
-class Qwen3TTSServer(NamedTuple):
+class VoicingTTSServer(NamedTuple):
     base_url: str
     log_file: Path
 
@@ -156,16 +158,16 @@ def custom_voice_payload(text: str, *, subtalker_dosample: bool | None = None) -
 
 
 @contextmanager
-def qwen3_tts_server(
+def voicing_tts_server(
     tmp_path_factory: pytest.TempPathFactory,
     name: str,
     model_path: str = MODEL_PATH,
-) -> Iterator[Qwen3TTSServer]:
-    config_path = tmp_path_factory.mktemp(f"qwen3_tts_{name}") / "config.yaml"
+) -> Iterator[VoicingTTSServer]:
+    config_path = tmp_path_factory.mktemp(f"voicing_tts_{name}") / "config.yaml"
     config_path.write_text(
         yaml.safe_dump(
             {
-                "config_cls": "Qwen3TTSPipelineConfig",
+                "config_cls": "VoicingTTSPipelineConfig",
                 "model_path": model_path,
                 "enable_deterministic_inference": True,
                 "stages": {
@@ -185,7 +187,7 @@ def qwen3_tts_server(
         encoding="utf-8",
     )
     port = find_available_port_range(1)
-    log_file = tmp_path_factory.mktemp(f"qwen3_tts_{name}_logs") / "server.log"
+    log_file = tmp_path_factory.mktemp(f"voicing_tts_{name}_logs") / "server.log"
     with managed_omni_server(
         model_path=model_path,
         port=port,
@@ -194,23 +196,23 @@ def qwen3_tts_server(
         server_config=str(config_path),
         timeout=STARTUP_TIMEOUT,
     ):
-        yield Qwen3TTSServer(f"http://127.0.0.1:{port}", log_file)
+        yield VoicingTTSServer(f"http://127.0.0.1:{port}", log_file)
 
 
 def assert_uncached_reference_encode(log_file: Path) -> None:
     assert (
-        "Qwen3-TTS ad-hoc reference reference encode stats: "
+        "Voicing-TTS ad-hoc reference reference encode stats: "
         "{'hits': 0, 'misses': 1" in log_file.read_text(encoding="utf-8")
     )
 
 
 @pytest.mark.benchmark
-def test_qwen3_tts_deterministic_batch_invariance(
+def test_voicing_tts_deterministic_batch_invariance(
     tmp_path_factory: pytest.TempPathFactory,
 ) -> None:
     """Match fresh batch-one and batch-eight executions."""
     if not torch.cuda.is_available():
-        pytest.skip("Qwen3-TTS batch invariance requires CUDA")
+        pytest.skip("Voicing-TTS batch invariance requires CUDA")
     if not Path(DATASET).exists():
         download_dataset(DATASET, quiet=True)
 
@@ -222,12 +224,12 @@ def test_qwen3_tts_deterministic_batch_invariance(
     assert len({payload["ref_text"] for payload in payloads}) == 8
 
     payload = payloads[0]
-    with qwen3_tts_server(tmp_path_factory, "b1") as server:
+    with voicing_tts_server(tmp_path_factory, "b1") as server:
         b1 = asyncio.run(generate_serial(server.base_url, payloads))
         repeated_b1 = asyncio.run(generate_serial(server.base_url, [payload] * 2))
         assert_uncached_reference_encode(server.log_file)
 
-    with qwen3_tts_server(tmp_path_factory, "b8") as server:
+    with voicing_tts_server(tmp_path_factory, "b8") as server:
         mixed_b8 = asyncio.run(generate_batch(server.base_url, payloads))
         assert_uncached_reference_encode(server.log_file)
         repeated_b8 = asyncio.run(generate_batch(server.base_url, [payload] * 8))
@@ -238,11 +240,11 @@ def test_qwen3_tts_deterministic_batch_invariance(
 
 
 @pytest.mark.benchmark
-def test_qwen3_tts_mixed_sampled_argmax_batch_invariance(
+def test_voicing_tts_mixed_sampled_argmax_batch_invariance(
     tmp_path_factory: pytest.TempPathFactory,
 ) -> None:
     if not torch.cuda.is_available():
-        pytest.skip("Qwen3-TTS batch invariance requires CUDA")
+        pytest.skip("Voicing-TTS batch invariance requires CUDA")
     if not Path(DATASET).exists():
         download_dataset(DATASET, quiet=True)
 
@@ -258,12 +260,12 @@ def test_qwen3_tts_mixed_sampled_argmax_batch_invariance(
     } == {False, True}
 
     payload = payloads[0]
-    with qwen3_tts_server(tmp_path_factory, "b1") as server:
+    with voicing_tts_server(tmp_path_factory, "b1") as server:
         b1 = asyncio.run(generate_serial(server.base_url, payloads))
         repeated_b1 = asyncio.run(generate_serial(server.base_url, [payload] * 2))
         assert_uncached_reference_encode(server.log_file)
 
-    with qwen3_tts_server(tmp_path_factory, "b8") as server:
+    with voicing_tts_server(tmp_path_factory, "b8") as server:
         mixed_b8 = asyncio.run(generate_batch(server.base_url, payloads))
         assert_uncached_reference_encode(server.log_file)
         repeated_b8 = asyncio.run(generate_batch(server.base_url, [payload] * 8))
@@ -274,7 +276,7 @@ def test_qwen3_tts_mixed_sampled_argmax_batch_invariance(
 
 
 @pytest.mark.benchmark
-def test_qwen3_tts_custom_voice_deterministic_batch_invariance(
+def test_voicing_tts_custom_voice_deterministic_batch_invariance(
     tmp_path_factory: pytest.TempPathFactory,
 ) -> None:
     """Match batch-one and batch-eight on the checkpoints that graph prefill.
@@ -285,7 +287,7 @@ def test_qwen3_tts_custom_voice_deterministic_batch_invariance(
     numerics shows up as a batch-one/batch-eight mismatch.
     """
     if not torch.cuda.is_available():
-        pytest.skip("Qwen3-TTS batch invariance requires CUDA")
+        pytest.skip("Voicing-TTS batch invariance requires CUDA")
     if not Path(DATASET).exists():
         download_dataset(DATASET, quiet=True)
 
@@ -295,7 +297,7 @@ def test_qwen3_tts_custom_voice_deterministic_batch_invariance(
     assert len({payload["input"] for payload in payloads}) == 8
 
     payload = payloads[0]
-    with qwen3_tts_server(
+    with voicing_tts_server(
         tmp_path_factory, "cv-b1", model_path=CUSTOM_VOICE_MODEL_PATH
     ) as server:
         b1 = asyncio.run(generate_serial(server.base_url, payloads))
@@ -307,7 +309,7 @@ def test_qwen3_tts_custom_voice_deterministic_batch_invariance(
         assert info["backend"] == "breakable", info
         assert info["replay_count"] > 0, info
 
-    with qwen3_tts_server(
+    with voicing_tts_server(
         tmp_path_factory, "cv-b8", model_path=CUSTOM_VOICE_MODEL_PATH
     ) as server:
         mixed_b8 = asyncio.run(generate_batch(server.base_url, payloads))

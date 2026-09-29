@@ -18,17 +18,17 @@ Before:
 
 ```yaml
 fused_stages:
-  - [preprocessing, audio_encoder]
+  - [tts_engine, vocoder]
 ```
 
 After:
 
 ```yaml
 stages:
-  - name: preprocessing
-    process: frontend
-  - name: audio_encoder
-    process: frontend
+  - name: tts_engine
+    process: pipeline
+  - name: vocoder
+    process: pipeline
 ```
 
 Keep all existing factory, routing, runtime, and placement fields when updating
