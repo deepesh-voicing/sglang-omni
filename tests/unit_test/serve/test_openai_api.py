@@ -938,9 +938,9 @@ def test_speech_request_records_explicit_generation_params() -> None:
         seed=123,
     )
 
-    gen_req = SpeechRequestValidator(default_model="qwen3-tts").build_generate_request(
-        req
-    )
+    gen_req = SpeechRequestValidator(
+        default_model="voicing-tts"
+    ).build_generate_request(req)
 
     assert gen_req.sampling.temperature == 0.8
     assert gen_req.sampling.top_k == 30
@@ -961,9 +961,9 @@ def test_speech_request_passes_streaming_control_fields() -> None:
         stream=True,
     )
 
-    gen_req = SpeechRequestValidator(default_model="qwen3-tts").build_generate_request(
-        req
-    )
+    gen_req = SpeechRequestValidator(
+        default_model="voicing-tts"
+    ).build_generate_request(req)
     tts_params = gen_req.metadata["tts_params"]
 
     assert tts_params["initial_codec_chunk_frames"] == 8

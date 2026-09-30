@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Dependency checks must cover the optional models selected by CI."""
+"""Dependency checks must cover the optional evaluation tools selected by CI."""
 
 from importlib import metadata
 from importlib.util import module_from_spec, spec_from_file_location
@@ -22,16 +22,16 @@ def project(tmp_path: Path) -> Path:
     path.write_text(
         '[project]\ndependencies = ["torch==2.13.0"]\n'
         "[project.optional-dependencies]\n"
-        'minicpm-o = ["einops>=0.8.1", "onnx>=1.18.0"]\n'
+        'eval = ["jiwer>=3.0.0", "s3prl>=0.4.18"]\n'
     )
     return path
 
 
-@pytest.mark.parametrize("onnx_version", [None, "1.17.0", "1.18.0"])
-def test_minicpm_extra_checks_missing_and_outdated_dependencies(
-    project: Path, monkeypatch: pytest.MonkeyPatch, onnx_version: str | None
+@pytest.mark.parametrize("s3prl_version", [None, "0.4.17", "0.4.18"])
+def test_eval_extra_checks_missing_and_outdated_dependencies(
+    project: Path, monkeypatch: pytest.MonkeyPatch, s3prl_version: str | None
 ) -> None:
-    versions = {"torch": "2.13.0", "einops": "0.8.1", "onnx": onnx_version}
+    versions = {"torch": "2.13.0", "jiwer": "3.0.0", "s3prl": s3prl_version}
 
     def version(name: str) -> str:
         installed = versions[name]
@@ -41,13 +41,13 @@ def test_minicpm_extra_checks_missing_and_outdated_dependencies(
 
     monkeypatch.setattr(dependencies.importlib.metadata, "version", version)
     assert dependencies.missing_requirements(project) == []
-    assert dependencies.missing_requirements(project, ("minicpm-o",)) == (
-        [] if onnx_version == "1.18.0" else ["onnx>=1.18.0"]
+    assert dependencies.missing_requirements(project, ("eval",)) == (
+        [] if s3prl_version == "0.4.18" else ["s3prl>=0.4.18"]
     )
 
 
 def test_unknown_extra_fails_instead_of_silently_omitting_dependencies(
     project: Path,
 ) -> None:
-    with pytest.raises(KeyError, match="minicpm-typo"):
-        dependencies.missing_requirements(project, ("minicpm-typo",))
+    with pytest.raises(KeyError, match="eval-typo"):
+        dependencies.missing_requirements(project, ("eval-typo",))

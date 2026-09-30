@@ -738,7 +738,7 @@ def test_stop_release_failure_still_tears_down_session() -> None:
 
 def test_stream_chunk_accepts_bool_false_stream_flag() -> None:
     """Talker latches the CLIENT streaming flag into chunk metadata; False is
-    a valid transport value and must not be rejected (see qwen3
+    a valid transport value and must not be rejected (see Voicing-TTS
     talker_model_runner metadata={'stream': is_streaming})."""
     scheduler = FakeStreamingVocoder(threshold=10)
     state = scheduler.ingest_stream_item("r", item([1], {"stream": False}))

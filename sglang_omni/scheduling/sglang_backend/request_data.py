@@ -26,4 +26,3 @@ class SGLangARRequestData(ARRequestData):
     pending_text_queue: Any = field(default_factory=collections.deque)
     tts_pad_embed: Any = None
     tts_eos_embed: Any = None
-    thinker_chunks_done: bool = True

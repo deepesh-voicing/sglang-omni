@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Full WER CI sweep (Qwen3 then TTS). One instance at a time (flock).
+# Full Voicing-TTS WER CI sweep. One instance at a time (flock).
 #
 # Two-terminal contract (see tune-ci-thresholds § Two-terminal supervision):
 #   Tab A (supervision) — tail -f /tmp/wer_ci_*.log  → detailed log

@@ -587,7 +587,7 @@ def test_dp_serves_v1_models_locally_from_the_snapshot_view(
                     200,
                     json={
                         "object": "list",
-                        "data": [{"id": "higgs", "object": "model"}],
+                        "data": [{"id": "voicing-tts", "object": "model"}],
                     },
                 )
             return httpx.Response(200, json={"ok": True})
@@ -600,7 +600,7 @@ def test_dp_serves_v1_models_locally_from_the_snapshot_view(
         wait_for(lambda: client.get("/ready").status_code == 200)
         response = client.get("/v1/models")
         assert response.status_code == 200
-        assert any(item["id"] == "higgs" for item in response.json()["data"])
+        assert any(item["id"] == "voicing-tts" for item in response.json()["data"])
         assert any(path == "/v1/models" for path, _ in upstream.requests)
 
 

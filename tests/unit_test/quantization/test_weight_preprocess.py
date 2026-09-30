@@ -73,7 +73,7 @@ class TestResolveWeightPreprocessor:
     """Tests for ``get_weight_preprocessor`` fixed dispatch."""
 
     def test_identity_when_no_quantization(self) -> None:
-        config = SimpleNamespace(model_type="qwen3")
+        config = SimpleNamespace(model_type="voicing_tts")
         preprocess = get_weight_preprocessor(config)
 
         weight = torch.tensor([[1.0, 2.0], [3.0, 4.0]])

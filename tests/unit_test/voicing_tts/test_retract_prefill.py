@@ -48,7 +48,6 @@ def make_sched_req(
             decode_input_embeds=list(history or []),
             pending_feedback_queue=deque(pending_feedback or []),
             pending_text_queue=deque(pending_text or []),
-            thinker_chunks_done=True,
             tts_pad_embed=torch.zeros(prompt.shape[-1], dtype=prompt.dtype),
         )
     )
@@ -66,7 +65,6 @@ def test_write_feedback_buffers_records_decode_input_history() -> None:
             pending_feedback_queue=deque([torch.tensor([1.0, 2.0])]),
             pending_text_queue=deque([torch.tensor([20.0, 30.0])]),
             decode_input_embeds=[],
-            thinker_chunks_done=True,
             tts_pad_embed=torch.zeros(2),
         )
     )
@@ -100,7 +98,6 @@ def test_write_feedback_buffers_batches_staged_rows_and_embeds_the_rest() -> Non
             pending_feedback_queue=deque(feedback),
             pending_text_queue=deque(text),
             decode_input_embeds=[],
-            thinker_chunks_done=True,
             tts_pad_embed=pad,
         )
 

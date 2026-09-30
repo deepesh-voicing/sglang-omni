@@ -1551,10 +1551,13 @@ mod tests {
                 .expect("valid test URI");
             realtime_model(&uri)
         };
-        assert_eq!(explicit("model=omni"), Ok(Some(String::from("omni"))));
         assert_eq!(
-            explicit("unknown=first&mo%64el=qwen%2FOmni"),
-            Ok(Some(String::from("qwen/Omni")))
+            explicit("model=voicing-tts"),
+            Ok(Some(String::from("voicing-tts")))
+        );
+        assert_eq!(
+            explicit("unknown=first&mo%64el=voicing%2Dtts"),
+            Ok(Some(String::from("voicing-tts")))
         );
         let absent: Uri = "/v1/realtime?unknown=retained"
             .parse()

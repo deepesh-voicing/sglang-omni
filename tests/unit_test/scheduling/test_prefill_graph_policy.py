@@ -693,7 +693,7 @@ def test_raised_operator_cap_extends_a_stage_ladder_without_dropping_buckets() -
     """A raised cap must grow a stage ladder, not replace it with the shared one.
 
     The stage ladders carry buckets the shared one does not, such as the
-    Qwen3-TTS 1-token bucket, and losing them sends those shapes back to eager.
+    Voicing-TTS 1-token bucket, and losing them sends those shapes back to eager.
     """
     stage_ladder = [1, 2] + build_default_prefill_cuda_graph_bs(512)
     overrides = build_generation_batch_overrides(

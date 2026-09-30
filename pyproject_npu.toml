@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "sglang-omni"
 dynamic = ["version"]
-description = "Multi-stage pipeline framework for omni models (Ascend NPU build)"
+description = "Multi-stage Voicing-TTS serving runtime (Ascend NPU build)"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
@@ -74,9 +74,7 @@ dependencies = [
     "silero-vad==6.2.1",  # 6.2.2 requires torchaudio<2.10, downgrading the NPU stack
     "onnxruntime>=1.17",
 
-    # --- Multimodal preprocessing (needed by Qwen3-Omni/ASR/TTS) ------------
-    "qwen-vl-utils==0.0.11",
-    "sox>=1.4.1",
+    # --- Audio preprocessing -------------------------------------------------
     "librosa>=0.11.0",
     "av>=16.1.0",
     "soundfile>=0.12.0",
@@ -97,21 +95,6 @@ all = [
     "s3prl>=0.4.18", "jiwer", "openai-whisper==20250625",
     "pytest>=7.0.0", "pytest-asyncio>=0.21.0",
 ]
-fun-cosyvoice3 = [
-    "conformer==0.3.2",
-    "HyperPyYAML==1.2.3",
-    "pyworld==0.3.4",
-    "wetext==0.0.4",
-    "inflect==7.3.1",
-    "gdown==5.1.0",
-    "lightning==2.6.5",
-    "matplotlib==3.11.1",
-    "omegaconf",
-    "hydra-core",
-    "wget",
-    "x_transformers",
-]
-
 [project.scripts]
 sgl-omni = "sglang_omni.cli:app"
 sgl-omni-router-py = "sglang_omni_router.python.serve:main"

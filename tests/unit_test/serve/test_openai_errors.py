@@ -54,7 +54,7 @@ def test_the_stop_bounds_themselves_normalize() -> None:
 def test_an_unrelated_failure_stays_internal() -> None:
     for message in (
         "CUDA out of memory",
-        "AuK generated latent contains NaN/Inf",
+        "Generated latent contains NaN/Inf",
         "internal cache size is a server-level setting",
     ):
         assert not is_bad_request_error(RuntimeError(message))

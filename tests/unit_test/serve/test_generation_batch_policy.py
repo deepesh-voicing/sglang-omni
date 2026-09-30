@@ -131,7 +131,7 @@ def test_validate_generation_batch_policy_accepts_partial_compile_coverage() -> 
         torch_compile_max_bs=32,
     )
     validate_generation_batch_policy(
-        model_name="Qwen3-TTS",
+        model_name="voicing-tts",
         server_args=undercovered_compile,
     )
 

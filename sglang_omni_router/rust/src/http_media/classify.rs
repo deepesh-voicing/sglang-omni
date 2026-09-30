@@ -717,7 +717,7 @@ stream_modes = ["non_streaming", "streaming"]
     }
 
     #[test]
-    fn qwen_task_types_follow_worker_capabilities() {
+    fn speech_task_types_follow_worker_capabilities() {
         for (value, expected) in [
             ("Base", SpeechTask::VoiceClone),
             (" base ", SpeechTask::VoiceClone),
@@ -737,7 +737,7 @@ stream_modes = ["non_streaming", "streaming"]
             ("CustomVoice", SpeechTask::TextToSpeech),
         ] {
             let body = format!(r#"{{"model":"tts","input":"x","task_type":"{task_type}"}}"#);
-            let classified = speech(body.as_bytes(), &pool, &trust).expect("classify Qwen task");
+            let classified = speech(body.as_bytes(), &pool, &trust).expect("classify speech task");
             let ProfileRequirement::SpeechHttp { task, .. } = classified.requirement.profile()
             else {
                 panic!("speech requirement")
@@ -757,7 +757,7 @@ stream_modes = ["non_streaming", "streaming"]
             &pool,
             &trust,
         )
-        .expect("classify inherited and overridden Qwen tasks");
+        .expect("classify inherited and overridden speech tasks");
         let ProfileRequirement::SpeechBatch { tasks, .. } = classified.requirement.profile() else {
             panic!("speech batch requirement")
         };

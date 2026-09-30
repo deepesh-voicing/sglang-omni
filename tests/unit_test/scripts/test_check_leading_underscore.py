@@ -166,7 +166,7 @@ def test_fix_skips_same_scope_public_name_collision() -> None:
 
 def test_fix_preserves_third_party_attribute_with_same_name() -> None:
     source = """
-from transformers.models.qwen3_omni_moe import modeling_qwen3_omni_moe as hf_modeling
+import external_model as hf_modeling
 
 def _get_feat_extract_output_lengths(lengths):
     return hf_modeling._get_feat_extract_output_lengths(lengths)

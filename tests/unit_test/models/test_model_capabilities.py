@@ -84,7 +84,7 @@ def test_get_model_capabilities_for_registered_architecture(architecture: str) -
 
 
 def test_get_model_capabilities_for_non_tts_and_unknown_architectures() -> None:
-    assert get_model_capabilities("Qwen3OmniMoeForConditionalGeneration") is None
+    assert get_model_capabilities("UnsupportedArchitecture") is None
     assert get_model_capabilities("UnknownArchitecture") is None
 
 
