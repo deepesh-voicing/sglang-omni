@@ -1,12 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
-"""The KV pool of a sub model engine is sized from the sub model's layers.
+"""The KV pool of the talker engine is sized from the talker's layers.
 
-SGLang builds the engine's ModelConfig from the root checkpoint config and,
-for a config with a thinker_config, takes the thinker's text config, so
-the Qwen3-Omni talker engine starts with the thinker's 48 layers in both
-num_hidden_layers and num_attention_layers. SGLang then sizes the pool
-from the larger of the two through resolve_layer_indices. The override
-has to leave the pool at the talker's 20 layers and the thinker's at 48.
+SGLang builds the engine's ModelConfig from the root checkpoint config, so
+the Voicing-TTS talker engine can start from a root text config whose layer
+counts differ from the talker's. SGLang then sizes the pool from the larger
+of num_hidden_layers and num_attention_layers through resolve_layer_indices,
+so the override has to leave the pool at the talker's layers.
 """
 
 from __future__ import annotations
@@ -25,39 +24,38 @@ from sglang.srt.speculative.spec_info import SpeculativeAlgorithm  # noqa: E402
 from sglang_omni.model_runner.model_worker import ModelWorker  # noqa: E402
 
 
-def qwen3_omni_engine_config():
-    thinker_text = SimpleNamespace(
-        num_hidden_layers=48,
+def voicing_tts_engine_config():
+    root_text = SimpleNamespace(
+        num_hidden_layers=36,
         num_attention_heads=32,
-        num_key_value_heads=4,
-        hidden_size=2048,
+        num_key_value_heads=8,
+        hidden_size=4096,
         head_dim=128,
-        vocab_size=152064,
+        vocab_size=151936,
     )
-    talker_text = SimpleNamespace(
-        num_hidden_layers=20,
+    talker_config = SimpleNamespace(
+        num_hidden_layers=28,
         num_attention_heads=16,
-        num_key_value_heads=2,
-        hidden_size=1024,
+        num_key_value_heads=8,
+        hidden_size=2048,
         head_dim=128,
         vocab_size=3072,
     )
     hf_config = SimpleNamespace(
-        architectures=["Qwen3OmniMoeForConditionalGeneration"],
-        thinker_config=SimpleNamespace(text_config=thinker_text),
-        talker_config=SimpleNamespace(text_config=talker_text),
+        architectures=["VoicingTTSForConditionalGeneration"],
+        talker_config=talker_config,
     )
     return SimpleNamespace(
         hf_config=hf_config,
-        hf_text_config=thinker_text,
-        num_attention_heads=thinker_text.num_attention_heads,
-        num_key_value_heads=thinker_text.num_key_value_heads,
-        hidden_size=thinker_text.hidden_size,
-        num_hidden_layers=thinker_text.num_hidden_layers,
-        num_attention_layers=thinker_text.num_hidden_layers,
+        hf_text_config=root_text,
+        num_attention_heads=root_text.num_attention_heads,
+        num_key_value_heads=root_text.num_key_value_heads,
+        hidden_size=root_text.hidden_size,
+        num_hidden_layers=root_text.num_hidden_layers,
+        num_attention_layers=root_text.num_hidden_layers,
         num_nextn_predict_layers=None,
-        head_dim=thinker_text.head_dim,
-        vocab_size=thinker_text.vocab_size,
+        head_dim=root_text.head_dim,
+        vocab_size=root_text.vocab_size,
     )
 
 
@@ -71,15 +69,16 @@ def pool_layers(config) -> int:
 
 
 def test_talker_pool_is_sized_from_the_talker_layers() -> None:
-    config = qwen3_omni_engine_config()
-    assert pool_layers(config) == 48
-    ModelWorker.apply_arch_override(config, "Qwen3OmniTalker")
-    assert pool_layers(config) == 20
-    assert config.num_key_value_heads == 2
+    config = voicing_tts_engine_config()
+    assert pool_layers(config) == 36
+    ModelWorker.apply_arch_override(config, "VoicingTTSTalker")
+    assert pool_layers(config) == 28
+    assert config.hidden_size == 2048
+    assert config.hf_config.architectures == ["VoicingTTSTalker"]
 
 
-def test_thinker_pool_keeps_the_thinker_layers() -> None:
-    config = qwen3_omni_engine_config()
-    ModelWorker.apply_arch_override(config, "Qwen3OmniThinkerForCausalLM")
-    assert pool_layers(config) == 48
-    assert config.num_key_value_heads == 4
+def test_unknown_arch_override_only_renames_the_architecture() -> None:
+    config = voicing_tts_engine_config()
+    ModelWorker.apply_arch_override(config, "UnknownTalker")
+    assert pool_layers(config) == 36
+    assert config.hf_config.architectures == ["UnknownTalker"]

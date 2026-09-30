@@ -17,13 +17,11 @@ is imported by `sglang_omni/`, and no CI job runs them.
 
 | Skill | What it does | Who can run it |
 |---|---|---|
-| [`running-eval-suite`](running-eval-suite/SKILL.md) | Reruns every reference benchmark under `benchmarks/eval/` and rewrites the reference-table cells in `benchmark_*.py` for the hardware it detects. Commits locally, never pushes. | Any sglang-omni dev container with free GPUs and the `omni` venv. |
+| [`model-profiling`](model-profiling/SKILL.md) | Plans a layered profiling run for one model, waits for confirmation, then hands the GPU work to a background agent and checks its report. | Any sglang-omni dev container with free GPUs and the `omni` venv. |
+| [`omni-gpu-deep-dive`](omni-gpu-deep-dive/SKILL.md) | Attributes GPU time in one pipeline stage to lines of `sglang_omni/` source from a mapping/formal trace pair. | Any sglang-omni dev container with a free GPU. |
 
-The evaluation skill expects the CI-equivalent environment (the `omni` venv,
-`HF_HOME` populated, `source .github/scripts/ci_env.sh`). Its precheck
-verifies this and stops with an actionable message rather than fixing it for you.
-The skill never kills another user's processes: busy GPUs are a hard
-stop.
+`code-review/` holds the repository coding style guide that `CLAUDE.md` points
+to; it is not a slash command.
 
 CI threshold calibration is maintained separately in the private
 [`sglang-omni-calibration` repository](https://github.com/zhaochenyang20/sglang-omni-calibration/tree/main/skills/calibrate-h100-ci).
@@ -35,19 +33,11 @@ instructions there.
 Type the slash command in Claude Code from the repo root:
 
 ```
-/running-eval-suite --benchmarks mmsu
+/model-profiling voicing_tts
 ```
 
 Read the skill's `SKILL.md` first and keep a supervision terminal open
 alongside the job.
-
-You can also drive the underlying tools directly, without an agent:
-
-```bash
-python .claude/skills/running-eval-suite/runner.py --model qwen3-omni precheck --output-dir "$RUN"
-```
-
-Run artifacts land in `.eval-runs/`, which is gitignored.
 
 ## Adding a skill
 
@@ -66,7 +56,7 @@ whether to reach for the skill, so lead with the trigger, then the mechanism:
 
 ```yaml
 ---
-name: running-eval-suite
-description: Run the reference benchmarks under benchmarks/eval/ and refresh their reference-table cells for the detected hardware.
+name: model-profiling
+description: Plan a layered profiling run for one model, stop for confirmation, then delegate the GPU work to a background agent.
 ---
 ```

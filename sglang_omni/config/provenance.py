@@ -5,10 +5,10 @@ The resolver records one :class:`ProvenanceEntry` per contributing patch, plus
 the baseline the patches were applied on top of. That is what makes
 ``sgl-omni config explain <path>`` answerable::
 
-    stages.thinker.engine.mem_fraction_static = 0.8
-      0.87  <- model default (Qwen3OmniConfig)
-      0.70  <- yaml file (configs/omni.yaml)            [superseded]
-      0.80  <- cli flag (--thinker-mem-fraction-static) [winner]
+    stages.tts_engine.engine.mem_fraction_static = 0.8
+      0.85  <- model default (VoicingTTSPipelineConfig)
+      0.70  <- yaml file (configs/voicing_tts.yaml)     [superseded]
+      0.80  <- cli flag (--mem-fraction-static)       [winner]
 
 Nothing here decides anything; precedence lives in
 :mod:`sglang_omni.config.patch` and is executed by

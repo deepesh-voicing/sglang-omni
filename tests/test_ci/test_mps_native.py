@@ -30,7 +30,11 @@ from pathlib import Path
 
 import pytest
 
-MODEL = os.environ.get("MPS_NATIVE_CI_MODEL", "bosonai/higgs-tts-3-4b")
+# A named-voice checkpoint, so the smoke request needs no reference clip.
+MODEL = os.environ.get(
+    "MPS_NATIVE_CI_MODEL", "checkpoints/voicing-tts-12hz-1.7b-customvoice"
+)
+VOICE = os.environ.get("MPS_NATIVE_CI_VOICE", "Ryan")
 STATE_ROOT = Path(os.environ.get("MPS_NATIVE_CI_STATE_ROOT", "/tmp/mps-native-ci"))
 HEALTH_TRIES = 150
 HEALTH_INTERVAL = 5
@@ -65,6 +69,10 @@ def launch_serve(port: int, mps: str) -> subprocess.Popen:
             MODEL,
             "--mps",
             mps,
+            # Voicing-TTS runs every stage in one process by default; a
+            # separate vocoder process gives MPS the two clients it needs.
+            "--vocoder.process",
+            "vocoder",
             "--mem-fraction-static",
             "0.45",
             # DP replicas budget KV explicitly; the second serve profiles a
@@ -100,7 +108,12 @@ def wait_healthy(port: int, proc: subprocess.Popen) -> None:
 
 def request_ok(port: int) -> None:
     body = json.dumps(
-        {"model": MODEL, "input": "MPS native CI check.", "response_format": "wav"}
+        {
+            "model": MODEL,
+            "input": "MPS native CI check.",
+            "voice": VOICE,
+            "response_format": "wav",
+        }
     ).encode()
     req = urllib.request.Request(
         f"http://localhost:{port}/v1/audio/speech",

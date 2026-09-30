@@ -2,14 +2,9 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import huggingface_hub
-import yaml
 
 from sglang_omni.utils.checkpoint import resolve_checkpoint
-
-REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def test_resolve_checkpoint_returns_local_directory(tmp_path) -> None:
@@ -48,7 +43,7 @@ def test_pinned_spec_resolves_architecture_without_snapshot(
     from types import SimpleNamespace
 
     from sglang_omni.config import manager
-    from sglang_omni.models.dots_tts.config import DotsTTSPipelineConfig
+    from sglang_omni.models.voicing_tts.config import VoicingTTSPipelineConfig
 
     def fail_snapshot(*args, **kwargs):
         raise AssertionError("architecture discovery must not download weights")
@@ -69,19 +64,19 @@ def test_pinned_spec_resolves_architecture_without_snapshot(
     def fake_hub_download(repo_id, filename, revision=None, **kwargs):
         captured["raw"] = (repo_id, filename, revision)
         path = tmp_path / filename
-        path.write_text('{"architectures": ["DotsTTSForConditionalGeneration"]}')
+        path.write_text('{"architectures": ["VoicingTTSForConditionalGeneration"]}')
         return str(path)
 
     monkeypatch.setattr("sglang_omni.utils.hf.hf_hub_download", fake_hub_download)
 
     config_cls = manager.resolve_config_cls_for_model_path(
-        "dots-studio/dots.tts-mf@c28105adc8228143392b4e346994ff613ee48a06"
+        "org/voicing-tts@c28105adc8228143392b4e346994ff613ee48a06"
     )
 
-    assert config_cls is DotsTTSPipelineConfig
+    assert config_cls is VoicingTTSPipelineConfig
     revision = "c28105adc8228143392b4e346994ff613ee48a06"
-    assert captured["auto"] == ("dots-studio/dots.tts-mf", revision)
-    assert captured["raw"] == ("dots-studio/dots.tts-mf", "config.json", revision)
+    assert captured["auto"] == ("org/voicing-tts", revision)
+    assert captured["raw"] == ("org/voicing-tts", "config.json", revision)
 
 
 def test_unresolvable_pinned_spec_names_the_revision(monkeypatch) -> None:
@@ -104,27 +99,16 @@ def test_unresolvable_pinned_spec_names_the_revision(monkeypatch) -> None:
 
 def test_local_model_path_skips_snapshot_resolution(monkeypatch, tmp_path) -> None:
     from sglang_omni.config import manager
-    from sglang_omni.models.dots_tts.config import DotsTTSPipelineConfig
+    from sglang_omni.models.voicing_tts.config import VoicingTTSPipelineConfig
 
     def fail_snapshot(*args, **kwargs):
         raise AssertionError("local paths must not resolve a snapshot")
 
     monkeypatch.setattr(huggingface_hub, "snapshot_download", fail_snapshot)
     (tmp_path / "config.json").write_text(
-        '{"architectures": ["DotsTTSForConditionalGeneration"]}'
+        '{"architectures": ["VoicingTTSForConditionalGeneration"]}'
     )
 
     config_cls = manager.resolve_config_cls_for_model_path(str(tmp_path))
 
-    assert config_cls is DotsTTSPipelineConfig
-
-
-def test_dots_tts_canonical_config_pins_snapshot_revision() -> None:
-    config = yaml.safe_load(
-        (REPO_ROOT / "examples" / "configs" / "dots_tts.yaml").read_text()
-    )
-    repo_id, _, revision = str(config["model_path"]).partition("@")
-
-    assert repo_id == "dots-studio/dots.tts-mf"
-    assert len(revision) == 40
-    assert all(c in "0123456789abcdef" for c in revision)
+    assert config_cls is VoicingTTSPipelineConfig

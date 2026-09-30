@@ -4,8 +4,8 @@
 Two spellings, one path language. In YAML, per-stage settings live under the
 ``stages:`` mapping, keyed by stage name::
 
-    config_cls: MossTTSPipelineConfig
-    model_path: OpenMOSS-Team/MOSS-TTS
+    config_cls: VoicingTTSPipelineConfig
+    model_path: checkpoints/voicing-tts-12hz-1.7b-base
 
     stages:
       tts_engine:
@@ -110,7 +110,7 @@ _REMOVED_TOP_LEVEL_BLOCKS: dict[str, str] = {
 _STAGES_LIST_GUIDANCE = (
     "stages must be a mapping keyed by stage name; the list form is no "
     "longer accepted. Move each entry under its name and drop the name: "
-    "key:\n\n    stages:\n      thinker:\n        tp_size: 2"
+    "key:\n\n    stages:\n      tts_engine:\n        tp_size: 2"
 )
 
 
@@ -120,7 +120,7 @@ def patches_from_dotted_cli(
     *,
     origin: str = "extra CLI args",
 ) -> ConfigPatchSet:
-    """Normalize ``--thinker.engine.mem_fraction_static 0.6`` style arguments.
+    """Normalize ``--tts_engine.engine.mem_fraction_static 0.6`` style arguments.
 
     The ``stages.`` prefix is implied on the command line -- the flag starts
     from the stage name, exactly as the YAML ``stages:`` mapping starts from

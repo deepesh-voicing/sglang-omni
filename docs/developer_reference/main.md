@@ -1,8 +1,9 @@
 # Architecture
 
-SGLang-Omni is the multi-stage runtime for omni models: models that accept
-mixed text, image, audio, and video inputs and may emit text, audio, or other
-modalities.
+SGLang-Omni is a multi-stage serving runtime. This repository serves one model,
+Voicing-TTS, which takes text (plus optional reference audio or instructions)
+and emits audio through a `preprocessing` -> `tts_engine` -> `vocoder`
+pipeline.
 
 ## System Overview
 
@@ -13,7 +14,7 @@ HTTP API -> Client -> Coordinator -> Stage -> Scheduler -> ModelRunner -> model 
 
 | Layer                             | Duty                                                                                   |
 | ----------------------------------- | ---------------------------------------------------------------------------------------- |
-| [HTTP API](./apiserver_design.md) | OpenAI-compatible request and response schemas, SSE framing, HTTP errors               |
+| [HTTP API](./apiserver_design.md) | OpenAI-compatible request and response schemas, PCM and WebSocket streaming, HTTP errors |
 | [Client](./apiserver_design.md)   | `GenerateRequest` to `OmniRequest`, result aggregation, audio encoding                 |
 | [Coordinator](./pipeline.md)      | Request lifecycle, entry-stage submission, terminal result collection, abort broadcast |
 | [Stage](./pipeline.md)            | Control-plane IO, relay IO, fan-in, stream routing, scheduler inbox/outbox bridging    |

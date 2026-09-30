@@ -21,7 +21,6 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "Client": ("sglang_omni.client.client", "Client"),
     "GenerateChunk": ("sglang_omni.client.types", "GenerateChunk"),
     "GenerateRequest": ("sglang_omni.client.types", "GenerateRequest"),
-    "Message": ("sglang_omni.client.types", "Message"),
     "SamplingParams": ("sglang_omni.client.types", "SamplingParams"),
     "UsageInfo": ("sglang_omni.client.types", "UsageInfo"),
     # pipeline

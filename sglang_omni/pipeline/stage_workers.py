@@ -32,7 +32,6 @@ from sglang_omni.utils.gpu_compat import (
 )
 from sglang_omni.utils.gpu_memory import gpu_startup_lock
 from sglang_omni.utils.imports import import_string
-from sglang_omni.utils.ipc_weights import prepare_weight_share_process_compat
 
 logger = logging.getLogger(__name__)
 
@@ -473,7 +472,6 @@ def stage_process_main(
         for stage_spec in spec.stage_specs:
             prepare_accelerator_environment(stage_spec, log)
         apply_gpu_compat_env_defaults()
-        prepare_weight_share_process_compat()
         run_process(spec, ready_event, log)
     except (KeyboardInterrupt, SystemExit):
         destroy_torch_distributed_process_group(log)

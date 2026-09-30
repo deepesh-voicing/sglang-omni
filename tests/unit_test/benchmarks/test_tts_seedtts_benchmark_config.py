@@ -20,8 +20,10 @@ from sglang_omni.admission import QueueFullError
 
 
 def config_from_cli(*args: str) -> TtsSeedttsBenchmarkConfig:
+    # WER runs against an external ASR server, so a full run must name one.
+    argv = list(args) if "--asr-port" in args else [*args, "--asr-port", "30000"]
     parser = _build_arg_parser()
-    parsed = parser.parse_args(list(args))
+    parsed = parser.parse_args(argv)
     _validate_args(parser, parsed)
     return _config_from_args(parsed)
 

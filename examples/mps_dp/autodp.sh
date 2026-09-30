@@ -5,14 +5,12 @@
 # for this GPU + model + KV cap from the
 # two-constraint sizing model:
 #
-#   1. capacity:  D*(s + h) <= M          (no-WS)
-#                 W + D*(s - W + h) <= M  (WS)
+#   1. capacity:  D*(s + h) <= M
 #   2. profiler:  the LAST replica's mem-fraction budget must clear the KV cap;
 #                 autodp derives --mem-fraction-static instead of trusting the
 #                 model default (which under-resolves the last replica).
 #
 #   M = GPU memory, s = measured per-replica static footprint at the cap,
-#   W = backbone weight bytes (shared once under WEIGHT_SHARE=1),
 #   h = per-replica dynamic headroom (cuBLAS/activations/vocoder; NOT covered
 #       by the static budget — undersizing h is how a run boots and then OOMs).
 #
@@ -22,53 +20,41 @@
 #
 # Environment (defaults in parentheses):
 #   MODEL (), MODEL_NAME (), GPU_ID (0),
-#   CONFIG (configs/higgs_h100_dp3.yaml when MODEL is unset)
+#   CONFIG (examples/configs/voicing_tts_1_7b.yaml when MODEL is unset)
 #                              pipeline config forwarded to launch.sh, which
 #                              serves via --config instead of --model-path
-#                              (launch.sh forbids MODEL with CONFIG and
-#                              requires CONFIG when WEIGHT_SHARE=1, so the
-#                              supported-model preflight can run)
+#                              (launch.sh forbids MODEL with CONFIG)
 #   MAX_TOTAL_TOKENS (100000)  common per-replica KV cap, required
-#   WEIGHT_SHARE (1)           1 = share the AR backbone over CUDA IPC; use 0
-#                              for models without weight-share support
-#   HEADROOM_GIB (1.5)         h; measured: 1.3 works, 0.5 OOMs (Higgs, bs<=64).
-#                              Re-measure if you raise max_running_requests.
+#   HEADROOM_GIB (1.5)         h; per-replica dynamic headroom. Re-measure for
+#                              your model and max_running_requests.
 #   N ()                       override replica count (must be <= computed max)
 #   MAX_DP (16)                hard clamp on computed D (small models can size
 #                              absurdly high before CPU becomes the limit)
 #   MIN_CORES_PER_REPLICA (2)  clamp D so each replica keeps this many cores
 #   STATIC_GIB ()              skip the probe: known per-replica footprint s
-#   WEIGHTS_GIB ()             skip log-derived W (needed for WS sizing)
 #   CORE_BLOCKS ()             forwarded to launch.sh; derived from the current
 #                              cpuset when unset (server share = 3/4 of cores)
 #
 # The probe boots ONE replica at the cap on the target GPU, reads its
-# memory.used as s, extracts W from the weight-share export line, and tears the
-# probe down before sizing. Skipped when STATIC_GIB (+ WEIGHTS_GIB) are given.
+# memory.used as s, and tears the probe down before sizing. Skipped when
+# STATIC_GIB is given.
 set -euo pipefail
 
 HERE=$(cd "$(dirname "$0")" && pwd)
 CMD=${1:-plan}
 CONFIG=${CONFIG:-}
 if [ -z "$CONFIG" ] && [ -z "${MODEL:-}" ]; then
-  # Default flow: Higgs through its shipped config, so the weight-share
-  # supported-model preflight can run before any resource is created.
-  CONFIG=$HERE/configs/higgs_h100_dp3.yaml
+  CONFIG=$HERE/../configs/voicing_tts_1_7b.yaml
 fi
 if [ -n "$CONFIG" ]; then
   # launch.sh forbids MODEL alongside CONFIG; empty values read as unset there.
   MODEL=
-  MODEL_NAME=${MODEL_NAME:-}
 else
   MODEL=${MODEL:-}
-  MODEL_NAME=${MODEL_NAME:-higgs}
 fi
+MODEL_NAME=${MODEL_NAME:-}
 GPU_ID=${GPU_ID:-0}
 CAP=${MAX_TOTAL_TOKENS:-100000}
-# Note (Jiaxin Deng): weight sharing supports only validated configs (the
-# WEIGHT_SHARE_VALIDATED_CONFIGS registry in config.py); others are rejected in
-# preflight. Size those with WEIGHT_SHARE=0.
-WS=${WEIGHT_SHARE:-1}
 H_GIB=${HEADROOM_GIB:-1.5}
 
 MAX_DP=${MAX_DP:-16}
@@ -80,14 +66,12 @@ command -v nvidia-smi >/dev/null || die "nvidia-smi not found (run on a GPU node
 
 # Note (Yueying Li): every public knob is validated before any resource is
 # created — a sizing tool that promises a safe plan must reject nonsensical
-# inputs (WEIGHT_SHARE=2, MIN_CORES_PER_REPLICA=0, nonnumeric MAX_DP, N=0)
+# inputs (MIN_CORES_PER_REPLICA=0, nonnumeric MAX_DP, N=0)
 # instead of folding them into arithmetic.
 [[ "$GPU_ID" =~ ^[0-9]+$ ]] \
   || die "GPU_ID must be a non-negative integer, got '$GPU_ID'"
 [[ "$CAP" =~ ^[1-9][0-9]*$ ]] \
   || die "MAX_TOTAL_TOKENS must be a positive integer, got '$CAP'"
-[[ "$WS" =~ ^[01]$ ]] \
-  || die "WEIGHT_SHARE must be 0 or 1, got '$WS'"
 [[ "$H_GIB" =~ ^[0-9]+([.][0-9]+)?$ ]] \
   || die "HEADROOM_GIB must be a non-negative number, got '$H_GIB'"
 [[ "$MAX_DP" =~ ^[1-9][0-9]*$ ]] \
@@ -118,23 +102,20 @@ print(" ".join(out))
 EOF
 }
 
-# ---- probe: boot one replica at the cap, measure s and W ---------------------
+# ---- probe: boot one replica at the cap, measure s ---------------------------
 STATIC_GIB=${STATIC_GIB:-}
-WEIGHTS_GIB=${WEIGHTS_GIB:-}
 if [ -z "$STATIC_GIB" ]; then
   echo "[autodp] probing: booting 1 replica at cap=$CAP to measure the static footprint..."
   probe_blocks=$(core_blocks_for 1)
   # Note (Jiaxin Deng): pin a unique run id so we read and tear down exactly the
   # run we started, never a rediscovered newest dir (which a concurrent launcher
   # on another GPU could win).
-  state_root=${STATE_ROOT:-/tmp/sglang-omni-same-gpu-dp/$UID}
   # Note (Jiaxin Deng): the run id must start with run- so launch.sh's find_runs
   # / down / stale-run guard (all glob run-*) can see and tear it down.
   probe_run="run-autodp-probe-$GPU_ID-$$"
-  probe_dir="$state_root/gpu-$GPU_ID/$probe_run"
   RUN_ID=$probe_run MODEL=$MODEL MODEL_NAME=$MODEL_NAME CONFIG=$CONFIG \
   GPU_ID=$GPU_ID N=1 BASE_PORT=${BASE_PORT:-8801} \
-  CORE_BLOCKS="$probe_blocks" MAX_TOTAL_TOKENS=$CAP WEIGHT_SHARE=$WS \
+  CORE_BLOCKS="$probe_blocks" MAX_TOTAL_TOKENS=$CAP \
     bash "$HERE/launch.sh" up > /tmp/autodp_probe.$$.log 2>&1 \
     || { echo "--- probe log (/tmp/autodp_probe.$$.log) ---" >&2; \
          cat /tmp/autodp_probe.$$.log >&2; \
@@ -144,14 +125,9 @@ if [ -z "$STATIC_GIB" ]; then
          die "probe boot failed"; }
   probe_used=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits -i "$GPU_ID")
   STATIC_GIB=$(python3 -c "print(round($probe_used/1024, 2))")
-  if [ -z "$WEIGHTS_GIB" ]; then
-    WEIGHTS_GIB=$(grep -hoE "leader exported .*\(([0-9.]+) GiB" "$probe_dir"/logs/replica_0.log 2>/dev/null \
-      | grep -oE "[0-9.]+" | tail -1 || true)
-  fi
   bash "$HERE/launch.sh" down "$probe_run" > /dev/null
-  echo "[autodp] probe: s=${STATIC_GIB} GiB per replica, W=${WEIGHTS_GIB:-?} GiB weights"
+  echo "[autodp] probe: s=${STATIC_GIB} GiB per replica"
 fi
-[ -n "$WEIGHTS_GIB" ] || { [ "$WS" = 0 ] || die "WS sizing needs WEIGHTS_GIB (probe could not extract it)"; WEIGHTS_GIB=0; }
 
 # ---- sizing ------------------------------------------------------------------
 SRV_CORE_COUNT=$(python3 -c "import os; c=len(os.sched_getaffinity(0)); print(max(1, c*3//4))")
@@ -160,30 +136,26 @@ import sys
 
 m = $M_MIB / 1024
 s = float("$STATIC_GIB")
-w = float("$WEIGHTS_GIB")
 h = float("$H_GIB")
-ws = $WS
 
-if not (m > 0 and s > 0 and h >= 0 and w >= 0 and (w < s or not ws)):
-    sys.exit("autodp: invalid sizing inputs m=%s s=%s w=%s h=%s" % (m, s, w, h))
+if not (m > 0 and s > 0 and h >= 0):
+    sys.exit(f"autodp: invalid sizing inputs m={m} s={s} h={h}")
+else:
+    pass
 
-denom = (s - w + h) if ws else (s + h)
-if denom <= 0:
-    sys.exit("autodp: non-positive per-replica cost %.3f GiB; cannot size" % denom)
-
-d = int((m - w) // denom) if ws else int(m // denom)
-d = min(d, $MAX_DP, $SRV_CORE_COUNT // $MIN_CORES_PER_REPLICA)
+per_replica = s + h
+d = min(int(m // per_replica), $MAX_DP, $SRV_CORE_COUNT // $MIN_CORES_PER_REPLICA)
 
 # Note (Jiaxin Deng): reject an unsizable card instead of forcing d=1, which
 # would report "safe" for a plan that cannot even boot one replica.
 if d < 1:
-    need = (w + denom) if ws else denom
-    sys.exit("autodp: no replica fits on %.1f GiB (needs >= %.1f GiB); lower the KV cap or free the GPU" % (m, need))
+    sys.exit(f"autodp: no replica fits on {m:.1f} GiB (needs >= {per_replica:.1f} GiB); lower the KV cap or free the GPU")
+else:
+    pass
 
-prev = (d - 1) * ((s - w) if ws else s) + (w if ws else 0)
-free_last = m - prev
+free_last = m - (d - 1) * s
 mf = min(0.97, round(s / free_last + 0.02, 3)) if free_last > 0 else 0.97
-static_total = (w + d * (s - w)) if ws else (d * s)
+static_total = d * s
 
 print(d)
 print(mf)
@@ -197,7 +169,7 @@ N=${N:-$D_MAX}
 [ "$N" -le "$D_MAX" ] || die "N=$N exceeds computed max estimated DP $D_MAX"
 
 M_GIB=$(python3 -c "print(round($M_MIB/1024,1))")
-echo "[autodp] plan: GPU ${GPU_ID} M=${M_GIB} GiB | s=${STATIC_GIB} GiB W=${WEIGHTS_GIB} GiB h=${H_GIB} GiB cap=${CAP} weight_share=${WS}"
+echo "[autodp] plan: GPU ${GPU_ID} M=${M_GIB} GiB | s=${STATIC_GIB} GiB h=${H_GIB} GiB cap=${CAP}"
 echo "[autodp] plan: max estimated DP = ${D_MAX} (launching N=${N}); static total ~${STATIC_TOT} GiB, dynamic pool ~${FREE_LEFT} GiB; derived MF=${MF_REQ} (boot-validated estimate, validate under sustained load)"
 [ "$CMD" = plan ] && exit 0
 
@@ -208,7 +180,7 @@ launch_run="run-autodp-$GPU_ID-$$"
 launch_log=$(mktemp /tmp/autodp_up.XXXXXX.log)
 if ! RUN_ID=$launch_run MODEL=$MODEL MODEL_NAME=$MODEL_NAME CONFIG=$CONFIG \
      GPU_ID=$GPU_ID N=$N BASE_PORT=${BASE_PORT:-8801} \
-     CORE_BLOCKS="$BLOCKS" MAX_TOTAL_TOKENS=$CAP WEIGHT_SHARE=$WS MF=$MF_REQ \
+     CORE_BLOCKS="$BLOCKS" MAX_TOTAL_TOKENS=$CAP MF=$MF_REQ \
      bash "$HERE/launch.sh" up 2>&1 | tee "$launch_log"; then
   # A config-file pipeline may reject --mem-fraction-static; the derived MF is
   # only required when it exceeds the model default, so retry without it and
@@ -222,7 +194,7 @@ if ! RUN_ID=$launch_run MODEL=$MODEL MODEL_NAME=$MODEL_NAME CONFIG=$CONFIG \
       || die "autodp: could not tear down the failed --mem-fraction-static attempt $launch_run; inspect and retry"
     RUN_ID=$launch_run MODEL=$MODEL MODEL_NAME=$MODEL_NAME CONFIG=$CONFIG \
     GPU_ID=$GPU_ID N=$N BASE_PORT=${BASE_PORT:-8801} \
-    CORE_BLOCKS="$BLOCKS" MAX_TOTAL_TOKENS=$CAP WEIGHT_SHARE=$WS \
+    CORE_BLOCKS="$BLOCKS" MAX_TOTAL_TOKENS=$CAP \
       bash "$HERE/launch.sh" up
   else
     die "launch failed (see above)"

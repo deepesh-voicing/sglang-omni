@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Full WER CI sweep (Qwen3 then TTS). One instance at a time (flock).
+# Full Voicing-TTS WER CI sweep. One instance at a time (flock).
 #
 # Two-terminal contract (see tune-ci-thresholds § Two-terminal supervision):
 #   Tab A (supervision) — tail -f /tmp/wer_ci_*.log  → detailed log
@@ -81,28 +81,11 @@ run_one() {
     return "${exit_code}"
 }
 
-LOG=/tmp/wer_ci_qwen3.log
+LOG=/tmp/wer_ci.log
 : > "${LOG}"
 echo "WER sweep started — milestones here; full log: tail -f ${LOG}"
 
 setup_omni_env "${LOG}"
-
-run_one mmmu_talker_wer "${LOG}" \
-    "${OMNI_CI_PYTHON}" -m pytest tests/test_model/test_qwen3_omni_mmmu_talker_ci.py::test_mmmu_talker_wer -v -s
-
-run_one videomme_talker_wer "${LOG}" \
-    "${OMNI_CI_PYTHON}" -m pytest tests/test_model/test_qwen3_omni_videomme_talker_ci.py::test_videomme_talker_wer -v -s
-
-run_one videoamme_talker_tp2_wer "${LOG}" \
-    "${OMNI_CI_PYTHON}" -m pytest tests/test_model/test_qwen3_omni_videoamme_talker_tp2_ci.py::test_videoamme_talker_tp2_wer -v -s
-
-run_one mmsu_talker_wer "${LOG}" \
-    "${OMNI_CI_PYTHON}" -m pytest tests/test_model/test_qwen3_omni_mmsu_talker_ci.py::test_mmsu_talker_wer -v -s
-
-run_one qwen3_tts_wer "${LOG}" \
-    "${OMNI_CI_PYTHON}" -m pytest tests/test_model/test_qwen3_omni_tts_ci.py::test_voice_cloning_wer -v -s
-
-log_and_echo "${LOG}" "===== QWEN3 WER SECTION FINISHED $(date -Is) ====="
 
 run_one tts_nonstream_wer "${LOG}" \
     "${OMNI_CI_PYTHON}" -m pytest tests/test_model/test_tts_ci.py --tts-stage tts-stage-1-nonstream \

@@ -66,10 +66,10 @@ def test_invalid_engine_mem_fraction_static_raises() -> None:
 
 
 def test_invalid_model_group_values_raise() -> None:
-    with pytest.raises(ValueError, match="max_seq_len"):
-        FactoryArgs(max_seq_len=0)
-    with pytest.raises(ValueError, match="video_fps"):
-        FactoryArgs(video_fps=-1.0)
+    with pytest.raises(ValueError, match="max_new_tokens"):
+        FactoryArgs(max_new_tokens=0)
+    with pytest.raises(ValueError, match="context_length"):
+        FactoryArgs(context_length=-1)
 
 
 def test_prefill_coalesce_range_is_enforced_at_validation() -> None:

@@ -6,20 +6,9 @@ Usage (programmatic)::
     from sglang_omni.serve.launcher import launch_server
     launch_server(pipeline_config, host="0.0.0.0", port=8000)
 
-Usage (CLI — with config file)::
+Usage (CLI)::
 
-    sglang-omni-server --config pipeline.json --port 8000
-
-Usage (CLI — built-in pipeline, no JSON needed)::
-
-    sglang-omni-server \\
-        --pipeline qwen3-omni \\
-        --model-id Qwen/Qwen3-Omni-30B-A3B-Instruct \\
-        --port 8000
-
-Export a config to JSON::
-
-    sglang-omni-server --pipeline qwen3-omni --model-id ... --export-config out.json
+    sgl-omni serve --model-path <checkpoint> --config pipeline.yaml --port 8000
 """
 
 from __future__ import annotations
@@ -47,14 +36,12 @@ from sglang_omni.profiler.event_recorder import get_recorder as _get_event_recor
 from sglang_omni.profiler.profiler_control import ProfilerControlClient
 from sglang_omni.serve.openai_api import create_app
 from sglang_omni.serve.protocol import DEFAULT_TTS_BATCH_MAX_ITEMS
-from sglang_omni.serve.realtime.manager import RealtimeDeployment
 from sglang_omni.utils.gpu_compat import apply_gpu_compat_env_defaults
 from sglang_omni.utils.gpu_memory import (
     GpuDeviceInfo,
     format_bytes_gib,
     get_gpu_device_info,
 )
-from sglang_omni.utils.imports import import_string
 
 logger = logging.getLogger(__name__)
 
@@ -408,7 +395,6 @@ async def run_server(
     model_name: str | None = None,
     log_level: str = "info",
     client_kwargs: dict[str, Any] | None = None,
-    enable_realtime: bool = False,
     allowed_local_media_path: str | None = None,
     allowed_media_domains: list[str] | None = None,
     tts_batch_max_items: int = DEFAULT_TTS_BATCH_MAX_ITEMS,
@@ -449,13 +435,6 @@ async def run_server(
     try:
         cl_kwargs = client_kwargs or {}
         client = Client(coordinator, **cl_kwargs)
-        deployment_factory = type(pipeline_config).realtime_deployment_factory
-        if enable_realtime and deployment_factory is not None:
-            realtime_deployment: RealtimeDeployment | None = import_string(
-                deployment_factory
-            )(client)
-        else:
-            realtime_deployment = None
         app = create_app(
             client,
             model_name=model_name or pipeline_config.name,
@@ -466,7 +445,6 @@ async def run_server(
                 pipeline_config.supports_uploaded_voice_references()
             ),
             custom_voice_config=pipeline_config.resolve_custom_voice_config(),
-            supports_audio_translation=(pipeline_config.supports_audio_translation()),
             required_speech_reference_count=(
                 pipeline_config.required_speech_reference_count
             ),
@@ -478,17 +456,10 @@ async def run_server(
             ),
             additional_speech_languages=pipeline_config.additional_speech_languages,
             max_speech_input_chars=pipeline_config.max_speech_input_chars,
-            enable_realtime=enable_realtime,
-            realtime_deployment=realtime_deployment,
-            supports_realtime_audio_output=(
-                type(pipeline_config).code2wav_stage() is not None
-            ),
-            realtime_transcription=type(pipeline_config).realtime_transcription,
             allowed_local_media_path=allowed_local_media_path,
             allowed_media_domains=allowed_media_domains,
             tts_batch_max_items=tts_batch_max_items,
             architectures=[pipeline_config.architecture],
-            audio_chunking=pipeline_config.resolved_audio_chunking,
         )
         profiler_dir = os.environ.get("SGLANG_TORCH_PROFILER_DIR")
         profiler_ctl = ProfilerControlClient(mp_runner.stage_control_endpoints)
@@ -565,7 +536,6 @@ def launch_server(
     model_name: str | None = None,
     log_level: str = "info",
     client_kwargs: dict[str, Any] | None = None,
-    enable_realtime: bool = False,
     allowed_local_media_path: str | None = None,
     allowed_media_domains: list[str] | None = None,
     tts_batch_max_items: int = DEFAULT_TTS_BATCH_MAX_ITEMS,
@@ -581,8 +551,6 @@ def launch_server(
         log_level: Uvicorn log level.
         client_kwargs: Extra keyword arguments forwarded to
             :class:`~sglang_omni.client.Client`.
-        enable_realtime: If True, mount the WebSocket ``/v1/realtime``
-            endpoint (OpenAI Realtime API).
         allowed_local_media_path: Directory that local media references in TTS
             requests must resolve inside. ``file://`` references are disabled
             when omitted; bare local paths remain allowed by default but are
@@ -600,7 +568,6 @@ def launch_server(
             model_name=model_name,
             log_level=log_level,
             client_kwargs=client_kwargs,
-            enable_realtime=enable_realtime,
             allowed_local_media_path=allowed_local_media_path,
             allowed_media_domains=allowed_media_domains,
             tts_batch_max_items=tts_batch_max_items,

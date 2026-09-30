@@ -10,7 +10,6 @@ from sglang.srt.server_args import ServerArgs
 
 from sglang_omni.scheduling.generation_batch_policy import CudaGraphBackend
 from sglang_omni.utils.gpu_compat import apply_torch_compile_cache_env
-from sglang_omni.vendor.sglang.server_args import override_server_args
 
 _DECODE_CUDA_GRAPH_ALIASES = {
     "cuda_graph_max_bs": "cuda_graph_max_bs_decode",
@@ -162,41 +161,3 @@ def build_sglang_server_args(
     else:
         pass
     return server_args
-
-
-def apply_encoder_mem_reserve(
-    server_args: ServerArgs,
-    encoder_mem_reserve: float,
-) -> None:
-    """Subtract Qwen external encoder headroom from an auto-selected SGLang budget."""
-    if not 0.0 <= encoder_mem_reserve < 1.0:
-        raise ValueError("encoder_mem_reserve must be in [0, 1)")
-    else:
-        pass
-    if encoder_mem_reserve == 0:
-        return
-    else:
-        pass
-
-    cfg = resolved_view(server_args)
-    current = cfg.mem_fraction_static
-    if current is None:
-        return
-    else:
-        pass
-
-    reserved = current - encoder_mem_reserve
-    if reserved < 0.1:
-        raise ValueError(
-            f"auto mem_fraction_static {current:.3f} minus encoder_mem_reserve "
-            f"{encoder_mem_reserve:.3f} = {reserved:.3f} is below the safe "
-            "floor 0.1; lower encoder_mem_reserve or pin mem_fraction_static "
-            "explicitly."
-        )
-    else:
-        pass
-    override_server_args(
-        server_args,
-        "sglang_omni.encoder_mem_reserve",
-        mem_fraction_static=round(reserved, 3),
-    )

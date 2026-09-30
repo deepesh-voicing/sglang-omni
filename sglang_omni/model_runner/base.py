@@ -42,30 +42,6 @@ def rank_shared_unseeded_sampling_seed(request: SchedulerRequest, row_idx: int) 
     return derive_sampling_seed("sglang-omni-unseeded-row", request_id)
 
 
-def resolve_deferred_prefill_inputs(schedule_batch: Any, device: torch.device) -> None:
-    """Materialize staged CPU prefill inputs before a direct worker forward.
-
-    Scheduler-owned execution resolves staging through SGLangExecutionBridge;
-    DllmScheduler calls this before invoking the worker directly.
-    """
-    staged_input_ids = schedule_batch.prefill_input_ids_cpu
-    if staged_input_ids is None:
-        return
-    else:
-        pass
-
-    if schedule_batch.mix_running_indices is not None:
-        raise RuntimeError(
-            "Omni does not support SGLang mixed chunked-prefill batches with "
-            "deferred decode tokens"
-        )
-    else:
-        pass
-
-    schedule_batch.input_ids = staged_input_ids.to(device, non_blocking=True)
-    schedule_batch.prefill_input_ids_cpu = None
-
-
 @dataclass
 class PendingStep:
     """One decode step launched on the GPU but not yet consumed on the host.
@@ -75,8 +51,8 @@ class PendingStep:
     after, so ``event.query()`` true means the launched step's GPU work is
     published. ``launch_buf`` is whatever ``post_decode_launch`` returns for
     resolve to consume: a device-side correctness snapshot of the published ids
-    (MOSS-TTS-Local, no host copy), or a pinned host staging buffer an async host
-    copy filled (Higgs); only the latter provides host-D2H overlap.
+    (no host copy), or a pinned host staging buffer an async host copy filled;
+    only the latter provides host-D2H overlap.
     ``execute_resolve`` later waits on ``event`` and reads ``launch_buf``.
 
     Invariant: at most one ``_PendingStep`` is live at a time (see
@@ -115,8 +91,8 @@ class ModelRunner:
         # Observability: how often resolve found the launched step's event
         # already done (no blocking) vs had to block on synchronize(). This
         # counts whether the launched step's GPU work was published in time; it
-        # does NOT measure host-D2H overlap (only host-staging runners like Higgs
-        # overlap a host copy; the device-snapshot path does not).
+        # does NOT measure host-D2H overlap (only host-staging runners overlap a
+        # host copy; the device-snapshot path does not).
         self.async_query_hit: int = 0
         self.async_query_miss: int = 0
         self.token_id_host_bufs: list[torch.Tensor] | None = None
@@ -302,9 +278,8 @@ class ModelRunner:
     ) -> torch.Tensor:
         """Return a pinned host staging buffer covering ``shape``/``dtype``,
         ping-ponging between two buffers on each call. Runners that stage the
-        collect to host use this: Higgs passes its fixed CG staging shape, the
-        base plain-LM launch passes the step's ``(batch_size,)`` ids shape.
-        Device-snapshot runners (MOSS-TTS-Local) never do.
+        collect to host use this; the base plain-LM launch passes the step's
+        ``(batch_size,)`` ids shape. Device-snapshot runners never do.
 
         Two buffers are required: resolve(N) reads one on the host while
         launch(N+1)'s async host copy writes the other. That CPU-read vs
@@ -385,8 +360,7 @@ class ModelRunner:
         ``post_decode_launch`` to publish a model-specific resolve payload
         (returned as launch_buf), and record a device event right after
         publication. Does NOT wait on the GPU. Decode batches only. ``launch_buf``
-        is a device-side correctness snapshot (MOSS-TTS-Local) or pinned host
-        staging (Higgs); only the latter overlaps a host copy with the next
+        is a device-side correctness snapshot or pinned host staging; only the latter overlaps a host copy with the next
         forward, and ``event.query()`` proves the launched step's GPU work is
         done, not that any host overlap happened.
 
@@ -492,10 +466,7 @@ class ModelRunner:
         """Build the ForwardBatch + capture-hidden mode. Returns
         ``(forward_batch, schedule_batch, is_prefill)``, or
         None when there is no batch to run."""
-        from sglang.srt.model_executor.forward_batch_info import (
-            CaptureHiddenMode,
-            ForwardBatch,
-        )
+        from sglang.srt.model_executor.forward_batch_info import ForwardBatch
 
         if self.device.type != "cpu":
             torch.get_device_module(self.device).set_device(self.device.index or 0)
@@ -519,11 +490,6 @@ class ModelRunner:
                 schedule_batch, scheduler_output.requests
             )
         )
-        if capture_hidden_mode is None and self.output_processor.capture_hidden:
-            capture_hidden_mode = CaptureHiddenMode.LAST
-        else:
-            pass
-
         # init_new does not read capture_hidden_mode off the batch, so pass the
         # override explicitly; None lets upstream derive it.
         forward_batch = ForwardBatch.init_new(
@@ -947,7 +913,7 @@ class ModelRunner:
     def install_sampling_seeds(self, forward_batch: Any, requests: list) -> None:
         """Install per-row ``seed``s onto ``sampling_info`` so SGLang routes to
         ``multinomial_with_seed``. No-op when no request set a seed, or when a
-        subclass already installed its own (e.g. Qwen3-TTS).
+        subclass already installed its own (e.g. Voicing-TTS).
 
         Runs once per decode step. User-provided seeds are resolved once and
         cached back onto ``sampling_params.sampling_seed``. In a mixed

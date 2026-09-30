@@ -123,7 +123,6 @@ def test_docker_dry_run_lists_dependencies_without_installing(repo: Path) -> Non
     result = run(
         repo,
         "--install-system-deps",
-        "--with-qwen-tts",
         "--no-editable",
         "--skip-device-check",
         "--check",
@@ -133,7 +132,6 @@ def test_docker_dry_run_lists_dependencies_without_installing(repo: Path) -> Non
     assert "apt-get install -y --no-install-recommends ffmpeg=" in result.stdout
     assert "libsndfile1=" in result.stdout
     assert "sox=" in result.stdout
-    assert "-m pip install --no-deps qwen-tts==0.1.1" in result.stdout
     assert "editable:    no" in result.stdout
     assert (repo / "pyproject.toml").read_text().startswith(ORIGINAL_MARKER)
 
@@ -226,9 +224,7 @@ def test_supported_version_is_read_from_manifest(repo: Path) -> None:
     assert "would run" in result.stdout
 
 
-@pytest.mark.parametrize(
-    "extra", ["eval", "all", "fun-cosyvoice3", "eval,fun-cosyvoice3"]
-)
+@pytest.mark.parametrize("extra", ["eval", "all", "eval,all"])
 def test_supported_extras_are_preserved_as_one_argument(repo: Path, extra: str) -> None:
     result = run(repo, "--check", "--extras", extra)
 

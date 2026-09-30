@@ -45,8 +45,7 @@ class SGLangGenerationEngineBuilder(ABC):
 
     Model-specific builders provide checkpoint preprocessing, model setup,
     request/result adapters, validation policy, and any stage-owned resources.
-    Family-specific builders such as :class:`AsrEngineBuilder` and
-    :class:`TtsEngineBuilder` define the lifecycle policy for each modality.
+    :class:`TtsEngineBuilder` defines the TTS lifecycle policy.
     """
 
     model_name: str
@@ -433,26 +432,6 @@ class SGLangGenerationEngineBuilder(ABC):
 
     def post_scheduler_setup(self, scheduler: Any, model_runner: Any) -> None:
         del scheduler, model_runner
-
-
-class AsrEngineBuilder(SGLangGenerationEngineBuilder):
-    """Shared lifecycle policy for SGLang-backed ASR stages."""
-
-    def resolve_checkpoint(self, model_path: str) -> str:
-        # ASR model loaders accept either a repo id or a local path and should
-        # preserve the operator-provided value through server-args creation.
-        return model_path
-
-    def validate_before_infrastructure(self, server_args: Any) -> None:
-        validate_generation_batch_policy(
-            model_name=self.model_name,
-            server_args=server_args,
-        )
-
-    def make_model_runner(self, model_worker: Any, output_proc: Any) -> Any:
-        from sglang_omni.model_runner.base import ModelRunner
-
-        return ModelRunner(model_worker, output_proc)
 
 
 class TtsEngineBuilder(SGLangGenerationEngineBuilder):

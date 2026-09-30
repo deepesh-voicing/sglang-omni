@@ -15,7 +15,7 @@ from sglang_omni.comm import stage_io
 from sglang_omni.comm.data_ref import DataKind, DataRef, TransportKind
 from sglang_omni.comm.engine import CommEngine
 from sglang_omni.config.schema import StageConfig
-from sglang_omni.models.fishaudio_s2_pro.config import S2ProPipelineConfig
+from sglang_omni.models.voicing_tts.config import VoicingTTSPipelineConfig
 from sglang_omni.pipeline.stage.runtime import Stage
 from sglang_omni.pipeline.stage.stream_queue import StreamItem, StreamQueue
 from sglang_omni.proto import DataReadyMessage, OmniRequest, StagePayload
@@ -605,8 +605,8 @@ def test_stage_config_rejects_unknown_model_transport_field() -> None:
         )
 
 
-def test_s2pro_config_declares_topology_without_transport_policy() -> None:
-    config = S2ProPipelineConfig(model_path="dummy")
+def test_voicing_tts_config_declares_topology_without_transport_policy() -> None:
+    config = VoicingTTSPipelineConfig(model_path="dummy")
     tts_stage = next(stage for stage in config.stages if stage.name == "tts_engine")
     vocoder_stage = next(stage for stage in config.stages if stage.name == "vocoder")
     assert tts_stage.stream_to == ["vocoder"]

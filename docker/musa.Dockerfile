@@ -72,10 +72,6 @@ RUN python3 -m pip install --upgrade pip "setuptools<82" wheel \
         --extra-index-url "${MUSA_PIP_INDEX_URL}" \
         --trusted-host dl.mthreads.com
 
-# Install qwen-tts without dependencies because it pins Transformers 4.57.3
-# and accelerate 1.12.0, which would replace the inherited stack.
-RUN python3 -m pip install --no-cache-dir --no-deps qwen-tts==0.1.1
-
 RUN python3 - <<'PY'
 import torch
 

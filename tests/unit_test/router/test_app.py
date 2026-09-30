@@ -181,7 +181,7 @@ def test_health_checks_use_separate_client_from_data_plane_client() -> None:
         ready = client.get("/ready")
         response = client.post(
             "/v1/chat/completions",
-            json={"model": "qwen3-omni", "messages": [{"role": "user"}]},
+            json={"model": "voicing-tts", "messages": [{"role": "user"}]},
         )
 
     assert ready.status_code == 200
@@ -308,7 +308,7 @@ def test_worker_crud_updates_runtime_pool_and_validates_payloads() -> None:
             "/workers",
             json={
                 "url": "http://worker-c:8103",
-                "model": "qwen3-omni",
+                "model": "voicing-tts",
                 "capabilities": ["chat", "streaming"],
             },
         )
@@ -500,7 +500,7 @@ def test_models_merge_queries_only_healthy_workers_and_deduplicates() -> None:
                 json={
                     "object": "list",
                     "data": [
-                        {"id": "qwen3-omni", "object": "model", "created": 0},
+                        {"id": "voicing-tts", "object": "model", "created": 0},
                     ],
                 },
                 request=request,
@@ -520,7 +520,7 @@ def test_models_merge_queries_only_healthy_workers_and_deduplicates() -> None:
     assert model_queries == [b"detail=1"]
     assert [worker.active_requests for worker in app.state.workers] == [7, 7]
     assert response.json()["data"] == [
-        {"id": "qwen3-omni", "object": "model", "created": 0}
+        {"id": "voicing-tts", "object": "model", "created": 0}
     ]
 
 
@@ -1131,7 +1131,7 @@ def test_round_robin_proxies_raw_bytes_and_alternates_workers() -> None:
     async_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     app = create_app(router_config(), client=async_client)
     body = {
-        "model": "qwen3-omni",
+        "model": "voicing-tts",
         "request_id": "req-1",
         "messages": [{"role": "user", "content": "hi"}],
         "stage_params": {"kept": True},
@@ -1228,7 +1228,7 @@ def test_buffered_route_completion_log_includes_selection_context(
             response = client.post(
                 "/v1/chat/completions",
                 headers={"x-request-id": "buffered-log-1"},
-                json={"model": "qwen3-omni", "messages": [{"role": "user"}]},
+                json={"model": "voicing-tts", "messages": [{"role": "user"}]},
             )
 
     assert response.status_code == 200
@@ -1264,7 +1264,7 @@ def test_upstream_request_failure_returns_502_and_cleans_active_count() -> None:
     with TestClient(app) as client:
         response = client.post(
             "/v1/chat/completions",
-            json={"model": "qwen3-omni", "messages": []},
+            json={"model": "voicing-tts", "messages": []},
         )
 
     assert response.status_code == 502
@@ -1305,7 +1305,7 @@ def test_router_response_errors_do_not_refresh_worker_routability(
         with pytest.raises(RuntimeError, match="router response bug"):
             client.post(
                 "/v1/chat/completions",
-                json={"model": "qwen3-omni", "messages": []},
+                json={"model": "voicing-tts", "messages": []},
             )
 
     worker = app.state.workers[0]
@@ -1337,11 +1337,11 @@ def test_retryable_upstream_status_refreshes_worker_routability() -> None:
     with TestClient(app) as client:
         first = client.post(
             "/v1/chat/completions",
-            json={"model": "qwen3-omni", "messages": []},
+            json={"model": "voicing-tts", "messages": []},
         )
         second = client.post(
             "/v1/chat/completions",
-            json={"model": "qwen3-omni", "messages": []},
+            json={"model": "voicing-tts", "messages": []},
         )
 
     assert first.status_code == 502
@@ -1372,7 +1372,7 @@ def test_worker_validation_error_does_not_refresh_worker_routability() -> None:
     with TestClient(app) as client:
         response = client.post(
             "/v1/chat/completions",
-            json={"model": "qwen3-omni", "messages": []},
+            json={"model": "voicing-tts", "messages": []},
         )
 
     assert response.status_code == 422
@@ -1406,7 +1406,7 @@ def test_streaming_upstream_error_cleans_active_count() -> None:
         with client.stream(
             "POST",
             "/v1/chat/completions",
-            json={"model": "qwen3-omni", "stream": True},
+            json={"model": "voicing-tts", "stream": True},
         ) as response:
             body = b"".join(response.iter_bytes())
 
@@ -1445,7 +1445,7 @@ def test_streaming_failure_records_single_worker_failure() -> None:
         with client.stream(
             "POST",
             "/v1/chat/completions",
-            json={"model": "qwen3-omni", "stream": True},
+            json={"model": "voicing-tts", "stream": True},
         ) as response:
             body = b"".join(response.iter_bytes())
 
@@ -1486,7 +1486,7 @@ def test_streaming_inflight_count_decrements_even_if_aclose_raises() -> None:
         with client.stream(
             "POST",
             "/v1/chat/completions",
-            json={"model": "qwen3-omni", "stream": True},
+            json={"model": "voicing-tts", "stream": True},
         ) as response:
             b"".join(response.iter_bytes())
 
@@ -1523,7 +1523,7 @@ def admission_proxy(
     )
 
 
-def chat_request(body: bytes = b'{"model": "qwen3-omni"}') -> Request:
+def chat_request(body: bytes = b'{"model": "voicing-tts"}') -> Request:
     return request_without_content_length([body])
 
 
@@ -1763,7 +1763,7 @@ def test_admission_slot_released_after_midstream_failure() -> None:
         with client.stream(
             "POST",
             "/v1/chat/completions",
-            json={"model": "qwen3-omni", "stream": True},
+            json={"model": "voicing-tts", "stream": True},
         ) as response:
             body = b"".join(response.iter_bytes())
         assert app.state.admission_controller.inflight == 0
@@ -1786,12 +1786,12 @@ def test_app_fast_rejects_when_admission_bound_reached() -> None:
         assert app.state.admission_controller.try_acquire()
         try:
             overloaded = client.post(
-                "/v1/chat/completions", json={"model": "qwen3-omni", "messages": []}
+                "/v1/chat/completions", json={"model": "voicing-tts", "messages": []}
             )
         finally:
             app.state.admission_controller.release()
         recovered = client.post(
-            "/v1/chat/completions", json={"model": "qwen3-omni", "messages": []}
+            "/v1/chat/completions", json={"model": "voicing-tts", "messages": []}
         )
 
     assert overloaded.status_code == 503
@@ -1806,7 +1806,7 @@ def test_admission_exempts_management_endpoints_and_reports_stats() -> None:
         if request.url.path == "/health":
             return httpx.Response(200, json={"status": "healthy"}, request=request)
         if request.url.path == "/model_info":
-            return httpx.Response(200, json={"model": "qwen3-omni"}, request=request)
+            return httpx.Response(200, json={"model": "voicing-tts"}, request=request)
         raise AssertionError(f"unexpected request path: {request.url.path}")
 
     async_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
@@ -1818,7 +1818,7 @@ def test_admission_exempts_management_endpoints_and_reports_stats() -> None:
             for _ in range(2):
                 rejected = client.post(
                     "/v1/chat/completions",
-                    json={"model": "qwen3-omni", "messages": []},
+                    json={"model": "voicing-tts", "messages": []},
                 )
                 assert rejected.status_code == 503
 
@@ -1871,7 +1871,7 @@ def test_non_streaming_midstream_failure_truncates_instead_of_502() -> None:
             with client.stream(
                 "POST",
                 "/v1/chat/completions",
-                json={"model": "qwen3-omni", "messages": []},
+                json={"model": "voicing-tts", "messages": []},
             ) as response:
                 assert response.status_code == 200
                 b"".join(response.iter_bytes())
@@ -1897,7 +1897,7 @@ def test_non_streaming_error_status_relays_full_body_not_truncated() -> None:
 
     with TestClient(app) as client:
         response = client.post(
-            "/v1/chat/completions", json={"model": "qwen3-omni", "messages": []}
+            "/v1/chat/completions", json={"model": "voicing-tts", "messages": []}
         )
 
     # Note (Jiaxin Deng): a complete error-status body relays cleanly (only a
@@ -1932,7 +1932,7 @@ def test_worker_failure_last_error_uses_status_code_not_body() -> None:
 
     with TestClient(app) as client:
         response = client.post(
-            "/v1/chat/completions", json={"model": "qwen3-omni", "messages": []}
+            "/v1/chat/completions", json={"model": "voicing-tts", "messages": []}
         )
 
     assert response.status_code == 502
@@ -1967,7 +1967,7 @@ def test_bad_input_500s_do_not_evict_worker() -> None:
     with TestClient(app) as client:
         responses = [
             client.post(
-                "/v1/chat/completions", json={"model": "qwen3-omni", "messages": []}
+                "/v1/chat/completions", json={"model": "voicing-tts", "messages": []}
             )
             for _ in range(3)
         ]
@@ -2001,13 +2001,13 @@ def test_transport_errors_still_evict_worker() -> None:
 
     with TestClient(app) as client:
         first = client.post(
-            "/v1/chat/completions", json={"model": "qwen3-omni", "messages": []}
+            "/v1/chat/completions", json={"model": "voicing-tts", "messages": []}
         )
         second = client.post(
-            "/v1/chat/completions", json={"model": "qwen3-omni", "messages": []}
+            "/v1/chat/completions", json={"model": "voicing-tts", "messages": []}
         )
         third = client.post(
-            "/v1/chat/completions", json={"model": "qwen3-omni", "messages": []}
+            "/v1/chat/completions", json={"model": "voicing-tts", "messages": []}
         )
 
     assert first.status_code == 502
@@ -2058,7 +2058,7 @@ def test_relayed_status_evicts_only_on_gateway_failure(
     with TestClient(app) as client:
         responses = [
             client.post(
-                "/v1/chat/completions", json={"model": "qwen3-omni", "messages": []}
+                "/v1/chat/completions", json={"model": "voicing-tts", "messages": []}
             )
             for _ in range(2)
         ]
@@ -2104,7 +2104,7 @@ def test_relayed_500_outcome_labeled_upstream_5xx(
         with TestClient(app) as client:
             response = client.post(
                 "/v1/chat/completions",
-                json={"model": "qwen3-omni", "messages": []},
+                json={"model": "voicing-tts", "messages": []},
             )
 
     assert response.status_code == 500
@@ -2138,7 +2138,7 @@ def test_relayed_response_has_no_content_length_header() -> None:
 
     with TestClient(app) as client:
         response = client.post(
-            "/v1/chat/completions", json={"model": "qwen3-omni", "messages": []}
+            "/v1/chat/completions", json={"model": "voicing-tts", "messages": []}
         )
 
     assert response.status_code == 200
@@ -2173,7 +2173,7 @@ def test_sse_terminal_error_event_appended_after_prior_events() -> None:
         with client.stream(
             "POST",
             "/v1/chat/completions",
-            json={"model": "qwen3-omni", "stream": True},
+            json={"model": "voicing-tts", "stream": True},
         ) as response:
             assert response.status_code == 200
             body = b"".join(response.iter_bytes())
@@ -2216,7 +2216,7 @@ def test_non_sse_midstream_failure_is_not_injected_with_error_event() -> None:
             with client.stream(
                 "POST",
                 "/v1/audio/speech",
-                json={"model": "qwen3-omni"},
+                json={"model": "voicing-tts"},
             ) as response:
                 assert response.status_code == 200
                 b"".join(response.iter_bytes())
@@ -2258,7 +2258,7 @@ def test_active_requests_held_across_body_relay_then_released() -> None:
     app_holder.append(app)
 
     with TestClient(app) as client:
-        response = client.post("/v1/audio/speech", json={"model": "qwen3-omni"})
+        response = client.post("/v1/audio/speech", json={"model": "voicing-tts"})
 
     assert response.status_code == 200
     assert response.content == b"chunk-1chunk-2"
@@ -2285,7 +2285,7 @@ def test_least_request_avoids_worker_with_active_stream_load() -> None:
     with TestClient(app) as client:
         workers = app.state.workers
         workers[0].active_requests = 10
-        response = client.post("/v1/audio/speech", json={"model": "qwen3-omni"})
+        response = client.post("/v1/audio/speech", json={"model": "voicing-tts"})
 
     assert response.status_code == 200
     assert response.headers["x-sglang-omni-worker"].endswith("worker-b%3A8102")
@@ -2317,14 +2317,14 @@ def test_chat_modality_capabilities_filter_mixed_worker_pool() -> None:
         client=async_client,
     )
     body = {
-        "model": "qwen3-omni",
+        "model": "voicing-tts",
         "request_id": "req-mm",
         "messages": [{"role": "user", "content": "describe"}],
         "audios": ["audio.wav"],
         "videos": ["clip.mp4"],
         "modalities": ["text", "audio"],
         "audio": {"format": "wav"},
-        "stage_sampling": {"thinker": {"temperature": 0.7}},
+        "stage_sampling": {"tts_engine": {"temperature": 0.7}},
         "stage_params": {"preprocessor": {"video_fps": 1.0}},
     }
 
@@ -2361,7 +2361,7 @@ def test_chat_message_part_capabilities_filter_mixed_worker_pool() -> None:
         response = client.post(
             "/v1/chat/completions",
             json={
-                "model": "qwen3-omni",
+                "model": "voicing-tts",
                 "messages": [
                     {
                         "role": "user",
@@ -2400,7 +2400,7 @@ def test_large_chat_body_uses_unique_capability_superset_without_route_header() 
     )
     body = large_json_body(
         {
-            "model": "qwen3-omni",
+            "model": "voicing-tts",
             "messages": [{"role": "user", "content": "describe"}],
         }
     )
@@ -2438,7 +2438,7 @@ def test_large_chat_body_requires_capability_header_for_ambiguous_worker_pool() 
     )
     body = large_json_body(
         {
-            "model": "qwen3-omni",
+            "model": "voicing-tts",
             "messages": [{"role": "user", "content": "describe"}],
         }
     )
@@ -2477,7 +2477,7 @@ def test_large_chat_body_routes_homogeneous_pool_without_route_headers() -> None
     )
     body = large_json_body(
         {
-            "model": "qwen3-omni",
+            "model": "voicing-tts",
             "messages": [{"role": "user", "content": "describe"}],
             "videos": ["sample"],
         }
@@ -2529,7 +2529,7 @@ def test_large_chat_body_preserves_modality_capability_routing(
     )
     body = large_json_body(
         {
-            "model": "qwen3-omni",
+            "model": "voicing-tts",
             "messages": [{"role": "user", "content": "describe"}],
             payload_field: ["sample"],
         }
@@ -2573,7 +2573,7 @@ def test_large_route_capability_hint_is_not_forwarded_to_worker() -> None:
     body = large_json_body(
         {
             "padding_first": "x" * (1024 * 1024 + 128),
-            "model": "qwen3-omni",
+            "model": "voicing-tts",
             "messages": [{"role": "user", "content": "describe"}],
             "videos": ["sample"],
         }
@@ -2623,7 +2623,7 @@ def test_large_streaming_chat_body_preserves_sse_routing() -> None:
     )
     body = large_json_body(
         {
-            "model": "qwen3-omni",
+            "model": "voicing-tts",
             "messages": [{"role": "user", "content": "stream"}],
             "stream": True,
         }
@@ -2647,8 +2647,8 @@ def test_large_streaming_chat_body_preserves_sse_routing() -> None:
 @pytest.mark.parametrize(
     "body",
     [
-        b'{"model":"qwen3-omni","padding":"\\x"}',
-        b'{"model":"qwen3-omni","bad":01}',
+        b'{"model":"voicing-tts","padding":"\\x"}',
+        b'{"model":"voicing-tts","bad":01}',
         b'["not", "an", "object"]',
     ],
 )
@@ -2705,7 +2705,7 @@ def test_speech_stream_requires_speech_and_streaming_capabilities() -> None:
         with client.stream(
             "POST",
             "/v1/audio/speech",
-            json={"model": "qwen3-omni", "input": "hello", "stream": True},
+            json={"model": "voicing-tts", "input": "hello", "stream": True},
         ) as response:
             body = b"".join(response.iter_bytes())
 
@@ -2717,24 +2717,24 @@ def test_speech_stream_requires_speech_and_streaming_capabilities() -> None:
 @pytest.mark.parametrize(
     "payload",
     [
-        {"model": "qwen3-omni", "input": "hello", "ref_audio": "voice.wav"},
+        {"model": "voicing-tts", "input": "hello", "ref_audio": "voice.wav"},
         {
-            "model": "qwen3-omni",
+            "model": "voicing-tts",
             "input": "hello",
             "references": [{"audio_path": "voice.wav", "text": "hello"}],
         },
         {
-            "model": "qwen3-omni",
+            "model": "voicing-tts",
             "input": "hello",
             "references": [{"data": "base64-audio", "text": "hello"}],
         },
         {
-            "model": "qwen3-omni",
+            "model": "voicing-tts",
             "input": "hello",
             "references": [{"audio": "base64-audio", "text": "hello"}],
         },
         {
-            "model": "qwen3-omni",
+            "model": "voicing-tts",
             "input": "hello",
             "references": [{"ref_audio": "base64-audio", "text": "hello"}],
         },
@@ -2902,7 +2902,7 @@ def test_large_tts_body_uses_voice_owner_in_heterogeneous_pool(
     )
     body = large_json_body(
         {
-            "model": "qwen3-omni",
+            "model": "voicing-tts",
             **request_fields,
         }
     )
@@ -2940,7 +2940,7 @@ def test_streaming_chat_relays_exact_sse_bytes() -> None:
         with client.stream(
             "POST",
             "/v1/chat/completions",
-            json={"model": "qwen3-omni", "stream": True},
+            json={"model": "voicing-tts", "stream": True},
         ) as response:
             body = b"".join(response.iter_bytes())
 
@@ -2975,7 +2975,7 @@ def test_streaming_route_completion_log_includes_stream_lifetime(
                 "POST",
                 "/v1/chat/completions",
                 headers={"x-request-id": "stream-log-1"},
-                json={"model": "qwen3-omni", "stream": True},
+                json={"model": "voicing-tts", "stream": True},
             ) as response:
                 body = b"".join(response.iter_bytes())
 
@@ -3070,7 +3070,7 @@ def test_payload_without_content_length_is_rejected_while_streaming_body() -> No
         selector=WorkerSelector(config.policy),
         client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
     )
-    request = request_without_content_length([b'{"model"', b':"qwen3-omni"}'])
+    request = request_without_content_length([b'{"model"', b':"voicing-tts"}'])
 
     response = asyncio.run(proxy.forward_model_request(request, "/v1/chat/completions"))
 
@@ -3599,7 +3599,7 @@ def test_speech_to_text_routes_select_audio_input_workers(path: str) -> None:
         response = client.post(
             path,
             files={"file": ("a.wav", b"RIFF....WAVE", "audio/wav")},
-            data={"model": "whisper"},
+            data={"model": "transcriber-b"},
         )
 
     assert response.status_code == 200, response.text
@@ -3654,10 +3654,14 @@ def mixed_asr_pool_app(seen_workers: list[str]) -> FastAPI:
 
     worker_configs = [
         WorkerConfig(
-            url="http://qwen3-asr:8101", model="qwen3-asr", capabilities={"audio_input"}
+            url="http://transcriber-a:8101",
+            model="transcriber-a",
+            capabilities={"audio_input"},
         ),
         WorkerConfig(
-            url="http://whisper:8102", model="whisper", capabilities={"audio_input"}
+            url="http://transcriber-b:8102",
+            model="transcriber-b",
+            capabilities={"audio_input"},
         ),
     ]
     return create_app(
@@ -3675,21 +3679,21 @@ def test_multipart_form_model_selects_matching_worker(
     # the file part — after means the scan has to skip the file bytes.
     seen_workers: list[str] = []
     app = mixed_asr_pool_app(seen_workers)
-    body, headers = speech_to_text_multipart("whisper", model_first=model_first)
+    body, headers = speech_to_text_multipart("transcriber-b", model_first=model_first)
 
     with TestClient(app) as client:
         for _ in range(4):
             response = client.post(path, content=body, headers=headers)
             assert response.status_code == 200, response.text
 
-    assert seen_workers == ["whisper:8102"] * 4
+    assert seen_workers == ["transcriber-b:8102"] * 4
 
 
 def test_multipart_form_model_conflicting_route_header_is_rejected() -> None:
     seen_workers: list[str] = []
     app = mixed_asr_pool_app(seen_workers)
-    body, headers = speech_to_text_multipart("whisper")
-    headers["x-sglang-omni-route-model"] = "qwen3-asr"
+    body, headers = speech_to_text_multipart("transcriber-b")
+    headers["x-sglang-omni-route-model"] = "transcriber-a"
 
     with TestClient(app) as client:
         response = client.post("/v1/audio/translations", content=body, headers=headers)
@@ -3706,7 +3710,7 @@ def test_multipart_body_router_cannot_parse_falls_back_to_route_header() -> None
     app = mixed_asr_pool_app(seen_workers)
     headers = {
         "content-type": f"multipart/form-data; boundary={ASR_BOUNDARY}",
-        "x-sglang-omni-route-model": "whisper",
+        "x-sglang-omni-route-model": "transcriber-b",
     }
 
     with TestClient(app) as client:
@@ -3717,7 +3721,7 @@ def test_multipart_body_router_cannot_parse_falls_back_to_route_header() -> None
         )
 
     assert response.status_code == 200, response.text
-    assert seen_workers == ["whisper:8102"]
+    assert seen_workers == ["transcriber-b:8102"]
 
 
 def test_multipart_form_stream_requires_streaming_capability() -> None:
@@ -3739,7 +3743,7 @@ def test_multipart_form_stream_requires_streaming_capability() -> None:
         router_config(worker_configs=worker_configs),
         client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
     )
-    body, headers = speech_to_text_multipart("whisper", stream="true")
+    body, headers = speech_to_text_multipart("transcriber-b", stream="true")
 
     with TestClient(app) as client:
         for _ in range(4):
@@ -3754,7 +3758,7 @@ def test_multipart_form_stream_requires_streaming_capability() -> None:
 def test_multipart_form_stream_conflicting_route_header_is_rejected() -> None:
     seen_workers: list[str] = []
     app = mixed_asr_pool_app(seen_workers)
-    body, headers = speech_to_text_multipart("whisper", stream="true")
+    body, headers = speech_to_text_multipart("transcriber-b", stream="true")
     headers["x-sglang-omni-route-stream"] = "false"
 
     with TestClient(app) as client:

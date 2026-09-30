@@ -144,7 +144,7 @@ def reconstruct_timelines(
 
 # (opener, closer) pairs framing a stage-local interval. Opener can
 # appear in multiple pairs (e.g. prefill_start closes against both
-# first_emit and first_stream_chunk_sent → thinker TTFT / talker TTFCC).
+# first_emit and first_stream_chunk_sent → TTFT / first stream chunk).
 _STAGE_INTERVAL_EVENTS = (
     ("stage_input_received", "stage_complete"),
     ("encoder_start", "encoder_end"),

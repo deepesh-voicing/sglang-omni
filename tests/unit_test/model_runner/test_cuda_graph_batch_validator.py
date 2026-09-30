@@ -146,7 +146,7 @@ def test_clamped_cap_is_not_a_failure():
 
 def test_missing_buffer_validates_partial():
     report = evaluate_cuda_graph_batch_sizing(
-        stage="voxtral_tts",
+        stage="voicing_tts",
         max_running_requests=16,
         cuda_graph_max_bs=16,
         captured_bs=[1, 8, 16],
@@ -197,53 +197,11 @@ def as_named(_unused, clsname, **attrs):
     return obj
 
 
-def test_read_buffer_higgs_sampler_pool():
-    model = as_named(
-        None,
-        "HiggsTTSModel",
-        sampler_pool=SimpleNamespace(seeds=FakeTensor(65)),
-    )
-    cap, source = read_model_buffer_capacity(model)
-    assert cap == 65
-    assert "sampler_pool.seeds.shape[0]" in source
-
-
-def test_read_buffer_returns_minimum_across_registered_buffers():
-    model = as_named(
-        None,
-        "HiggsTTSModel",
-        sampler_pool=SimpleNamespace(seeds=FakeTensor(65)),
-        cg_codes_BN=FakeTensor(40),
-        cg_active_last_codes=FakeTensor(65),
-    )
-    cap, source = read_model_buffer_capacity(model)
-    assert cap == 40
-    assert "cg_codes_BN.shape[0]" in source
-
-
-def test_read_buffer_qwen3_tts_feedback():
-    model = as_named(None, "Qwen3TTSTalker", feedback_buffer=FakeTensor(64))
+def test_read_buffer_voicing_tts_feedback():
+    model = as_named(None, "VoicingTTSTalker", feedback_buffer=FakeTensor(64))
     cap, source = read_model_buffer_capacity(model)
     assert cap == 64
     assert "feedback_buffer.shape[0]" in source
-
-
-def test_read_buffer_inner_submodule_fallback():
-    inner = as_named(None, "Inner", feedback_buffer=FakeTensor(32))
-    model = as_named(None, "Qwen3OmniTalker", model=inner)
-    cap, source = read_model_buffer_capacity(model)
-    assert cap == 32
-    assert source.startswith("model.model.")
-
-
-def test_read_buffer_qwen3_omni_prefers_top_level_alias():
-    inner = as_named(None, "TextModel", feedback_buffer=FakeTensor(48))
-    model = as_named(
-        None, "Qwen3OmniTalker", model=inner, feedback_buffer=inner.feedback_buffer
-    )
-    cap, source = read_model_buffer_capacity(model)
-    assert cap == 48
-    assert source == "model.feedback_buffer.shape[0]"
 
 
 def test_read_buffer_unregistered_model():
@@ -254,7 +212,7 @@ def test_read_buffer_unregistered_model():
 
 
 def test_read_buffer_registered_but_unallocated():
-    model = as_named(None, "S2ProSGLangTextModel")
+    model = as_named(None, "VoicingTTSTalker")
     cap, source = read_model_buffer_capacity(model)
     assert cap is None
     assert "none of its buffers resolved" in source
@@ -270,18 +228,16 @@ def test_read_buffer_none_model():
 
 
 def test_validate_stage_auto_reads_buffer_and_passes():
-    model = as_named(None, "Qwen3TTSTalker", feedback_buffer=FakeTensor(64))
+    model = as_named(None, "VoicingTTSTalker", feedback_buffer=FakeTensor(64))
     runner = fake_runner(model=model, capture_bs=[1, 2, 4, 8, 16, 32, 64])
     report = validate_stage("tts_engine", runner)
     assert report.buffer_capacity == 64
-    assert report.stage == "tts_engine (Qwen3TTSTalker)"
+    assert report.stage == "tts_engine (VoicingTTSTalker)"
     assert report.is_valid
 
 
 def test_validate_stage_detects_undersized_buffer_end_to_end():
-    model = as_named(
-        None, "VoxtralSGLangTTSModel", decode_input_embed_buffer=FakeTensor(64)
-    )
+    model = as_named(None, "VoicingTTSTalker", feedback_buffer=FakeTensor(64))
     runner = fake_runner(
         model=model,
         max_running_requests=128,
@@ -289,7 +245,7 @@ def test_validate_stage_detects_undersized_buffer_end_to_end():
         capture_bs=[1, 16, 64, 128],
         request_slots=128,
     )
-    report = validate_stage("tts_generation", runner)
+    report = validate_stage("tts_engine", runner)
     assert report.buffer_capacity == 64
     assert not report.is_valid
     assert any("overruns the model buffer" in f for f in report.findings)
@@ -304,7 +260,7 @@ def test_validate_stage_caller_override_buffer():
 
 
 def test_validate_stage_disabled_cuda_graph_is_valid_no_op():
-    model = as_named(None, "Qwen3TTSTalker", feedback_buffer=FakeTensor(64))
+    model = as_named(None, "VoicingTTSTalker", feedback_buffer=FakeTensor(64))
     runner = fake_runner(
         model=model,
         disable_cuda_graph=True,
@@ -328,10 +284,10 @@ def test_validate_stage_unregistered_model_partial_report():
 
 
 def test_validate_stage_names_the_stage():
-    model = as_named(None, "Qwen3TTSTalker", feedback_buffer=FakeTensor(64))
+    model = as_named(None, "VoicingTTSTalker", feedback_buffer=FakeTensor(64))
     runner = fake_runner(model=model, capture_bs=[1, 16, 64])
     out = validate_stage("talker_ar", runner).format()
-    assert "Stage: talker_ar (Qwen3TTSTalker)" in out
+    assert "Stage: talker_ar (VoicingTTSTalker)" in out
     assert "VERDICT:" in out
     assert "model-side buffers:" in out
 
@@ -340,16 +296,7 @@ def test_validate_stage_names_the_stage():
 
 
 def test_every_generation_model_has_a_probe():
-    expected = {
-        "HiggsTTSModel",
-        "Qwen3TTSTalker",
-        "VoicingTTSTalker",
-        "MossTTSDelaySGLangModel",
-        "MossTTSLocalSGLangModel",
-        "S2ProSGLangTextModel",
-        "VoxtralSGLangTTSModel",
-        "Qwen3OmniTalker",
-    }
+    expected = {"VoicingTTSTalker"}
     assert expected <= set(
         cgv._BUFFER_PROBES
     )  # noqa: leading-underscore  # production name

@@ -8,8 +8,8 @@ decode to float32.
 Note(Chenchen Hong): use this when a tensor must survive a control-plane
 message, not just a relay hop. A field left in pipeline state reaches the
 terminal CompleteMessage, which control_plane.send_complete msgpack-packs and
-msgpack cannot pack a Tensor (it can pack bytes). Voxtral's audio_codes ends up
-there, so it must be bytes. A keep-CPU-tensor field (serialize_value) only works
+msgpack cannot pack a Tensor (it can pack bytes), so a tensor that ends up
+there must be bytes. A keep-CPU-tensor field (serialize_value) only works
 when it never crosses a control-plane message (relay side-channel hops only).
 """
 

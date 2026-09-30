@@ -2,10 +2,10 @@
 """Translation of dotted CLI keys into canonical configuration paths.
 
 On the command line the ``stages.`` prefix is implied: a per-stage flag
-starts from the stage name (``--thinker.engine.mem_fraction_static 0.6``),
+starts from the stage name (``--tts_engine.engine.mem_fraction_static 0.6``),
 mirroring the YAML ``stages:`` mapping where the stage name is also the
 outermost key the user writes. This module owns that rewrite. Everything downstream sees canonical paths
-(``stages.thinker.engine.mem_fraction_static``) and nothing else.
+(``stages.tts_engine.engine.mem_fraction_static``) and nothing else.
 
 The canonical surfaces themselves -- dotted CLI flags and the YAML
 ``stages:`` mapping -- live in :mod:`sglang_omni.config.sources`.

@@ -25,6 +25,7 @@ from sglang_omni.cli.config import config_app
 from sglang_omni.cli.serve import patches_from_broadcast_flags
 from sglang_omni.config.manager import ConfigManager
 from sglang_omni.config.sources import dump_user_config
+from sglang_omni.models.voicing_tts.config import VoicingTTSPipelineConfig
 
 
 def output_of(result) -> str:
@@ -62,8 +63,7 @@ def runner() -> CliRunner:
 @pytest.fixture
 def base_config():
     """A shipped pipeline config, so the paths are ones users actually type."""
-    module = pytest.importorskip("sglang_omni.models.moss_tts.config")
-    return module.MossTTSPipelineConfig(model_path="dummy")
+    return VoicingTTSPipelineConfig(model_path="dummy")
 
 
 @pytest.fixture
@@ -329,34 +329,39 @@ class TestTensorParallelDerivation:
     """The post-merge TP derivation: preview shows it, users outrank it."""
 
     @pytest.fixture
-    def ming_config_file(self, tmp_path):
-        pytest.importorskip("sglang_omni.models.ming_omni.config")
+    def tp_config_file(self, tmp_path, monkeypatch):
+        # Voicing-TTS declares no TP stage; opt its engine in for this contract.
+        monkeypatch.setattr(
+            VoicingTTSPipelineConfig,
+            "tensor_parallel_disable_custom_all_reduce_stages",
+            ("tts_engine",),
+        )
         data = {
-            "config_cls": "MingOmniPipelineConfig",
+            "config_cls": "VoicingTTSPipelineConfig",
             "model_path": "dummy",
-            "stages": {"thinker": {"tp_size": 2, "gpu": [0, 1]}},
+            "stages": {
+                "tts_engine": {"tp_size": 2, "gpu": [0, 1], "process": "engine"}
+            },
         }
-        path = tmp_path / "ming.yaml"
+        path = tmp_path / "voicing_tp.yaml"
         path.write_text(yaml.safe_dump(data, sort_keys=False))
         return path
 
-    def test_resolve_previews_the_derived_engine_override(
-        self, runner, ming_config_file
-    ):
+    def test_resolve_previews_the_derived_engine_override(self, runner, tp_config_file):
         with mock.patch(
             "sglang_omni.cli.serve.should_disable_custom_all_reduce_for_gpus",
             return_value=True,
         ):
             result = runner.invoke(
                 config_app,
-                ["resolve", "--config", str(ming_config_file), "--show", "config"],
+                ["resolve", "--config", str(tp_config_file), "--show", "config"],
             )
 
         assert result.exit_code == 0, output_of(result)
         assert "disable_custom_all_reduce: true" in result.stdout
 
     def test_an_explicit_engine_value_outranks_the_derivation(
-        self, runner, ming_config_file
+        self, runner, tp_config_file
     ):
         with mock.patch(
             "sglang_omni.cli.serve.should_disable_custom_all_reduce_for_gpus",
@@ -367,8 +372,8 @@ class TestTensorParallelDerivation:
                 [
                     "resolve",
                     "--config",
-                    str(ming_config_file),
-                    "--thinker.engine.disable_custom_all_reduce",
+                    str(tp_config_file),
+                    "--tts_engine.engine.disable_custom_all_reduce",
                     "false",
                     "--show",
                     "config",

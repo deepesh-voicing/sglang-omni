@@ -531,7 +531,7 @@ def test_chunk_scaffold_accepts_configured_input_modality() -> None:
 
 def test_scaffold_errors_use_stream_source_hint() -> None:
     # note (Gaokai): client-visible scaffold errors carry the display hint
-    # (e.g. moss passes "MOSS-TTS Local"), keeping migrated error text
+    # (e.g. Voicing-TTS passes "Voicing-TTS"), keeping migrated error text
     # byte-identical to the pre-refactor schedulers.
     scheduler = FakeStreamingVocoder(stream_source_hint="Fake TTS")
     bad = SimpleNamespace(request=SimpleNamespace(params="nope"))
@@ -738,7 +738,7 @@ def test_stop_release_failure_still_tears_down_session() -> None:
 
 def test_stream_chunk_accepts_bool_false_stream_flag() -> None:
     """Talker latches the CLIENT streaming flag into chunk metadata; False is
-    a valid transport value and must not be rejected (see qwen3
+    a valid transport value and must not be rejected (see Voicing-TTS
     talker_model_runner metadata={'stream': is_streaming})."""
     scheduler = FakeStreamingVocoder(threshold=10)
     state = scheduler.ingest_stream_item("r", item([1], {"stream": False}))

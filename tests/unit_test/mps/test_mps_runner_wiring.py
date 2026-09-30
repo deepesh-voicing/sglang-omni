@@ -53,7 +53,7 @@ def noop_factory():  # pragma: no cover - never constructed in these tests
 
 def make_config(base_path: Path, *, mps: str = "auto") -> PipelineConfig:
     base = PipelineConfig(
-        model_path="Qwen/Qwen3-Omni-30B-A3B-Instruct",
+        model_path="checkpoints/voicing-tts-12hz-1.7b-base",
         entry_stage="preprocessing",
         stages=[
             StageConfig(

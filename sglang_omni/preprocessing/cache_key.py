@@ -3,13 +3,9 @@ from __future__ import annotations
 import threading
 from collections import OrderedDict
 from pathlib import Path
-from typing import Any
 from urllib.parse import urlparse
 
-import numpy as np
-import torch
 import xxhash
-from PIL import Image
 
 
 def is_url_like(s: str) -> bool:
@@ -141,7 +137,7 @@ def reference_path_cache_key(
     # Note(Jiaxin): trust_stat (opt-in, from #740) trusts the (size,mtime,ctime)
     # stat tuple and skips the sentinel byte-read on memo hits; the accepted gap
     # is same-size+mtime+ctime-with-different-content (reachable only by clock
-    # rollback). Default False keeps Higgs's sentinel path; keys are identical.
+    # rollback). Default False keeps the sentinel path; keys are identical.
     path = Path(str(path_like)).expanduser()
     memo = reference_path_hash_memo_key(path)
     if memo is None:
@@ -184,98 +180,3 @@ def reference_path_cache_key(
     else:
         pass
     return f"file:{digest}"
-
-
-def hash_media_item(item: Any) -> str | None:
-    """Generate hash for a single media item (unified logic for image/audio/video).
-
-    Supported types:
-    - str/Path: local file -> sampled hash; URL -> string hash
-    - PIL.Image: mode + size + content hash
-    - numpy.ndarray: dtype + shape + content hash
-    - torch.Tensor: dtype + shape + content hash
-    - bytes/bytearray: content hash
-
-    Returns None for unsupported types (caller should skip caching).
-    """
-    # File path or URL
-    if isinstance(item, (str, Path)):
-        s = str(item)
-        if is_url_like(s):
-            return f"url:{hash_bytes(s.encode())}"
-        else:
-            pass
-        p = Path(s)
-        if p.exists() and p.is_file():
-            return f"file:{hash_file_sampled(p)}"
-        else:
-            pass
-        return f"url:{hash_bytes(s.encode())}"
-    else:
-        pass
-
-    # PIL Image
-    if isinstance(item, Image.Image):
-        meta = f"{item.mode}|{item.size}"
-        content_hash = hash_bytes(item.tobytes())
-        return f"pil:{meta}:{content_hash}"
-    else:
-        pass
-
-    # numpy array
-    if isinstance(item, np.ndarray):
-        meta = f"{item.dtype}|{item.shape}"
-        content_hash = hash_bytes(item.tobytes())
-        return f"np:{meta}:{content_hash}"
-    else:
-        pass
-
-    # torch Tensor
-    if isinstance(item, torch.Tensor):
-        cpu = item.detach().cpu()
-        meta = f"{cpu.dtype}|{tuple(cpu.shape)}"
-        content_hash = hash_bytes(cpu.numpy().tobytes())
-        return f"pt:{meta}:{content_hash}"
-    else:
-        pass
-
-    # Raw bytes
-    if isinstance(item, (bytes, bytearray, memoryview)):
-        return f"bytes:{hash_bytes(item)}"
-    else:
-        pass
-
-    # Unsupported type
-    return None
-
-
-def compute_media_cache_key(items: Any, *, prefix: str) -> str | None:
-    """Compute cache key for media items (image/audio/video).
-
-    Args:
-        items: Single item or list of items
-        prefix: Type prefix (e.g., "image", "audio", "video")
-
-    Returns:
-        Cache key string or None if any item is unsupported.
-    """
-    if items is None:
-        return None
-    else:
-        pass
-    seq = items if isinstance(items, list) else [items]
-    if not seq:
-        return None
-    else:
-        pass
-
-    parts: list[str] = []
-    for item in seq:
-        part = hash_media_item(item)
-        if part is None:
-            return None
-        else:
-            pass
-        parts.append(part)
-
-    return f"{prefix}:{hash_joined(parts)}"

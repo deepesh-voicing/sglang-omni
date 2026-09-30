@@ -25,11 +25,11 @@ class TestExtractQuantizationConfig:
         assert result is not None
         assert result["quant_method"] == "fp8"
 
-    def test_reads_nested_thinker_config(self) -> None:
-        thinker = SimpleNamespace(
+    def test_reads_nested_talker_config(self) -> None:
+        talker = SimpleNamespace(
             quantization_config={"quant_method": "fp8", "weight_block_size": [128, 128]}
         )
-        config = SimpleNamespace(quantization_config=None, thinker_config=thinker)
+        config = SimpleNamespace(quantization_config=None, talker_config=talker)
         result = resolve_quant_config(config)
         assert result is not None
         assert result["quant_method"] == "fp8"
@@ -73,7 +73,7 @@ class TestResolveWeightPreprocessor:
     """Tests for ``get_weight_preprocessor`` fixed dispatch."""
 
     def test_identity_when_no_quantization(self) -> None:
-        config = SimpleNamespace(model_type="qwen3")
+        config = SimpleNamespace(model_type="voicing_tts")
         preprocess = get_weight_preprocessor(config)
 
         weight = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
@@ -130,10 +130,10 @@ class TestResolveWeightPreprocessor:
         assert torch.equal(preprocess("model.layers.0.weight", weight), weight)
 
     def test_nested_fp8_config_is_detected(self) -> None:
-        thinker = SimpleNamespace(
+        talker = SimpleNamespace(
             quantization_config={"quant_method": "fp8", "weight_block_size": [128, 128]}
         )
-        config = SimpleNamespace(quantization_config=None, thinker_config=thinker)
+        config = SimpleNamespace(quantization_config=None, talker_config=talker)
         preprocess = get_weight_preprocessor(config, fp8_scale_inverted=True)
 
         scale = torch.tensor([2.0])

@@ -180,7 +180,7 @@ def test_router_cli_rejects_global_model_with_worker_config(tmp_path: Path) -> N
             "--launcher-config cannot be used with --worker-config",
         ),
         (
-            ["--model", "qwen3-omni"],
+            ["--model", "voicing-tts"],
             "--model cannot be used with --launcher-config",
         ),
     ],
@@ -197,7 +197,7 @@ def test_router_cli_rejects_launcher_config_with_other_worker_sources(
         build_config_from_args(
             args,
             managed_worker_urls=["http://127.0.0.1:8101"],
-            managed_model="qwen3-omni",
+            managed_model="voicing-tts",
         )
 
 
@@ -214,13 +214,13 @@ def test_router_cli_builds_config_from_managed_worker_urls() -> None:
     config = build_config_from_args(
         args,
         managed_worker_urls=["http://127.0.0.1:8101", "http://127.0.0.1:8102"],
-        managed_model="qwen3-omni",
+        managed_model="voicing-tts",
     )
 
     assert config.policy == "least_request"
     assert [(worker.url, worker.model) for worker in config.workers] == [
-        ("http://127.0.0.1:8101", "qwen3-omni"),
-        ("http://127.0.0.1:8102", "qwen3-omni"),
+        ("http://127.0.0.1:8101", "voicing-tts"),
+        ("http://127.0.0.1:8102", "voicing-tts"),
     ]
     assert [worker.capabilities for worker in config.workers] == [
         DEFAULT_CAPABILITIES,
@@ -234,7 +234,7 @@ def test_router_cli_uses_managed_worker_capabilities() -> None:
     config = build_config_from_args(
         args,
         managed_worker_urls=["http://127.0.0.1:8101"],
-        managed_model="qwen3-omni",
+        managed_model="voicing-tts",
         managed_worker_capabilities={"chat", "streaming", "image_input"},
     )
 
@@ -251,7 +251,7 @@ def test_router_cli_infers_text_only_managed_worker_capabilities() -> None:
     config = build_config_from_args(
         args,
         managed_worker_urls=["http://127.0.0.1:8101"],
-        managed_model="qwen3-omni",
+        managed_model="voicing-tts",
         managed_worker_capabilities=resolve_managed_worker_capabilities(
             launcher_config
         ),
@@ -286,8 +286,8 @@ def test_launcher_config_passes_worker_extra_args_to_public_serve_command(
         """
 launcher:
   backend: local
-  model_path: Qwen/Qwen3-Omni-30B-A3B-Instruct
-  model_name: qwen3-omni
+  model_path: checkpoints/voicing-tts-12hz-1.7b-base
+  model_name: voicing-tts
   num_workers: 2
   num_gpus_per_worker: 2
   worker_host: 127.0.0.1
@@ -295,8 +295,8 @@ launcher:
   worker_gpu_ids: ["0,1", "2,3"]
   wait_timeout: 600
   worker_extra_args: >-
-    --mem-fraction-static 0.6 --thinker-tp-size 2
-    --thinker-gpus '0,1'
+    --mem-fraction-static 0.6 --tts_engine.tp_size 2
+    --tts_engine.gpu '[0, 1]'
 """,
         encoding="utf-8",
     )
@@ -308,16 +308,16 @@ launcher:
         "sgl-omni",
         "serve",
         "--model-path",
-        "Qwen/Qwen3-Omni-30B-A3B-Instruct",
+        "checkpoints/voicing-tts-12hz-1.7b-base",
         "--host",
         "127.0.0.1",
         "--port",
     ]
     assert command[7] == "8011"
-    assert command[command.index("--model-name") + 1] == "qwen3-omni"
+    assert command[command.index("--model-name") + 1] == "voicing-tts"
     assert command[command.index("--mem-fraction-static") + 1] == "0.6"
-    assert command[command.index("--thinker-tp-size") + 1] == "2"
-    assert command[command.index("--thinker-gpus") + 1] == "0,1"
+    assert command[command.index("--tts_engine.tp_size") + 1] == "2"
+    assert command[command.index("--tts_engine.gpu") + 1] == "[0, 1]"
 
 
 def test_launcher_config_accepts_managed_worker_capabilities(tmp_path: Path) -> None:
@@ -984,7 +984,7 @@ def test_selector_preserves_unannotated_homogeneous_pool_behavior() -> None:
         selector.select(
             workers,
             required_capabilities={"chat"},
-            requested_model="qwen3-omni",
+            requested_model="voicing-tts",
         ).url
         == "http://127.0.0.1:8101"
     )
@@ -992,7 +992,7 @@ def test_selector_preserves_unannotated_homogeneous_pool_behavior() -> None:
         selector.select(
             workers,
             required_capabilities={"chat"},
-            requested_model="qwen3-omni",
+            requested_model="voicing-tts",
         ).url
         == "http://127.0.0.1:8102"
     )

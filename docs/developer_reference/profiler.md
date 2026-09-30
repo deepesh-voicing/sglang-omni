@@ -26,7 +26,7 @@ JSONL file. The shape:
 ```jsonc
 {
   "request_id": "req-123",
-  "stage": "thinker",
+  "stage": "tts_engine",
   "event_name": "scheduler_first_emit",
   "timestamp_ns": 1717000000123456789,
   "run_id": "demo-run",
@@ -44,26 +44,23 @@ identifies the owner. The views layer merges files from every process by
 ### Standard event names
 
 The recorder always attaches the active `stage` name to every event, so the
-same `scheduler_prefill_start` becomes "thinker prefill start" when emitted
-from the thinker process and "talker prefill start" when emitted from the
-talker process. `scheduler_queue_enter` marks a built request entering the
-scheduler queue; `scheduler_prefill_start` is emitted later, when the request's
-first executable prefill / extend batch is selected.
+same `scheduler_prefill_start` reads as "tts_engine prefill start" when
+emitted from the `tts_engine` stage, and as another stage's prefill start when
+emitted from a different AR stage. `scheduler_queue_enter` marks a built
+request entering the scheduler queue; `scheduler_prefill_start` is emitted
+later, when the request's first executable prefill / extend batch is selected.
 
 | Pipeline milestone | Concrete event | Source |
 |---|---|---|
-| Request admission | `request_admission` | `Coordinator._submit_request` |
-| Preprocessing start / end | `preprocess_start` / `preprocess_end` | model preprocessor `__call__` |
-| Encoder start / end | `encoder_start` / `encoder_end` (metadata `modality`, `batch_size`) | image / audio encoder executors |
-| Aggregate ready | `stage_aggregate_ready` | `Stage._on_data_ready` after `InputHandler.receive` returns a merged payload |
-| Thinker prefill start | `scheduler_prefill_start` (stage = thinker) | `OmniScheduler.run_batch` |
-| Thinker first token | `stage_first_stream_chunk_sent` (stage = thinker) | `Stage._send_stream_to_target` / `_send_stream_to_coordinator` |
-| First stream chunk to client | `stage_first_stream_chunk_sent` (terminal stage → coordinator) | same |
-| Talker request build execution start / end | `scheduler_request_build_start` / `_end` (stage = talker) | `OmniScheduler._run_request_builder` |
-| Talker prefill start | `scheduler_prefill_start` (stage = talker) | same |
-| First code chunk | `stage_first_stream_chunk_sent` (stage = talker) | `Stage._send_stream_to_target` |
-| Code2Wav first audio | `code2wav_first_audio` | `Code2WavScheduler.decode_delta` / `_flush_pending` / `run_step` |
-| Terminal response | `terminal_response` | `Coordinator._handle_completion` |
+| Request admission | `request_admission` | `Coordinator.submit_request` |
+| Preprocessing start / end | `preprocess_start` / `preprocess_end` | model preprocessors that emit them |
+| Encoder start / end | `encoder_start` / `encoder_end` (metadata `modality`, `batch_size`) | encoder executors that emit them |
+| Aggregate ready | `stage_aggregate_ready` | `Stage.receive_payload_from_stage` after `InputHandler.receive` returns a merged payload |
+| Engine request build execution start / end | `scheduler_request_build_start` / `_end` (stage = tts_engine) | `OmniScheduler.run_request_builder` |
+| Engine prefill start | `scheduler_prefill_start` (stage = tts_engine) | `OmniScheduler.emit_prefill_start_for_batch` |
+| First code chunk | `stage_first_stream_chunk_sent` (stage = tts_engine) | `Stage.send_stream_to_target` |
+| First stream chunk to client | `stage_first_stream_chunk_sent` (terminal stage → coordinator) | `Stage.send_stream_to_coordinator` |
+| Terminal response | `terminal_response` | `Coordinator.handle_completion` |
 
 Supporting events used for finer-grained breakdown:
 
@@ -78,18 +75,6 @@ Supporting events used for finer-grained breakdown:
 | Stage | `stage_stream_chunk_received` | Each stream chunk materialized and ready for the receiver scheduler, including coordinator terminal chunks |
 | AR scheduler | `scheduler_queue_enter` | Built request entered the scheduler queue |
 | AR scheduler | `scheduler_first_emit` | First `stream_output_builder` emission per request |
-| Code2Wav | `code2wav_decode_start` | Serial decode start: trigger, start/end/new/context/window frames, active and threshold-ready requests, inbox depth |
-| Code2Wav | `code2wav_decode_launched` | Pipelined serial window whose vocoder work and asynchronous D2H copy have been enqueued; includes execution mode and window/new-frame counts |
-| Code2Wav | `code2wav_decode_end` | Repeats start metadata and adds the current decode's `audio_samples` plus execution metadata; output-overlap runs also include `pipelined` and the previous window's post-EOS-scan `d2h_wait_ns` |
-| Code2Wav | `code2wav_batch_start` | Coalesced step start: batch and bucket shape, new/window frames, active requests, inbox depth, oldest wait, fire reason, due-bucket count, and sub-batch decomposition |
-| Code2Wav | `code2wav_batch_end` | Repeats the start metadata and adds audio samples, execution mode, graph key, and fallback reason |
-
-Read `d2h_wait_ns` narrowly. With output overlap on, the lazy codec-EOS scan
-calls `.tolist()` on the staged frame heads, which is itself a host
-synchronization point, and it runs before `code2wav_decode_start`. So
-`d2h_wait_ns` measures only the residual wait left after that scan, not the
-whole overlap interval. Use the process-wide CUDA API trace as the load-bearing
-measurement of whether blocking synchronization was actually removed.
 
 Custom callsites can call `sglang_omni.profiler.event_recorder.emit(...)` to
 add domain-specific events. Events from inactive recorders are no-ops, so
@@ -99,7 +84,7 @@ instrumentation sites do not need to guard against the disabled case.
 
 `emit(...)` accepts an explicit `stage=...` parameter; when the caller can't
 plumb the stage name down (preprocessor `__call__`, encoder callables,
-`OmniScheduler` / `Code2WavScheduler` internals), it can pass `stage=None`
+`OmniScheduler` / vocoder scheduler internals), it can pass `stage=None`
 and the recorder fills it in from the **per-thread / per-task active
 stage**.
 
@@ -208,7 +193,7 @@ trace stays small enough to load in `chrome://tracing` or
 | `SGLANG_TORCH_PROFILER_WITH_STACK=1` | Record the Python (and C++) call stack per op |
 | `SGLANG_TORCH_PROFILER_WITH_FLOPS=1` | Estimate FLOPs per op |
 
-With all four off (the default), a typical 10-sample MMMU run produces a
+With all four off (the default), a typical 10-request TTS run produces a
 trace in the tens of MB. With all four on, the same workload can produce a
 multi-GB trace — only opt in when you need that specific information.
 
@@ -244,5 +229,5 @@ python -m sglang_omni.profiler /tmp/profiles/demo/events --format table
   tensors / numpy scalars still serialize as plain scalars.
 - **Event naming.** Lowercase snake_case, prefix with the layer that
   owns the event (`stage_*`, `scheduler_*`, `encoder_*`, etc.). Use the
-  stage name (not the event name) to distinguish "thinker prefill start"
-  from "talker prefill start".
+  stage name (not the event name) to distinguish the same event emitted
+  by two stages, such as the prefill start of two AR stages.

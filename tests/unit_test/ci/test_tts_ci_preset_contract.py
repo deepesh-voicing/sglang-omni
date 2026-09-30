@@ -60,7 +60,7 @@ def test_the_workflow_rotation_draws_registered_presets_only() -> None:
         "the rotation names models tts_ci_config.py does not know: "
         f"{sorted(rotation - set(TTS_CI_PRESETS))}"
     )
-    assert "qwen3-tts-custom-voice" not in rotation
+    assert "voicing-tts-custom-voice" not in rotation
 
 
 @pytest.mark.parametrize("name", sorted(TTS_CI_PRESETS))

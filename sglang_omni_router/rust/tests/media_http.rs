@@ -389,7 +389,7 @@ fn media_profile(
     }
 }
 
-fn qwen_task_config(address: SocketAddr, custom: &Worker, base: &Worker) -> String {
+fn speech_task_config(address: SocketAddr, custom: &Worker, base: &Worker) -> String {
     let routes = [MediaRoute::Speech];
     let mut output = config_header(address, &routes);
     for (index, (worker, task, references, voice_policy)) in [
@@ -400,7 +400,7 @@ fn qwen_task_config(address: SocketAddr, custom: &Worker, base: &Worker) -> Stri
     .enumerate()
     {
         output.push_str(&format!(
-            "\n[[workers]]\nworker_id = \"qwen-{index}\"\nbase_url = \"http://{}\"\ntrust_domain = \"local\"\ndefault_model_id = \"tts\"\n\n[[workers.service_profiles]]\nservice = \"speech_http\"\nmodel_ids = [\"tts\"]\nresponse_formats = [\"wav\"]\nstream_modes = [\"non_streaming\"]\ntasks = [\"{task}\"]\nreference_forms = {references}\nvoice_name_policy = \"{voice_policy}\"\n",
+            "\n[[workers]]\nworker_id = \"voicing-{index}\"\nbase_url = \"http://{}\"\ntrust_domain = \"local\"\ndefault_model_id = \"tts\"\n\n[[workers.service_profiles]]\nservice = \"speech_http\"\nmodel_ids = [\"tts\"]\nresponse_formats = [\"wav\"]\nstream_modes = [\"non_streaming\"]\ntasks = [\"{task}\"]\nreference_forms = {references}\nvoice_name_policy = \"{voice_policy}\"\n",
             worker.address
         ));
     }
@@ -644,12 +644,12 @@ fn relays_all_media_routes_with_exact_bytes_headers_and_large_direct_uploads() {
 }
 
 #[test]
-fn qwen_task_types_select_the_matching_worker_profile() {
+fn speech_task_types_select_the_matching_worker_profile() {
     let _guard = socket_guard();
     let custom = Worker::start();
     let base = Worker::start();
     let router = RouterProcess::start_with(&[&custom, &base], |address| {
-        qwen_task_config(address, &custom, &base)
+        speech_task_config(address, &custom, &base)
     });
 
     let custom_request =

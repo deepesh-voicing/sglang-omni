@@ -16,30 +16,17 @@ TEST_MAX_TOTAL_TOKENS = 82000
 
 def test_engine_builder_import_is_cpu_only() -> None:
     from sglang_omni.scheduling.engine_factory import (
-        AsrEngineBuilder,
         SGLangGenerationEngineBuilder,
         TtsEngineBuilder,
     )
 
     assert SGLangGenerationEngineBuilder.__name__ == "SGLangGenerationEngineBuilder"
-    assert AsrEngineBuilder.__name__ == "AsrEngineBuilder"
     assert TtsEngineBuilder.__name__ == "TtsEngineBuilder"
-    assert issubclass(AsrEngineBuilder, SGLangGenerationEngineBuilder)
     assert issubclass(TtsEngineBuilder, SGLangGenerationEngineBuilder)
 
 
-def test_asr_engine_builder_preserves_model_path() -> None:
-    from sglang_omni.scheduling.engine_factory import AsrEngineBuilder
-
-    assert AsrEngineBuilder.resolve_checkpoint(object(), "repo/id") == "repo/id"
-
-
 def test_legacy_tts_engine_factory_paths_remain_importable() -> None:
-    module_names = (
-        "sglang_omni.models.moss_tts.stages",
-        "sglang_omni.models.moss_tts_local.stages",
-        "sglang_omni.models.qwen3_tts.stages",
-    )
+    module_names = ("sglang_omni.models.voicing_tts.stages",)
 
     for module_name in module_names:
         module = importlib.import_module(module_name)
@@ -94,17 +81,11 @@ def test_tts_engine_builder_hook_contract_is_narrow() -> None:
 
 
 def test_context_length_override_is_capability_gated() -> None:
-    from sglang_omni.models.arkasr.engine_builder import ArkasrEngineBuilder
-    from sglang_omni.models.moss_tts.engine_builder import MossTtsEngineBuilder
-    from sglang_omni.models.moss_tts_local.engine_builder import (
-        MossTtsLocalEngineBuilder,
-    )
+    from sglang_omni.models.voicing_tts.engine_builder import VoicingTtsEngineBuilder
     from sglang_omni.scheduling.engine_factory import TtsEngineBuilder
 
     assert TtsEngineBuilder.supports_context_length_override is False
-    assert ArkasrEngineBuilder.supports_context_length_override is False
-    assert MossTtsEngineBuilder.supports_context_length_override is True
-    assert MossTtsLocalEngineBuilder.supports_context_length_override is True
+    assert VoicingTtsEngineBuilder.supports_context_length_override is False
 
 
 @pytest.mark.parametrize(
@@ -115,7 +96,7 @@ def test_normalize_context_length_rejects_non_integral_values(value: Any) -> Non
     from sglang_omni.scheduling.engine_factory import normalize_context_length
 
     with pytest.raises(ValueError, match="context length must be a positive integer"):
-        normalize_context_length(value, model_name="MOSS-TTS")
+        normalize_context_length(value, model_name="Voicing-TTS")
 
 
 @pytest.mark.parametrize("value", [0, -1])
@@ -123,14 +104,14 @@ def test_normalize_context_length_rejects_non_positive_values(value: int) -> Non
     from sglang_omni.scheduling.engine_factory import normalize_context_length
 
     with pytest.raises(ValueError, match="resolved an invalid context length"):
-        normalize_context_length(value, model_name="MOSS-TTS")
+        normalize_context_length(value, model_name="Voicing-TTS")
 
 
 @pytest.mark.parametrize("value", [1, 8192])
 def test_normalize_context_length_preserves_integral_values(value: int) -> None:
     from sglang_omni.scheduling.engine_factory import normalize_context_length
 
-    assert normalize_context_length(value, model_name="MOSS-TTS") == value
+    assert normalize_context_length(value, model_name="Voicing-TTS") == value
 
 
 def test_tts_engine_builder_phase_order_and_override_contract(monkeypatch) -> None:
@@ -569,151 +550,6 @@ def test_without_byte_budget_builder_default_mem_fraction_is_kept(
 
     assert build_kwargs["mem_fraction_static"] == 0.2
     assert consumed == [None]
-
-
-def test_asr_engine_builder_phase_order_and_failure_cleanup(monkeypatch) -> None:
-    from sglang_omni.scheduling import bootstrap, engine_factory, sglang_backend
-    from sglang_omni.scheduling.engine_factory import AsrEngineBuilder
-
-    events: list[str] = []
-
-    class FakeModel:
-        pass
-
-    class FakeSGLangRunner:
-        def __init__(self) -> None:
-            self.model = FakeModel()
-
-        def init_cuda_graphs(self) -> None:
-            events.append("init_cuda_graphs")
-
-    model_worker = SimpleNamespace(
-        model_runner=FakeSGLangRunner(),
-        model_config=SimpleNamespace(is_multimodal=False),
-        enable_prefill_input_embeds=False,
-    )
-
-    def fake_server_args(*args: Any, **kwargs: Any) -> Any:
-        del args, kwargs
-        events.append("server_args")
-        return SimpleNamespace(
-            cuda_graph_config=SimpleNamespace(
-                prefill=SimpleNamespace(backend="disabled")
-            ),
-            _cuda_graph_config_locked=set(),
-        )
-
-    def fake_validate(**kwargs: Any) -> None:
-        assert kwargs["model_name"] == "Test ASR"
-        events.append("validate")
-
-    def fake_infrastructure(*args: Any, **kwargs: Any) -> tuple[Any, ...]:
-        del args, kwargs
-        events.append("infrastructure")
-        return True, (
-            model_worker,
-            "tree_cache",
-            "req_pool",
-            "kv_pool",
-            "model_config",
-        )
-
-    def fake_output_processor(**kwargs: Any) -> Any:
-        assert kwargs == {}
-        events.append("output_processor")
-        return object()
-
-    monkeypatch.setattr(sglang_backend, "build_sglang_server_args", fake_server_args)
-    monkeypatch.setattr(
-        bootstrap,
-        "create_sglang_infrastructure_defer_cuda_graph",
-        fake_infrastructure,
-    )
-    monkeypatch.setattr(sglang_backend, "SGLangOutputProcessor", fake_output_processor)
-    monkeypatch.setattr(
-        engine_factory, "validate_generation_batch_policy", fake_validate
-    )
-
-    class RecordingBuilder(AsrEngineBuilder):
-        model_name = "Test ASR"
-        context_length = 256
-
-        def generation_defaults(self, *, dtype: str) -> dict[str, Any]:
-            events.append("generation_defaults")
-            return {"max_running_requests": 4, "dtype": dtype}
-
-        def setup_model(self, **kwargs: Any) -> None:
-            del kwargs
-            events.append("setup_model")
-
-        def compile_model(self, model: Any, server_args: Any) -> None:
-            del model, server_args
-            events.append("compile_model")
-
-        def post_cuda_graph_setup(self, model: Any, server_args: Any) -> None:
-            del model, server_args
-            events.append("post_cuda_graph_setup")
-
-        def setup_model_resources(
-            self,
-            model: Any,
-            server_args: Any,
-            *,
-            generation_cuda_graph_enabled: bool,
-        ) -> None:
-            del model, server_args
-            assert generation_cuda_graph_enabled is True
-            events.append("setup_model_resources")
-
-        def setup_runtime_resources(self, model: Any, server_args: Any) -> None:
-            del model, server_args
-            events.append("setup_runtime_resources")
-
-        def make_adapters(self, model: Any) -> tuple[Any, Any]:
-            del model
-            events.append("make_adapters")
-            return "request_builder", "result_adapter"
-
-        def make_model_runner(self, model_worker: Any, output_proc: Any) -> Any:
-            del model_worker, output_proc
-            events.append("make_model_runner")
-            return "model_runner"
-
-        def extra_scheduler_kwargs(self) -> dict[str, Any]:
-            events.append("extra_scheduler_kwargs")
-            return {"stream_output_builder": "stream_builder"}
-
-        def make_scheduler(self, **kwargs: Any) -> Any:
-            assert kwargs["extra_scheduler_kwargs"] == {
-                "stream_output_builder": "stream_builder"
-            }
-            events.append("make_scheduler")
-            raise RuntimeError("scheduler failed")
-
-        def cleanup_build_failure(self) -> None:
-            events.append("cleanup_build_failure")
-
-    with pytest.raises(RuntimeError, match="scheduler failed"):
-        RecordingBuilder().build("repo/id")
-
-    assert events == [
-        "generation_defaults",
-        "server_args",
-        "validate",
-        "infrastructure",
-        "setup_model",
-        "compile_model",
-        "init_cuda_graphs",
-        "post_cuda_graph_setup",
-        "setup_model_resources",
-        "output_processor",
-        "setup_runtime_resources",
-        "make_adapters",
-        "extra_scheduler_kwargs",
-        "make_model_runner",
-        "make_scheduler",
-        "cleanup_build_failure",
-    ]
 
 
 def test_tts_engine_builder_base_scheduler_preserves_abort_with_extra_kwargs(

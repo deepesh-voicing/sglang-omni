@@ -145,22 +145,6 @@ def make_runner(calls: list[str], *, custom_result):
     return runner
 
 
-def test_resolve_deferred_prefill_inputs_materializes_staged_ids():
-    from sglang_omni.model_runner.base import resolve_deferred_prefill_inputs
-
-    staged = torch.tensor([11, 12], dtype=torch.long)
-    batch = SimpleNamespace(
-        input_ids=None,
-        prefill_input_ids_cpu=staged,
-        mix_running_indices=None,
-    )
-
-    resolve_deferred_prefill_inputs(batch, torch.device("cpu"))
-
-    assert batch.prefill_input_ids_cpu is None
-    assert torch.equal(batch.input_ids, staged)
-
-
 @pytest.mark.parametrize(
     ("is_prefill", "expected"),
     [

@@ -4,36 +4,31 @@
 # This is a tested example, not a production process supervisor.
 #
 # Usage:
-#   CONFIG=examples/mps_dp/configs/higgs_h100_dp3.yaml GPU_ID=0 N=3 \
-#     CORE_BLOCKS="0-9 10-19 20-29" \
+#   CONFIG=examples/configs/voicing_tts_1_7b.yaml GPU_ID=0 N=3 \
+#     MAX_TOTAL_TOKENS=100000 CORE_BLOCKS="0-9 10-19 20-29" \
 #     bash examples/mps_dp/launch.sh up
-#   MODEL=bosonai/higgs-tts-3-4b GPU_ID=0 N=3 MAX_TOTAL_TOKENS=100000 \
-#     CORE_BLOCKS="0-9 10-19 20-29" \
+#   MODEL=checkpoints/voicing-tts-12hz-1.7b-base GPU_ID=0 N=3 \
+#     MAX_TOTAL_TOKENS=100000 CORE_BLOCKS="0-9 10-19 20-29" \
 #     bash examples/mps_dp/launch.sh up
 #   bash examples/mps_dp/launch.sh list
 #   bash examples/mps_dp/launch.sh verify [RUN_ID]
 #   bash examples/mps_dp/launch.sh down [RUN_ID]
 #
 # Environment for `up` (defaults in parentheses):
-#   CONFIG: optional pipeline config. For N > 1, it must contain one SGLang
-#     engine stage so the launcher can identify that stage's KV log. When unset,
-#     MODEL is used.
-#   MODEL (bosonai/higgs-tts-3-4b; unavailable with CONFIG),
-#   MODEL_NAME (higgs without CONFIG; pipeline name with CONFIG), GPU_ID (0), N (3),
-#   BASE_PORT (8801), PYTHON_BIN (python),
+#   CONFIG (examples/configs/voicing_tts_1_7b.yaml when MODEL is unset):
+#     pipeline config. For N > 1, it must contain one SGLang engine stage so the
+#     launcher can identify that stage's KV log.
+#   MODEL (unset; unavailable with CONFIG): checkpoint path served via
+#     --model-path instead of a pipeline config.
+#   MODEL_NAME (pipeline name), GPU_ID (0), N (3), BASE_PORT (8801),
+#   PYTHON_BIN (python),
+#   ENGINE_STAGE (tts_engine; MODEL launches only): generation engine stage name.
 #   CORE_BLOCKS: N non-overlapping CPU blocks on the GPU's NUMA node, required.
 #   NUMA_NODE: explicit override when the PCI-derived NUMA node is unavailable.
 #   MAX_TOTAL_TOKENS: optional common positive token-cap override. For N > 1,
 #     set it here or in CONFIG's generation-stage server arguments. The environment
 #     value takes precedence when both are set.
 #   MF: optional explicit --mem-fraction-static override (unset = pipeline default).
-#   WEIGHT_SHARE (0): 1 = replicas share one copy of the AR backbone weights
-#     over CUDA IPC. Requires CONFIG (the validated-config preflight runs
-#     before any resource is created). Replica 0 is the weight LEADER (loads the checkpoint and
-#     publishes IPC handles under $state/ipc_weights); replicas 1..N-1 attach
-#     zero-copy instead of loading their own copy. The leader owns the shared
-#     storage: if replica 0 dies, followers hold dangling mappings — always
-#     bring the whole run down and restart it together (down + up).
 set -euo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
@@ -313,11 +308,12 @@ teardown_state() {
 }
 
 up() {
-  local config=${CONFIG:-} model=${MODEL:-bosonai/higgs-tts-3-4b}
+  local config=${CONFIG:-} model=${MODEL:-}
+  if [ -z "$config" ] && [ -z "$model" ]; then
+    config=$SCRIPT_DIR/../configs/voicing_tts_1_7b.yaml
+  fi
   local model_name=${MODEL_NAME:-}
   local gpu=${GPU_ID:-0} n=${N:-3} base_port=${BASE_PORT:-8801} mf=${MF:-}
-  local weight_share=${WEIGHT_SHARE:-0}
-  [[ "$weight_share" =~ ^[01]$ ]] || die "WEIGHT_SHARE must be 0 or 1, got '$weight_share'"
   [[ "$gpu" =~ ^[0-9]+$ ]] || die "GPU_ID must be a non-negative integer, got '$gpu'"
   [[ "$n" =~ ^[1-9][0-9]*$ ]] || die "N must be a positive integer, got '$n'"
   [[ "$base_port" =~ ^[1-9][0-9]*$ ]] \
@@ -342,21 +338,14 @@ up() {
   local uuid=""
   local model_path_manifest=$model
   if [ -n "$config" ]; then
-    [ -z "${MODEL:-}" ] || die "MODEL cannot be combined with CONFIG"
+    [ -z "$model" ] || die "MODEL cannot be combined with CONFIG"
     [ -f "$config" ] || die "config file not found: $config"
     config=$(cd -- "$(dirname -- "$config")" && pwd)/$(basename -- "$config")
     serve_cmd=("$PYTHON_BIN" -m sglang_omni.cli serve)
     source_args=(--config "$config")
     model_path_manifest=from_config
-    if [ -n "$model_name" ]; then
-      model_name_args=(--model-name "$model_name")
-    fi
-    local kv_probe_args=("$config" --print-kv-cache-bytes)
-    if [ "$weight_share" = 1 ]; then
-      kv_probe_args+=(--weight-share)
-    fi
     kv_cache_bytes=$("$PYTHON_BIN" "$SCRIPT_DIR/config.py" \
-      "${kv_probe_args[@]}") \
+      "$config" --print-kv-cache-bytes) \
       || die "could not resolve kv_cache_bytes from $config"
     if [ -n "$kv_cache_bytes" ] && [ -n "${MAX_TOTAL_TOKENS:-}" ]; then
       die "MAX_TOTAL_TOKENS conflicts with engine.kv_cache_bytes in $config; a lower token cap would silently shrink the byte-derived KV pool, keep exactly one"
@@ -368,9 +357,6 @@ up() {
     if [ "$n" -gt 1 ]; then
       config_resolver_args+=(--require-single-sglang-engine)
     fi
-    if [ "$weight_share" = 1 ]; then
-      config_resolver_args+=(--weight-share)
-    fi
     local resolved_stage_and_tokens
     resolved_stage_and_tokens=$("$PYTHON_BIN" "$SCRIPT_DIR/config.py" \
       --print-stage "${config_resolver_args[@]}") \
@@ -380,27 +366,18 @@ up() {
     # Note (Aditya Vaid Sharma): nvidia-smi resolves GPU_ID physically, so the
     # budget helper runs in a single-UUID namespace and queries logical GPU 0.
     uuid=$(nvidia-smi --query-gpu=uuid --format=csv,noheader -i "$gpu")
-    local budget_args=("$config" --print-mps-memory-budget --gpu-id 0 --replicas "$n")
-    if [ "$weight_share" = 1 ]; then
-      budget_args+=(--weight-share)
-    fi
     mps_budget_manifest=$(env CUDA_VISIBLE_DEVICES="$uuid" \
-      "$PYTHON_BIN" "$SCRIPT_DIR/config.py" "${budget_args[@]}") \
+      "$PYTHON_BIN" "$SCRIPT_DIR/config.py" \
+      "$config" --print-mps-memory-budget --gpu-id 0 --replicas "$n") \
       || die "could not resolve MPS memory budget from $config"
   else
-    # Note (Jiaxin Deng): without a pipeline config the supported-model check
-    # cannot run until engine startup, which is after the MPS daemon and state
-    # dir exist; sharing therefore requires CONFIG so unsupported models are
-    # rejected before any resource is created.
-    [ "$weight_share" = 1 ] \
-      && die "WEIGHT_SHARE=1 requires CONFIG (support is checked per pipeline config before any resource is created)"
     source_args=(--model-path "$model")
-    model_name=${MODEL_NAME:-higgs}
-    model_name_args=(--model-name "$model_name")
-    # Model-path launches default to the Higgs pipeline; its generation
-    # engine stage is tts_engine. Other models need CONFIG, which resolves
-    # the stage name from the pipeline itself.
+    # Model-path launches cannot read the pipeline before startup; the
+    # Voicing-TTS generation engine stage is tts_engine.
     engine_stage=${ENGINE_STAGE:-tts_engine}
+  fi
+  if [ -n "$model_name" ]; then
+    model_name_args=(--model-name "$model_name")
   fi
   if [ "$n" -gt 1 ] && [ -z "$expected_max_total_tokens" ] && [ -z "$kv_cache_bytes" ]; then
     die "MAX_TOTAL_TOKENS is required for N=$n so every replica has the same KV capacity (or declare engine.kv_cache_bytes in CONFIG)"
@@ -475,16 +452,14 @@ up() {
   {
     echo "run_id=$run"; echo "gpu_id=$gpu"; echo "gpu_uuid=$uuid"; echo "numa_node=$node"
     echo "config=${config:-none}"; echo "model_path=$model_path_manifest"
-    echo "model_name=${model_name:-from_config}"; echo "n=$n"
+    echo "model_name=${model_name:-pipeline_default}"; echo "n=$n"
     echo "mem_fraction_static_cli_override=${mf:-none}"
     echo "base_port=$base_port"; echo "core_blocks=$CORE_BLOCKS"
     echo "max_total_tokens=${expected_max_total_tokens:-auto/profiled}"
-    echo "weight_share=$weight_share"
     if [ -n "$mps_budget_manifest" ]; then
       printf '%s\n' "$mps_budget_manifest"
     fi
   } > "$state/manifest"
-  if [ "$weight_share" = 1 ]; then mkdir -p "$state/ipc_weights"; chmod 700 "$state/ipc_weights"; fi
 
   export CUDA_MPS_PIPE_DIRECTORY=$state/mps/pipe CUDA_MPS_LOG_DIRECTORY=$state/mps/log
   local mps_launch_status=0
@@ -509,28 +484,16 @@ up() {
   pid_is_live "$control_pid" \
     || die "MPS control daemon PID $control_pid exited during startup"
 
-  local pid leader_start log resolved_tokens ws_env
+  local pid leader_start log resolved_tokens
   local first_resolved_tokens=""
   for ((i=0; i<n; i++)); do
     port=$((base_port+i))
     log=$state/logs/replica_$i.log
-    # Note (Jiaxin Deng): replica 0 leads (loads + exports IPC handles); later
-    # replicas attach. The sequential health gate below already guarantees the
-    # leader has exported (export completes during model load, well before
-    # /health turns 200) by the time any follower boots, so followers never
-    # block on the handle file in this launcher. Empty value = feature off.
-    ws_env=""
-    if [ "$weight_share" = 1 ]; then
-      if [ "$i" = 0 ]; then ws_env="leader:$state/ipc_weights"
-      else ws_env="follower:$state/ipc_weights"; fi
-    fi
     # Note (Jiaxin Deng): concurrent colocated launches raced on CUDA-graph capture and
     # memory profiling in testing, so replicas start sequentially behind a health
     # gate; setsid gives each replica its own process group so teardown can signal
     # exactly this run's process trees.
     CUDA_VISIBLE_DEVICES="$uuid" \
-    SGLANG_OMNI_WEIGHT_SHARE="$ws_env" \
-    SGLANG_OMNI_WEIGHT_SHARE_RUN_ID="$run" \
     SGLANG_OMNI_STRICT_PORT=1 \
     setsid numactl --cpunodebind="$node" --membind="$node" -C "${blocks[$i]}" \
       "${serve_cmd[@]}" "${source_args[@]}" "${model_name_args[@]}" \
@@ -587,10 +550,7 @@ up() {
     exit 1
   fi
   trap - EXIT
-  echo "up: $n replicas on GPU $gpu; token cap ${expected_max_total_tokens:-auto/profiled}; weight_share=$weight_share; state: $state"
-  if [ "$weight_share" = 1 ]; then
-    echo "weight sharing is ON: replica 0 owns the shared weights — never restart replicas individually; use down + up"
-  fi
+  echo "up: $n replicas on GPU $gpu; token cap ${expected_max_total_tokens:-auto/profiled}; state: $state"
   echo "tear down with: bash $0 down $run"
 }
 

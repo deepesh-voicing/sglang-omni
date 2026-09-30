@@ -30,7 +30,7 @@ ARG GMM_VERSION=22.10.0
 WORKDIR /workspace
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        git ffmpeg libsndfile1 sox python3-dev build-essential python3.12-venv \
+        git ffmpeg libsndfile1 python3-dev build-essential python3.12-venv \
         software-properties-common curl ca-certificates
 
 ARG RENDER_GID=110
@@ -99,11 +99,6 @@ RUN cd /workspace/sglang-omni \
     && cp pyproject_xpu.toml pyproject.toml \
     && pip install --no-cache-dir -e . --no-build-isolation --extra-index-url ${TORCH_XPU_INDEX} \
     && pip install --no-cache-dir --no-deps openai-whisper==20250625
-
-# --no-deps: qwen-tts pins Transformers 4.57.3, which would replace the stack above,
-# and resolving sox lifts numpy past the numba==0.65.1 ceiling.
-RUN pip install --no-cache-dir --no-deps sox \
-    && pip install --no-cache-dir --no-deps qwen-tts==0.1.1
 
 WORKDIR /workspace/sglang-omni
 

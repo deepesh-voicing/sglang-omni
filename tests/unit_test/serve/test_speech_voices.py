@@ -12,7 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from sglang_omni.client.audio import DEFAULT_SAMPLE_RATE, encode_wav
-from sglang_omni.models.qwen3_tts.config import Qwen3TTSPipelineConfig
+from sglang_omni.models.voicing_tts.config import VoicingTTSPipelineConfig
 from sglang_omni.scheduling.speaker_cache import SpeakerArtifactCache, SpeakerCacheKey
 from sglang_omni.serve import create_app
 from sglang_omni.serve.openai_api import VoiceUploadBodyLimitMiddleware
@@ -176,7 +176,7 @@ def test_voice_store_restores_overwrites_and_invalidates_cache(tmp_path: Path) -
         filename="guide.wav",
         content_type="audio/wav",
     )
-    key = SpeakerCacheKey("higgs", "guide", first["created_at"], "ref_codes")
+    key = SpeakerCacheKey("voicing_tts", "guide", first["created_at"], "ref_codes")
     cache.put(key, np.arange(8, dtype=np.float32))
 
     second = store.upload(
@@ -635,7 +635,7 @@ def test_speech_service_can_disable_uploaded_voice_resolution(
         content_type="audio/wav",
     )
     service = SpeechRequestValidator(
-        default_model="qwen3-customvoice",
+        default_model="voicing-tts-customvoice",
         supports_uploaded_voice_references=False,
         voice_store=store,
     )
@@ -674,7 +674,7 @@ def test_custom_voice_discovery_and_speech_share_checkpoint_config(
             }
         )
     )
-    config = Qwen3TTSPipelineConfig(
+    config = VoicingTTSPipelineConfig(
         model_path=str(tmp_path)
     ).resolve_custom_voice_config()
     client_impl = RecordingSpeechClient()

@@ -262,7 +262,6 @@ _UNSUPPORTED_PROCESS_ENV = (
     "CUDA_VISIBLE_DEVICES",
     "CUDA_DEVICE_ORDER",
     "CUDA_MPS_PIPE_DIRECTORY",
-    "SGLANG_OMNI_WEIGHT_SHARE",
 )
 
 
@@ -283,11 +282,9 @@ def reject_process_env_overrides(process_specs) -> None:
     if conflicts:
         raise MpsError(
             "native MPS does not support per-worker CUDA visibility, device "
-            "ordering, external MPS, or CUDA IPC weight-sharing overrides: "
+            "ordering, or external MPS overrides: "
             f"{'; '.join(conflicts)}. Configure CUDA visibility and device "
-            "order in the parent environment, request weight sharing with "
-            "weight_share=on instead of an environment variable, or use "
-            "mps=off."
+            "order in the parent environment, or use mps=off."
         )
     else:
         pass
@@ -636,17 +633,6 @@ def create_for_pipeline(
             "native MPS cannot join CUDA_MPS_PIPE_DIRECTORY="
             f"{os.environ['CUDA_MPS_PIPE_DIRECTORY']!r} from the parent "
             "environment; remove it or use mps=off."
-        )
-    else:
-        pass
-
-    weight_share = os.environ.get("SGLANG_OMNI_WEIGHT_SHARE", "").strip()
-    if weight_share:
-        raise MpsError(
-            "native MPS cannot combine with parent "
-            f"SGLANG_OMNI_WEIGHT_SHARE={weight_share!r}; remove it and request "
-            "weight sharing with weight_share=on, which assigns replica roles "
-            "itself, or use mps=off with the external supervisor"
         )
     else:
         pass

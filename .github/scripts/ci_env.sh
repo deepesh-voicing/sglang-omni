@@ -1,4 +1,4 @@
-# Source CI-aligned env for all Omni benchmark tests (unit, Qwen3, TTS, Qwen3-ASR).
+# Source CI-aligned env for all Omni benchmark tests (unit, TTS).
 # Matches GitHub Actions omni-setup + tune-ci-thresholds auto_env.
 set -a
 export HOME=/github/home

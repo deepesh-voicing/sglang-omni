@@ -15,34 +15,15 @@ from sglang_omni.client import Client, ClientError, GenerateChunk
 from sglang_omni.client.audio import encode_pcm
 from sglang_omni.client.types import GenerateRequest
 from sglang_omni.pipeline.coordinator import Coordinator
-from sglang_omni.proto import (
-    EXPLICIT_GENERATION_PARAMS_KEY,
-    CompleteMessage,
-    OmniRequest,
-    StreamMessage,
-)
+from sglang_omni.proto import CompleteMessage, OmniRequest, StreamMessage
 from sglang_omni.serve import create_app
-from sglang_omni.serve.openai_api import (
-    _ClosableStreamingResponse,
-    await_speech_response,
-    build_chat_generate_request,
-    chat_stream,
-    speech_audio_response,
-)
-from sglang_omni.serve.protocol import ChatCompletionRequest, CreateSpeechRequest
+from sglang_omni.serve.openai_api import await_speech_response, speech_audio_response
+from sglang_omni.serve.protocol import CreateSpeechRequest
 from sglang_omni.serve.speech_service import SpeechRequestValidator
-from sglang_omni.serve.transcriptions import (
-    _first_transcription_chunk,
-    _transcription_stream,
-    build_transcription_generate_request,
-)
 from tests.unit_test.fixtures.pipeline_fakes import RecordingCoordinatorControlPlane
 
 MODEL_FAMILIES = {
-    "qwen3-omni": "code2wav",
-    "ming-omni": "talker",
-    "s2-pro": "vocoder",
-    "voxtral": "vocoder",
+    "voicing-tts": "vocoder",
 }
 
 
@@ -295,130 +276,6 @@ class ConnectedRequest:
         return False
 
 
-class SuccessfulTranscriptionClient:
-    def __init__(self) -> None:
-        self.requests: list[GenerateRequest] = []
-
-    def health(self) -> dict[str, Any]:
-        return {"running": True}
-
-    async def completion(
-        self,
-        request: GenerateRequest,
-        *,
-        request_id: str,
-        audio_format: str = "wav",
-    ):
-        from sglang_omni.client.types import CompletionResult
-
-        del request_id, audio_format
-        self.requests.append(request)
-        return CompletionResult(request_id="transcription-1", text="hello world")
-
-    async def generate(
-        self,
-        request: GenerateRequest,
-        request_id: str | None = None,
-    ):
-        del request_id
-        self.requests.append(request)
-        yield GenerateChunk(request_id="transcription-1", text="hello ")
-        yield GenerateChunk(request_id="transcription-1", text="world")
-        yield GenerateChunk(
-            request_id="transcription-1",
-            text="hello world",
-            finish_reason="stop",
-        )
-
-
-class ChunkRecordingTranscriptionClient:
-    """Records (request_id, request) pairs; can fail one chunk by index.
-
-    Texts derive from the chunk index parsed out of the request id, so the
-    "joined in span order" assertions hold however chunks are scheduled.
-    """
-
-    def __init__(
-        self,
-        *,
-        fail_chunk: int | None = None,
-        fail_message: str = "cuda out of memory",
-    ) -> None:
-        self.requests: list[tuple[str, GenerateRequest]] = []
-        self.aborted: list[str] = []
-        self.fail_chunk = fail_chunk
-        self.fail_message = fail_message
-
-    def health(self) -> dict[str, Any]:
-        return {"running": True}
-
-    @staticmethod
-    def chunk_index(request_id: str) -> int | None:
-        if "-chunk-" not in request_id:
-            return None
-        return int(request_id.rsplit("-chunk-", 1)[-1])
-
-    async def completion(
-        self,
-        request: GenerateRequest,
-        *,
-        request_id: str,
-        audio_format: str = "wav",
-    ):
-        from sglang_omni.client import ClientError
-        from sglang_omni.client.types import CompletionResult
-
-        del audio_format
-        arrival = len(self.requests)
-        self.requests.append((request_id, request))
-        index = self.chunk_index(request_id)
-        if index is None:
-            index = arrival
-        if self.fail_chunk is not None and index == self.fail_chunk:
-            raise ClientError(self.fail_message)
-        return CompletionResult(request_id=request_id, text=f"part{index}")
-
-    async def abort(self, request_id: str) -> None:
-        self.aborted.append(request_id)
-
-
-class FailingTranscriptionClient:
-    def __init__(self, message: str, exc_type: type[Exception] | None = None) -> None:
-        self.message = message
-        self.exc_type = exc_type
-
-    def health(self) -> dict[str, Any]:
-        return {"running": True}
-
-    async def completion(
-        self,
-        request: GenerateRequest,
-        *,
-        request_id: str,
-        audio_format: str = "wav",
-    ):
-        from sglang_omni.client import ClientError
-
-        del request, request_id, audio_format
-        raise (self.exc_type or ClientError)(self.message)
-
-    async def generate(
-        self,
-        request: GenerateRequest,
-        request_id: str | None = None,
-    ):
-        from sglang_omni.client import ClientError
-
-        del request, request_id
-        raise (self.exc_type or ClientError)(self.message)
-        yield  # unreachable, makes this an async generator
-
-
-class IdentityTranscriptionAdapter:
-    def postprocess_text(self, text: str) -> str:
-        return text
-
-
 class BlockingAbortControlPlane(RecordingCoordinatorControlPlane):
     def __init__(self) -> None:
         super().__init__()
@@ -587,17 +444,6 @@ class AdminClient:
 def test_non_streaming_http_faults_return_500(model_name: str) -> None:
     client = TestClient(create_app(fault_client(model_name), model_name=model_name))
 
-    chat_resp = client.post(
-        "/v1/chat/completions",
-        json={
-            "model": model_name,
-            "messages": [{"role": "user", "content": "hello"}],
-            "stream": False,
-        },
-    )
-    assert chat_resp.status_code == 500
-    assert "cuda out of memory" in chat_resp.json()["detail"]
-
     speech_resp = client.post(
         "/v1/audio/speech",
         json={
@@ -619,7 +465,7 @@ def test_speech_stream_admission_reject_returns_503_without_traceback(
     client = TestClient(
         create_app(
             FailingSpeechGenerateClient(QueueFullError.MESSAGE),
-            model_name="s2-pro",
+            model_name="voicing-tts",
         )
     )
 
@@ -627,7 +473,7 @@ def test_speech_stream_admission_reject_returns_503_without_traceback(
         response = client.post(
             "/v1/audio/speech",
             json={
-                "model": "s2-pro",
+                "model": "voicing-tts",
                 "input": "hello",
                 "voice": "default",
                 "stream": True,
@@ -651,14 +497,14 @@ def test_speech_context_rejection_returns_400_without_traceback(
 ) -> None:
     message = "Requested token count exceeds the model's maximum context length"
     client = TestClient(
-        create_app(FailingSpeechGenerateClient(message), model_name="s2-pro")
+        create_app(FailingSpeechGenerateClient(message), model_name="voicing-tts")
     )
 
     with caplog.at_level(logging.WARNING, logger="sglang_omni.serve.openai_api"):
         response = client.post(
             "/v1/audio/speech",
             json={
-                "model": "s2-pro",
+                "model": "voicing-tts",
                 "input": "hello",
                 "voice": "default",
                 "stream": stream,
@@ -728,7 +574,7 @@ def test_speech_endpoint_returns_binary_audio() -> None:
 def test_create_app_passes_model_specific_speech_input_limit() -> None:
     app = create_app(
         SuccessfulSpeechClient(),
-        model_name="moss-tts",
+        model_name="voicing-tts",
         max_speech_input_chars=None,
     )
 
@@ -843,7 +689,7 @@ def test_speech_endpoint_stream_empty_delta_is_not_success() -> None:
 
 def test_admin_routes_forward_to_client() -> None:
     admin = AdminClient()
-    client = TestClient(create_app(admin, model_name="qwen3-omni"))
+    client = TestClient(create_app(admin, model_name="voicing-tts"))
 
     info = client.get("/model_info")
     pause = client.post(
@@ -893,372 +739,13 @@ def test_admin_routes_forward_to_client() -> None:
     ]
 
 
-def test_chat_stream_failure_closes_without_done_sentinel() -> None:
-    chunks: list[str] = []
-    client = fault_client("qwen3-omni")
-    req = ChatCompletionRequest(
-        model="qwen3-omni",
-        messages=[{"role": "user", "content": "hello"}],
-        stream=True,
-    )
-
-    async def drive() -> None:
-        async for chunk in chat_stream(
-            client=client,
-            gen_req=GenerateRequest(model="qwen3-omni", prompt="hello", stream=True),
-            request_id="req-1",
-            response_id="chatcmpl-req-1",
-            created=0,
-            model="qwen3-omni",
-            req=req,
-            audio_format="wav",
-        ):
-            chunks.append(chunk)
-
-    with pytest.raises(RuntimeError, match="cuda out of memory"):
-        asyncio.run(drive())
-
-    assert chunks
-    assert all(chunk != "data: [DONE]\n\n" for chunk in chunks)
-
-
-def test_chat_asgi_send_failure_aborts_backend_and_cleans_state() -> None:
-    async def run() -> None:
-        client, coordinator, control_plane = streaming_client()
-        request_id = "req-asgi-disconnect"
-        request = ChatCompletionRequest(
-            model="qwen3-omni",
-            messages=[{"role": "user", "content": "hello"}],
-            stream=True,
-        )
-        response = _ClosableStreamingResponse(
-            chat_stream(
-                client=client,
-                gen_req=GenerateRequest(
-                    model="qwen3-omni", prompt="hello", stream=True
-                ),
-                request_id=request_id,
-                response_id=f"chatcmpl-{request_id}",
-                created=0,
-                model="qwen3-omni",
-                req=request,
-                audio_format="wav",
-            ),
-            media_type="text/event-stream",
-        )
-
-        body_ready = asyncio.Event()
-
-        async def send(message: dict[str, Any]) -> None:
-            if message["type"] != "http.response.body":
-                return
-            body_ready.set()
-            raise RuntimeError("client vanished during body send")
-
-        async def receive() -> dict[str, Any]:
-            await asyncio.Event().wait()
-            return {"type": "http.disconnect"}
-
-        scope = http_scope(path="/v1/chat/completions", spec_version="2.4")
-        response_task = asyncio.create_task(response(scope, receive, send))
-        for _ in range(100):
-            if request_id in coordinator.stream_queues:
-                break
-            await asyncio.sleep(0)
-        await coordinator.handle_stream(
-            StreamMessage(
-                request_id=request_id,
-                from_stage="decode",
-                chunk={"text": "hello", "modality": "text"},
-                modality="text",
-            )
-        )
-
-        await body_ready.wait()
-        with pytest.raises(RuntimeError, match="client vanished during body send"):
-            await response_task
-        assert [msg.request_id for msg in control_plane.aborts] == [request_id]
-        assert request_id not in coordinator.requests
-        assert request_id not in coordinator.stream_queues
-        assert request_id not in coordinator.completion_futures
-
-    asyncio.run(run())
-
-
-def test_chat_asgi_receive_disconnect_aborts_backend_and_cleans_state() -> None:
-    async def run() -> None:
-        blocking_control_plane = BlockingAbortControlPlane()
-        client, coordinator, control_plane = streaming_client(blocking_control_plane)
-        request_id = "req-asgi-receive-disconnect"
-        request = ChatCompletionRequest(
-            model="qwen3-omni",
-            messages=[{"role": "user", "content": "hello"}],
-            stream=True,
-        )
-        response = _ClosableStreamingResponse(
-            chat_stream(
-                client=client,
-                gen_req=GenerateRequest(
-                    model="qwen3-omni", prompt="hello", stream=True
-                ),
-                request_id=request_id,
-                response_id=f"chatcmpl-{request_id}",
-                created=0,
-                model="qwen3-omni",
-                req=request,
-                audio_format="wav",
-            ),
-            media_type="text/event-stream",
-        )
-
-        first_body_sent = asyncio.Event()
-        disconnected = asyncio.Event()
-
-        async def send(message: dict[str, Any]) -> None:
-            if message["type"] == "http.response.body" and message.get("body"):
-                first_body_sent.set()
-
-        async def receive() -> dict[str, Any]:
-            await disconnected.wait()
-            return {"type": "http.disconnect"}
-
-        response_task = asyncio.create_task(
-            response(
-                http_scope(
-                    path="/v1/chat/completions",
-                    spec_version="2.3",
-                ),
-                receive,
-                send,
-            )
-        )
-        for _ in range(100):
-            if request_id in coordinator.stream_queues:
-                break
-            await asyncio.sleep(0)
-        await coordinator.handle_stream(
-            StreamMessage(
-                request_id=request_id,
-                from_stage="decode",
-                chunk={"text": "hello", "modality": "text"},
-                modality="text",
-            )
-        )
-
-        await first_body_sent.wait()
-        disconnected.set()
-        await blocking_control_plane.abort_started.wait()
-        await asyncio.wait_for(response_task, timeout=1)
-
-        assert [msg.request_id for msg in control_plane.aborts] == [request_id]
-        assert blocking_control_plane.abort_cancelled is False
-        abort_task = coordinator.abort_tasks[request_id]
-        assert request_id in coordinator.requests
-        assert request_id not in coordinator.stream_queues
-        assert request_id not in coordinator.completion_futures
-
-        blocking_control_plane.release_abort.set()
-        assert await asyncio.wait_for(asyncio.shield(abort_task), timeout=1) is True
-        await asyncio.sleep(0)
-
-        assert request_id not in coordinator.requests
-        assert request_id not in coordinator.stream_queues
-        assert request_id not in coordinator.completion_futures
-        assert request_id not in coordinator.abort_tasks
-
-    asyncio.run(run())
-
-
-def test_chat_asgi_task_cancellation_aborts_backend_and_stays_cancelled() -> None:
-    async def run() -> None:
-        client, coordinator, control_plane = streaming_client()
-        request_id = "req-asgi-cancelled"
-        request = ChatCompletionRequest(
-            model="qwen3-omni",
-            messages=[{"role": "user", "content": "hello"}],
-            stream=True,
-        )
-        response = _ClosableStreamingResponse(
-            chat_stream(
-                client=client,
-                gen_req=GenerateRequest(
-                    model="qwen3-omni", prompt="hello", stream=True
-                ),
-                request_id=request_id,
-                response_id=f"chatcmpl-{request_id}",
-                created=0,
-                model="qwen3-omni",
-                req=request,
-                audio_format="wav",
-            ),
-            media_type="text/event-stream",
-        )
-
-        async def send(message: dict[str, Any]) -> None:
-            return
-
-        async def receive() -> dict[str, Any]:
-            await asyncio.Event().wait()
-            return {"type": "http.disconnect"}
-
-        response_task = asyncio.create_task(
-            response(
-                http_scope(
-                    path="/v1/chat/completions",
-                    spec_version="2.4",
-                ),
-                receive,
-                send,
-            )
-        )
-        for _ in range(100):
-            if request_id in coordinator.stream_queues:
-                break
-            await asyncio.sleep(0)
-
-        response_task.cancel()
-        with pytest.raises(asyncio.CancelledError):
-            await response_task
-
-        assert [msg.request_id for msg in control_plane.aborts] == [request_id]
-        assert request_id not in coordinator.requests
-        assert request_id not in coordinator.stream_queues
-        assert request_id not in coordinator.completion_futures
-
-    asyncio.run(run())
-
-
-def test_client_completion_stream_close_reaches_coordinator_owner() -> None:
-    async def run() -> None:
-        client, coordinator, control_plane = streaming_client()
-        request_id = "req-client-close"
-        stream = client.completion_stream(
-            GenerateRequest(model="qwen3-omni", prompt="hello", stream=True),
-            request_id=request_id,
-        )
-        first_chunk = asyncio.create_task(anext(stream))
-        for _ in range(100):
-            if request_id in coordinator.stream_queues:
-                break
-            await asyncio.sleep(0)
-        await coordinator.handle_stream(
-            StreamMessage(
-                request_id=request_id,
-                from_stage="decode",
-                chunk={"text": "hello", "modality": "text"},
-                modality="text",
-            )
-        )
-        await first_chunk
-        await stream.aclose()
-
-        assert [msg.request_id for msg in control_plane.aborts] == [request_id]
-        assert request_id not in coordinator.requests
-        assert request_id not in coordinator.stream_queues
-        assert request_id not in coordinator.completion_futures
-
-    asyncio.run(run())
-
-
-def test_transcription_stream_close_reaches_coordinator_owner() -> None:
-    async def run() -> None:
-        client, coordinator, control_plane = streaming_client()
-        request_id = "req-transcription-close"
-        stream = _transcription_stream(
-            client.generate(
-                GenerateRequest(model="whisper", prompt="hello", stream=True),
-                request_id=request_id,
-            ),
-            first_chunk=None,
-            request_id=request_id,
-            adapter=IdentityTranscriptionAdapter(),
-            duration_s=1.0,
-        )
-        first_event = asyncio.create_task(anext(stream))
-        for _ in range(100):
-            if request_id in coordinator.stream_queues:
-                break
-            await asyncio.sleep(0)
-        await coordinator.handle_stream(
-            StreamMessage(
-                request_id=request_id,
-                from_stage="decode",
-                chunk={"text": "hello", "modality": "text"},
-                modality="text",
-            )
-        )
-        await first_event
-        await stream.aclose()
-
-        assert [msg.request_id for msg in control_plane.aborts] == [request_id]
-        assert request_id not in coordinator.requests
-        assert request_id not in coordinator.stream_queues
-        assert request_id not in coordinator.completion_futures
-
-    asyncio.run(run())
-
-
-def test_chat_request_omits_explicit_params_when_sampling_omitted() -> None:
-    req = ChatCompletionRequest(
-        model="OpenMOSS-Team/MOSS-Transcribe-Diarize",
-        messages=[{"role": "user", "content": "hello"}],
-    )
-
-    gen_req = build_chat_generate_request(req)
-
-    assert gen_req.sampling.temperature == 1.0
-    assert gen_req.sampling.top_p == 1.0
-    assert gen_req.sampling.top_k == -1
-    assert EXPLICIT_GENERATION_PARAMS_KEY not in gen_req.metadata
-
-
-def test_chat_request_preserves_explicit_default_sampling_values() -> None:
-    req = ChatCompletionRequest(
-        model="OpenMOSS-Team/MOSS-Transcribe-Diarize",
-        messages=[{"role": "user", "content": "hello"}],
-        temperature=1.0,
-        top_p=1.0,
-        top_k=-1,
-    )
-
-    gen_req = build_chat_generate_request(req)
-
-    assert gen_req.sampling.temperature == 1.0
-    assert gen_req.sampling.top_p == 1.0
-    assert gen_req.sampling.top_k == -1
-    assert gen_req.metadata[EXPLICIT_GENERATION_PARAMS_KEY] == [
-        "temperature",
-        "top_k",
-        "top_p",
-    ]
-
-
-def test_chat_request_does_not_mark_null_sampling_params_explicit() -> None:
-    req = ChatCompletionRequest(
-        model="OpenMOSS-Team/MOSS-Transcribe-Diarize",
-        messages=[{"role": "user", "content": "hello"}],
-        temperature=None,
-        top_p=None,
-        top_k=None,
-    )
-
-    gen_req = build_chat_generate_request(req)
-
-    assert gen_req.sampling.temperature == 1.0
-    assert gen_req.sampling.top_p == 1.0
-    assert gen_req.sampling.top_k == -1
-    assert EXPLICIT_GENERATION_PARAMS_KEY not in gen_req.metadata
-
-
 def test_speech_stream_defaults_to_raw_pcm() -> None:
-    client = TestClient(
-        create_app(SuccessfulSpeechClient(), model_name="higgs-audio-v2")
-    )
+    client = TestClient(create_app(SuccessfulSpeechClient(), model_name="voicing-tts"))
 
     response = client.post(
         "/v1/audio/speech",
         json={
-            "model": "higgs-audio-v2",
+            "model": "voicing-tts",
             "input": "hello",
             "voice": "default",
             "stream": True,
@@ -1277,13 +764,13 @@ def test_speech_stream_defaults_to_raw_pcm() -> None:
 
 def test_speech_stream_headers_use_chunk_sample_rate() -> None:
     client = TestClient(
-        create_app(SuccessfulSpeechClient(sample_rate=44100), model_name="s2-pro")
+        create_app(SuccessfulSpeechClient(sample_rate=44100), model_name="voicing-tts")
     )
 
     response = client.post(
         "/v1/audio/speech",
         json={
-            "model": "s2-pro",
+            "model": "voicing-tts",
             "input": "hello",
             "voice": "default",
             "stream": True,
@@ -1306,7 +793,7 @@ def test_raw_pcm_response_close_aborts_inner_speech_stream() -> None:
         response = await speech_audio_response(
             request=ConnectedRequest(),
             client=client,
-            gen_req=GenerateRequest(model="s2-pro", prompt="hello", stream=True),
+            gen_req=GenerateRequest(model="voicing-tts", prompt="hello", stream=True),
             request_id="req-1",
             speed=1.0,
         )
@@ -1326,7 +813,9 @@ def test_raw_pcm_response_disconnect_before_first_chunk_aborts_request() -> None
             speech_audio_response(
                 request=request,
                 client=client,
-                gen_req=GenerateRequest(model="s2-pro", prompt="hello", stream=True),
+                gen_req=GenerateRequest(
+                    model="voicing-tts", prompt="hello", stream=True
+                ),
                 request_id="req-1",
                 speed=1.0,
             )
@@ -1341,14 +830,12 @@ def test_raw_pcm_response_disconnect_before_first_chunk_aborts_request() -> None
 
 
 def test_speech_stream_rejects_non_pcm_response_format() -> None:
-    client = TestClient(
-        create_app(SuccessfulSpeechClient(), model_name="higgs-audio-v2")
-    )
+    client = TestClient(create_app(SuccessfulSpeechClient(), model_name="voicing-tts"))
 
     response = client.post(
         "/v1/audio/speech",
         json={
-            "model": "higgs-audio-v2",
+            "model": "voicing-tts",
             "input": "hello",
             "voice": "default",
             "stream": True,
@@ -1370,7 +857,7 @@ def test_speech_request_carries_initial_codec_chunk_frames() -> None:
     )
 
     gen_req = SpeechRequestValidator(
-        default_model="higgs-audio-v2"
+        default_model="voicing-tts"
     ).build_generate_request(req)
 
     assert gen_req.extra_params["initial_codec_chunk_frames"] == 4
@@ -1384,7 +871,7 @@ def test_raw_pcm_speech_request_defers_initial_chunk_to_model() -> None:
     )
 
     gen_req = SpeechRequestValidator(
-        default_model="higgs-audio-v2"
+        default_model="voicing-tts"
     ).build_generate_request(req)
 
     assert "initial_codec_chunk_frames" not in gen_req.extra_params
@@ -1399,7 +886,7 @@ def test_raw_pcm_speech_request_respects_explicit_initial_zero() -> None:
     )
 
     gen_req = SpeechRequestValidator(
-        default_model="higgs-audio-v2"
+        default_model="voicing-tts"
     ).build_generate_request(req)
 
     assert gen_req.extra_params["initial_codec_chunk_frames"] == 0
@@ -1413,7 +900,7 @@ def test_speech_response_disconnect_aborts_active_request() -> None:
             await_speech_response(
                 request=request,
                 client=client,
-                gen_req=GenerateRequest(model="s2-pro", prompt="hello"),
+                gen_req=GenerateRequest(model="voicing-tts", prompt="hello"),
                 request_id="req-1",
                 response_format="wav",
                 speed=1.0,
@@ -1433,7 +920,7 @@ def test_speech_response_returns_when_disconnect_poll_is_false() -> None:
         result = await await_speech_response(
             request=ConnectedRequest(),
             client=SuccessfulSpeechClient(),
-            gen_req=GenerateRequest(model="s2-pro", prompt="hello"),
+            gen_req=GenerateRequest(model="voicing-tts", prompt="hello"),
             request_id="req-1",
             response_format="wav",
             speed=1.0,
@@ -1451,9 +938,9 @@ def test_speech_request_records_explicit_generation_params() -> None:
         seed=123,
     )
 
-    gen_req = SpeechRequestValidator(default_model="qwen3-tts").build_generate_request(
-        req
-    )
+    gen_req = SpeechRequestValidator(
+        default_model="voicing-tts"
+    ).build_generate_request(req)
 
     assert gen_req.sampling.temperature == 0.8
     assert gen_req.sampling.top_k == 30
@@ -1474,1928 +961,15 @@ def test_speech_request_passes_streaming_control_fields() -> None:
         stream=True,
     )
 
-    gen_req = SpeechRequestValidator(default_model="qwen3-tts").build_generate_request(
-        req
-    )
+    gen_req = SpeechRequestValidator(
+        default_model="voicing-tts"
+    ).build_generate_request(req)
     tts_params = gen_req.metadata["tts_params"]
 
     assert tts_params["initial_codec_chunk_frames"] == 8
     assert tts_params["x_vector_only_mode"] is True
     assert tts_params["response_format"] == "pcm"
     assert gen_req.extra_params == {"initial_codec_chunk_frames": 8}
-
-
-def test_transcription_request_builds_asr_generate_request() -> None:
-    gen_req = build_transcription_generate_request(
-        audio_bytes=b"RIFF",
-        filename="sample.wav",
-        content_type="audio/wav",
-        model="openai/whisper-large-v3",
-        language="en",
-        prompt=None,
-        temperature=None,
-    )
-
-    assert gen_req.model == "openai/whisper-large-v3"
-    assert gen_req.prompt == {
-        "audio_bytes": b"RIFF",
-        "filename": "sample.wav",
-        "content_type": "audio/wav",
-    }
-    assert gen_req.extra_params == {
-        "task": "transcribe",
-        "language": "en",
-    }
-    assert gen_req.sampling.temperature == 0.0
-    omni_req = Client.build_omni_request(gen_req)
-    assert omni_req.params["temperature"] == 0.0
-    assert gen_req.metadata == {"task": "asr"}
-    assert gen_req.output_modalities == ["text"]
-    assert gen_req.stream is False
-
-
-def test_transcription_request_preserves_explicit_empty_language() -> None:
-    gen_req = build_transcription_generate_request(
-        audio_bytes=b"RIFF",
-        filename="sample.wav",
-        content_type="audio/wav",
-        model="Qwen/Qwen3-ASR-1.7B",
-        language="",
-        prompt=None,
-        temperature=None,
-    )
-
-    assert gen_req.extra_params["language"] == ""
-    omni_req = Client.build_omni_request(gen_req)
-    assert omni_req.params["language"] == ""
-
-
-def test_transcription_request_passes_explicit_temperature() -> None:
-    gen_req = build_transcription_generate_request(
-        audio_bytes=b"RIFF",
-        filename="sample.wav",
-        content_type="audio/wav",
-        model="openai/whisper-large-v3",
-        language="en",
-        prompt=None,
-        temperature=0.7,
-    )
-
-    assert gen_req.sampling.temperature == 0.7
-    assert gen_req.metadata[EXPLICIT_GENERATION_PARAMS_KEY] == ["temperature"]
-    omni_req = Client.build_omni_request(gen_req)
-    assert omni_req.params["temperature"] == 0.7
-
-
-def test_transcription_request_passes_explicit_max_new_tokens() -> None:
-    gen_req = build_transcription_generate_request(
-        audio_bytes=b"RIFF",
-        filename="sample.wav",
-        content_type="audio/wav",
-        model="OpenMOSS-Team/MOSS-Transcribe-Diarize",
-        language="en",
-        prompt=None,
-        temperature=None,
-        max_new_tokens=4096,
-    )
-
-    assert gen_req.model == "OpenMOSS-Team/MOSS-Transcribe-Diarize"
-    assert gen_req.sampling.max_new_tokens == 4096
-    assert gen_req.metadata[EXPLICIT_GENERATION_PARAMS_KEY] == ["max_new_tokens"]
-    omni_req = Client.build_omni_request(gen_req)
-    assert omni_req.params["max_new_tokens"] == 4096
-
-
-def wav_upload(duration_s: float, sample_rate: int = 16000) -> bytes:
-    """Loud float32 WAV of the given duration."""
-    import numpy as np
-
-    from sglang_omni.serve.transcription_chunking import encode_wav
-
-    rng = np.random.default_rng(0)
-    samples = int(duration_s * sample_rate)
-    return encode_wav(rng.uniform(-0.5, 0.5, samples).astype(np.float32), sample_rate)
-
-
-def chunking_app(
-    transcription_client: Any,
-    *,
-    max_total_audio_s: float | None = None,
-    max_native_clip_s: float | None = None,
-    architectures: list[str] | None = None,
-    max_concurrent_long_audio_requests: int = 4,
-):
-    from sglang_omni.config import ResolvedAudioChunking
-
-    policy = ResolvedAudioChunking(
-        allow_audio_chunking=True,
-        max_audio_clip_s=1.0,
-        max_native_clip_s=max_native_clip_s,
-        max_total_audio_s=max_total_audio_s,
-        min_tail_s=0.5,
-        max_concurrent_chunks=8,
-        max_concurrent_long_audio_requests=max_concurrent_long_audio_requests,
-        condition_on_previous_text=False,
-    )
-    return create_app(
-        transcription_client,
-        model_name="asr",
-        architectures=architectures,
-        audio_chunking=policy,
-    )
-
-
-def chunking_test_client(
-    transcription_client: Any,
-    *,
-    max_total_audio_s: float | None = None,
-    max_native_clip_s: float | None = None,
-    architectures: list[str] | None = None,
-) -> TestClient:
-    return TestClient(
-        chunking_app(
-            transcription_client,
-            max_total_audio_s=max_total_audio_s,
-            max_native_clip_s=max_native_clip_s,
-            architectures=architectures,
-        )
-    )
-
-
-class GatedTranscriptionClient:
-    """completion() parks every chunk until the test opens the gate."""
-
-    def __init__(self) -> None:
-        self.gate = asyncio.Event()
-        self.started = asyncio.Event()
-        self.requests: list[str] = []
-        self.aborted: list[str] = []
-
-    def health(self) -> dict[str, Any]:
-        return {"running": True}
-
-    async def completion(self, request, *, request_id: str, **kwargs):
-        from sglang_omni.client.types import CompletionResult
-
-        self.requests.append(request_id)
-        self.started.set()
-        await self.gate.wait()
-        index = request_id.rsplit("-chunk-", 1)[-1]
-        return CompletionResult(request_id=request_id, text=f"part{index}")
-
-    async def abort(self, request_id: str) -> None:
-        self.aborted.append(request_id)
-
-
-def asgi_client(app):
-    import httpx
-
-    return httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://asr"
-    )
-
-
-async def post_transcription(client, upload: bytes, name: str = "long.wav"):
-    return await client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "asr"},
-        files={"file": (name, upload, "audio/wav")},
-    )
-
-
-def test_long_audio_past_the_admission_cap_is_rejected_before_decoding(
-    monkeypatch,
-) -> None:
-    # Note (Jeffro): One admitted upload holds the only slot; the next long
-    # upload must get 503 without ever decoding (the slot is what bounds
-    # resident waveforms), and short uploads must not be gated at all.
-    from sglang_omni.serve import transcriptions
-
-    decodes: list[int] = []
-    real_plan = transcriptions.plan_audio_chunks
-
-    def counting_plan(audio_bytes, chunking):
-        decodes.append(1)
-        return real_plan(audio_bytes, chunking)
-
-    monkeypatch.setattr(transcriptions, "plan_audio_chunks", counting_plan)
-
-    async def scenario() -> None:
-        gated = GatedTranscriptionClient()
-        app = chunking_app(gated, max_concurrent_long_audio_requests=1)
-        admission = app.state.long_audio_admission
-        async with asgi_client(app) as client:
-            first = asyncio.create_task(post_transcription(client, wav_upload(2.5)))
-            await asyncio.wait_for(gated.started.wait(), timeout=10.0)
-            assert admission.active == 1
-            assert decodes == [1]
-
-            rejected = await post_transcription(client, wav_upload(2.5))
-            assert rejected.status_code == 503
-            assert "max_concurrent_long_audio_requests" in rejected.json()["detail"]
-            assert decodes == [1]
-            assert admission.active == 1
-
-            # A short clip is one engine request with no waveform to hold.
-            gated.gate.set()
-            short = await post_transcription(client, wav_upload(0.5), "short.wav")
-            assert short.status_code == 200
-
-            response = await first
-            assert response.status_code == 200
-            assert admission.active == 0
-
-            # The slot is free again for the next long upload.
-            again = await post_transcription(client, wav_upload(2.5))
-            assert again.status_code == 200
-            assert admission.active == 0
-
-    asyncio.run(scenario())
-
-
-def test_long_audio_admission_is_released_when_a_chunk_fails() -> None:
-    transcription_client = ChunkRecordingTranscriptionClient(fail_chunk=0)
-    app = chunking_app(transcription_client, max_concurrent_long_audio_requests=1)
-    client = TestClient(app)
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "asr"},
-        files={"file": ("long.wav", wav_upload(2.5), "audio/wav")},
-    )
-    assert response.status_code == 500
-    assert app.state.long_audio_admission.active == 0
-
-    transcription_client.fail_chunk = None
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "asr"},
-        files={"file": ("long.wav", wav_upload(2.5), "audio/wav")},
-    )
-    assert response.status_code == 200
-    assert app.state.long_audio_admission.active == 0
-
-
-def test_long_audio_admission_counter_contract() -> None:
-    from fastapi import HTTPException
-
-    from sglang_omni.serve.transcriptions import LongAudioAdmission
-
-    with pytest.raises(ValueError):
-        LongAudioAdmission(0)
-    gate = LongAudioAdmission(2)
-    assert gate.try_acquire() and gate.try_acquire()
-    assert not gate.try_acquire()
-    with pytest.raises(HTTPException) as info:
-        gate.acquire_or_reject()
-    assert info.value.status_code == 503
-    gate.release()
-    gate.acquire_or_reject()
-    gate.release()
-    gate.release()
-    with pytest.raises(RuntimeError):
-        gate.release()
-
-
-def test_long_audio_is_transcribed_chunk_by_chunk() -> None:
-    transcription_client = ChunkRecordingTranscriptionClient()
-    client = chunking_test_client(transcription_client)
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "asr"},
-        files={"file": ("long.wav", wav_upload(2.5), "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    # Chunk count depends on where the energy search cuts; the contract is
-    # covered by the splitter tests. Here: more than one chunk, each sent as
-    # its own WAV request with an indexed request id (arrival order is
-    # scheduling-dependent now that chunks run concurrently).
-    count = len(transcription_client.requests)
-    assert count > 1
-    seen_ids = {request_id for request_id, _ in transcription_client.requests}
-    assert {int(rid.rsplit("-chunk-", 1)[-1]) for rid in seen_ids} == set(range(count))
-    for _, request in transcription_client.requests:
-        assert request.prompt["audio_bytes"][:4] == b"RIFF"
-        assert request.prompt["content_type"] == "audio/wav"
-    # Chunk texts are assembled in span order regardless of completion order.
-    expected_text = " ".join(f"part{index}" for index in range(count))
-    assert response.json()["text"] == expected_text
-    # usage reports the whole upload, not one chunk.
-    assert response.json()["usage"] == {"seconds": 3, "type": "duration"}
-
-
-@pytest.mark.parametrize("response_format", ["srt", "vtt"])
-def test_chunked_subtitle_format_is_rejected_before_inference(
-    response_format: str,
-) -> None:
-    transcription_client = ChunkRecordingTranscriptionClient()
-    client = chunking_test_client(
-        transcription_client,
-        architectures=["MossTranscribeDiarizeForConditionalGeneration"],
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "asr", "response_format": response_format},
-        files={"file": ("long.wav", wav_upload(2.5), "audio/wav")},
-    )
-
-    assert response.status_code == 400
-    assert "does not support chunked transcription" in response.json()["detail"]
-    assert transcription_client.requests == []
-
-
-def test_noise_floor_chunks_are_skipped_not_transcribed() -> None:
-    # A TTS-runaway-shaped upload: loud speech then a ~-70 dBFS noise floor.
-    # Floor-only chunks hallucinate when decoded, so they must never be sent.
-    import numpy as np
-
-    from sglang_omni.serve.transcription_chunking import encode_wav
-
-    rng = np.random.default_rng(0)
-    loud = rng.uniform(-0.5, 0.5, 8000).astype(np.float32)
-    floor = rng.uniform(-3e-4, 3e-4, 32000).astype(np.float32)
-    upload = encode_wav(np.concatenate([loud, floor]), 16000)
-
-    transcription_client = ChunkRecordingTranscriptionClient()
-    client = chunking_test_client(transcription_client)
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "asr"},
-        files={"file": ("runaway.wav", upload, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    # Only the chunk holding speech reached the engine; the floor-only
-    # chunks were answered locally with empty text.
-    assert len(transcription_client.requests) == 1
-    assert response.json()["text"] == "part0"
-    # usage still reports the whole upload, skipped chunks included.
-    assert response.json()["usage"] == {"seconds": 3, "type": "duration"}
-
-
-def test_streamed_long_audio_is_rejected_explicitly() -> None:
-    # Streaming cannot chunk; without this 400 a too-long upload would run
-    # as a single request and truncate (observed live: 243s audio came back
-    # 20% short with HTTP 200). No native limit declared here, so the guard
-    # falls back to the chunk length.
-    transcription_client = ChunkRecordingTranscriptionClient()
-    client = chunking_test_client(transcription_client)
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "asr", "stream": "true"},
-        files={"file": ("long.wav", wav_upload(2.5), "audio/wav")},
-    )
-
-    assert response.status_code == 400
-    assert "stream=false" in response.json()["detail"]
-    assert transcription_client.requests == []
-
-
-def count_duration_probes(monkeypatch) -> list[int]:
-    from sglang_omni.serve import speech_to_text, transcriptions
-
-    calls: list[int] = []
-    real_probe = speech_to_text.probe_audio_duration
-
-    def counting_probe(audio_bytes: bytes) -> float:
-        calls.append(1)
-        return real_probe(audio_bytes)
-
-    monkeypatch.setattr(speech_to_text, "probe_audio_duration", counting_probe)
-    monkeypatch.setattr(transcriptions, "_probe_audio_duration", counting_probe)
-    return calls
-
-
-def test_non_streaming_transcription_probes_the_upload_once(monkeypatch) -> None:
-    # The handler probes in a worker thread and hands the duration to the
-    # response assembly. A second probe per request was measurable: SeedTTS
-    # CI runs ~150 short requests/s, and each sync probe blocks the event
-    # loop for the whole process.
-    calls = count_duration_probes(monkeypatch)
-    client = chunking_test_client(SuccessfulTranscriptionClient())
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "asr"},
-        files={"file": ("short.wav", wav_upload(0.5), "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    assert len(calls) == 1
-
-
-def test_streaming_transcription_probes_the_upload_once(monkeypatch) -> None:
-    calls = count_duration_probes(monkeypatch)
-    client = chunking_test_client(SuccessfulTranscriptionClient())
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "asr", "stream": "true"},
-        files={"file": ("short.wav", wav_upload(0.5), "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    assert len(calls) == 1
-
-
-def test_streamed_audio_within_the_native_limit_streams_whole() -> None:
-    # The chunk length is a scheduling choice for the non-stream path; a
-    # stream request only needs to fit the engine natively. 2.5s is past the
-    # 1s chunk length but under the 3s native limit, so it streams as one
-    # engine request instead of getting a 400.
-    transcription_client = SuccessfulTranscriptionClient()
-    client = chunking_test_client(transcription_client, max_native_clip_s=3.0)
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "asr", "stream": "true"},
-        files={"file": ("long.wav", wav_upload(2.5), "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    assert "transcript.text.done" in response.text
-
-
-def test_streamed_audio_beyond_the_native_limit_is_rejected() -> None:
-    transcription_client = ChunkRecordingTranscriptionClient()
-    client = chunking_test_client(transcription_client, max_native_clip_s=2.0)
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "asr", "stream": "true"},
-        files={"file": ("long.wav", wav_upload(2.5), "audio/wav")},
-    )
-
-    assert response.status_code == 400
-    assert "2 seconds" in response.json()["detail"]
-    assert transcription_client.requests == []
-
-
-def test_streamed_audio_beyond_total_limit_requests_shorter_file() -> None:
-    transcription_client = ChunkRecordingTranscriptionClient()
-    client = chunking_test_client(
-        transcription_client,
-        max_total_audio_s=2.0,
-        max_native_clip_s=2.0,
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "asr", "stream": "true"},
-        files={"file": ("long.wav", wav_upload(2.5), "audio/wav")},
-    )
-
-    assert response.status_code == 400
-    assert "use a shorter audio file" in response.json()["detail"]
-    assert transcription_client.requests == []
-
-
-def test_streamed_short_audio_streams_as_before() -> None:
-    transcription_client = SuccessfulTranscriptionClient()
-    client = chunking_test_client(transcription_client)
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "asr", "stream": "true"},
-        files={"file": ("short.wav", wav_upload(0.5), "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    assert "transcript.text.done" in response.text
-
-
-def test_verbose_json_reports_per_chunk_segments() -> None:
-    transcription_client = ChunkRecordingTranscriptionClient()
-    client = chunking_test_client(transcription_client)
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "asr", "response_format": "verbose_json"},
-        files={"file": ("long.wav", wav_upload(2.5), "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    body = response.json()
-    segments = body["segments"]
-    # One segment per chunk, with the chunk's own timestamps -- not a single
-    # segment spanning the whole upload.
-    assert len(segments) == len(transcription_client.requests) > 1
-    previous_end = 0.0
-    for index, segment in enumerate(segments):
-        assert segment["id"] == index
-        assert segment["text"] == f"part{index}"
-        assert segment["start"] == pytest.approx(previous_end)
-        assert segment["end"] > segment["start"]
-        previous_end = segment["end"]
-    assert previous_end == pytest.approx(2.5, abs=0.01)
-    assert body["duration"] == pytest.approx(2.5, abs=0.01)
-
-
-def test_chunk_segments_skip_silent_chunks() -> None:
-    from sglang_omni.serve.transcription_adapters.base import (
-        DefaultTranscriptionAdapter,
-    )
-
-    response = DefaultTranscriptionAdapter().build_verbose_response_from_chunks(
-        text="hello world",
-        chunks=[(0.0, 1.0, "hello"), (1.0, 2.0, "   "), (2.0, 2.5, "world")],
-        language="en",
-        audio_duration_s=2.5,
-    )
-
-    # The silent chunk emits no segment and ids stay consecutive.
-    assert [(s.id, s.text) for s in response.segments] == [(0, "hello"), (1, "world")]
-    assert response.segments[1].start == 2.0
-
-
-def test_chunk_failure_fails_the_whole_request() -> None:
-    transcription_client = ChunkRecordingTranscriptionClient(fail_chunk=1)
-    client = chunking_test_client(transcription_client)
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "asr"},
-        files={"file": ("long.wav", wav_upload(2.5), "audio/wav")},
-    )
-
-    # No partial 200: one failed chunk fails the request, naming the chunk.
-    assert response.status_code == 500
-    assert "chunk 1" in response.json()["detail"]
-    assert "cuda out of memory" in response.json()["detail"]
-
-
-def test_chunk_bad_request_failure_maps_to_400() -> None:
-    transcription_client = ChunkRecordingTranscriptionClient(
-        fail_chunk=0,
-        fail_message="Requested audio is longer than the model's context length",
-    )
-    client = chunking_test_client(transcription_client)
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "asr"},
-        files={"file": ("long.wav", wav_upload(2.5), "audio/wav")},
-    )
-
-    assert response.status_code == 400
-    assert "chunk 0" in response.json()["detail"]
-
-
-def test_upload_over_the_total_duration_limit_is_rejected() -> None:
-    transcription_client = ChunkRecordingTranscriptionClient()
-    client = chunking_test_client(transcription_client, max_total_audio_s=2.0)
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "asr"},
-        files={"file": ("long.wav", wav_upload(2.5), "audio/wav")},
-    )
-
-    assert response.status_code == 400
-    assert "accepts audio up to" in response.json()["detail"]
-    # Rejected before any engine request or decode.
-    assert transcription_client.requests == []
-
-
-def test_total_duration_limit_is_re_enforced_on_the_decoded_audio(monkeypatch) -> None:
-    # A metadata probe can under-measure estimated containers; once the
-    # decode reveals the true duration the cap must still hold.
-    from sglang_omni.serve import transcriptions
-
-    monkeypatch.setattr(
-        transcriptions, "_probe_audio_duration", lambda audio_bytes: 1.5
-    )
-    transcription_client = ChunkRecordingTranscriptionClient()
-    client = chunking_test_client(transcription_client, max_total_audio_s=2.0)
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "asr"},
-        files={"file": ("long.wav", wav_upload(2.5), "audio/wav")},
-    )
-
-    assert response.status_code == 400
-    assert "accepts audio up to" in response.json()["detail"]
-    assert transcription_client.requests == []
-
-
-def test_long_audio_without_chunking_policy_stays_one_request() -> None:
-    # No audio_chunking passed to create_app: models that have not declared a
-    # policy keep today's single-request behaviour, byte for byte.
-    transcription_client = ChunkRecordingTranscriptionClient()
-    client = TestClient(create_app(transcription_client, model_name="asr"))
-    upload = wav_upload(2.5)
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "asr"},
-        files={"file": ("long.wav", upload, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    assert len(transcription_client.requests) == 1
-    request_id, request = transcription_client.requests[0]
-    assert "-chunk-" not in request_id
-    assert request.prompt["audio_bytes"] == upload
-
-
-def test_short_audio_with_chunking_enabled_stays_one_request() -> None:
-    transcription_client = ChunkRecordingTranscriptionClient()
-    client = chunking_test_client(transcription_client)
-    upload = wav_upload(0.5)
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "asr"},
-        files={"file": ("short.wav", upload, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    assert len(transcription_client.requests) == 1
-    assert transcription_client.requests[0][1].prompt["audio_bytes"] == upload
-
-
-def tiny_plan(num_chunks: int):
-    import numpy as np
-
-    from sglang_omni.serve.transcription_chunking import ChunkPlan, ChunkSpan
-
-    chunk_samples = 1600
-    spans = [
-        ChunkSpan(
-            index=i,
-            start_sample=i * chunk_samples,
-            end_sample=(i + 1) * chunk_samples,
-            start_s=i * 0.1,
-            end_s=(i + 1) * 0.1,
-        )
-        for i in range(num_chunks)
-    ]
-    return ChunkPlan(
-        sample_rate=16000,
-        duration_s=num_chunks * 0.1,
-        spans=spans,
-        waveform=np.zeros(num_chunks * chunk_samples, dtype=np.float32),
-    )
-
-
-def run_chunks(
-    client: Any,
-    plan: Any,
-    *,
-    max_concurrent: int,
-    prompt: str | None = None,
-    condition_on_previous_text: bool = False,
-    adapter: Any = None,
-):
-    from sglang_omni.serve.transcription_adapters.base import (
-        DefaultTranscriptionAdapter,
-    )
-    from sglang_omni.serve.transcriptions import transcribe_audio_chunks
-
-    if adapter is None:
-        adapter = DefaultTranscriptionAdapter()
-    return asyncio.wait_for(
-        transcribe_audio_chunks(
-            client,
-            plan,
-            request_id="req",
-            model="asr",
-            filename=None,
-            language=None,
-            prompt=prompt,
-            temperature=None,
-            repetition_penalty=None,
-            max_new_tokens=None,
-            max_concurrent=max_concurrent,
-            condition_on_previous_text=condition_on_previous_text,
-            adapter=adapter,
-        ),
-        timeout=10.0,
-    )
-
-
-class ScriptedChunkClient:
-    def __init__(self, responses: list[str]) -> None:
-        self.responses = responses
-        self.requests: list[tuple[str, str | None]] = []
-
-    async def completion(self, request, *, request_id, **kwargs):
-        from sglang_omni.client.types import CompletionResult
-
-        response = self.responses[len(self.requests)]
-        self.requests.append((request_id, request.extra_params.get("prompt")))
-        return CompletionResult(request_id=request_id, text=response)
-
-
-def test_chunks_run_concurrently() -> None:
-    class BarrierClient:
-        """completion() blocks until all expected chunks have arrived.
-
-        A serial implementation deadlocks here (chunk 0 waits forever for
-        peers that are never submitted); only a concurrent one passes.
-        """
-
-        def __init__(self, expected: int) -> None:
-            self.expected = expected
-            self.active = 0
-            self.max_active = 0
-            self.all_in = asyncio.Event()
-
-        async def completion(self, request, *, request_id, **kwargs):
-            from sglang_omni.client.types import CompletionResult
-
-            self.active += 1
-            self.max_active = max(self.max_active, self.active)
-            if self.active >= self.expected:
-                self.all_in.set()
-            await self.all_in.wait()
-            self.active -= 1
-            index = request_id.rsplit("-chunk-", 1)[-1]
-            return CompletionResult(request_id=request_id, text=f"part{index}")
-
-    async def scenario() -> None:
-        barrier_client = BarrierClient(expected=3)
-        texts = await run_chunks(barrier_client, tiny_plan(3), max_concurrent=3)
-        assert texts == ["part0", "part1", "part2"]
-        assert barrier_client.max_active == 3
-
-    asyncio.run(scenario())
-
-
-def test_whisper_chunks_do_not_condition_on_previous_text_by_default() -> None:
-    class IndependentWhisperClient:
-        def __init__(self) -> None:
-            self.active = 0
-            self.max_active = 0
-            self.prompts: list[str | None] = []
-
-        async def completion(self, request, *, request_id, **kwargs):
-            from sglang_omni.client.types import CompletionResult
-
-            self.active += 1
-            self.max_active = max(self.max_active, self.active)
-            self.prompts.append(request.extra_params.get("prompt"))
-            await asyncio.sleep(0.01)
-            self.active -= 1
-            index = request_id.rsplit("-chunk-", 1)[-1]
-            return CompletionResult(request_id=request_id, text=f"part{index}")
-
-    async def scenario() -> None:
-        from sglang_omni.serve.transcription_adapters import resolve_adapter
-
-        independent_client = IndependentWhisperClient()
-        texts = await run_chunks(
-            independent_client,
-            tiny_plan(3),
-            max_concurrent=3,
-            prompt="SGLang vocabulary",
-            adapter=resolve_adapter(["WhisperForConditionalGeneration"]),
-        )
-        assert texts == ["part0", "part1", "part2"]
-        assert independent_client.prompts == ["SGLang vocabulary"] * 3
-        assert independent_client.max_active == 3
-
-    asyncio.run(scenario())
-
-
-def test_whisper_chunks_chain_previous_text_in_decode_order() -> None:
-    class OrderedClient:
-        def __init__(self) -> None:
-            self.active = 0
-            self.max_active = 0
-            self.prompts: list[str | None] = []
-
-        async def completion(self, request, *, request_id, **kwargs):
-            from sglang_omni.client.types import CompletionResult
-
-            self.active += 1
-            self.max_active = max(self.max_active, self.active)
-            self.prompts.append(request.extra_params.get("prompt"))
-            await asyncio.sleep(0.01)
-            self.active -= 1
-            index = request_id.rsplit("-chunk-", 1)[-1]
-            return CompletionResult(request_id=request_id, text=f"part{index}")
-
-    async def scenario() -> None:
-        from sglang_omni.serve.transcription_adapters import resolve_adapter
-
-        ordered_client = OrderedClient()
-        texts = await run_chunks(
-            ordered_client,
-            tiny_plan(3),
-            max_concurrent=3,
-            prompt="SGLang vocabulary",
-            condition_on_previous_text=True,
-            adapter=resolve_adapter(["WhisperForConditionalGeneration"]),
-        )
-        assert texts == ["part0", "part1", "part2"]
-        assert ordered_client.prompts == [
-            "SGLang vocabulary",
-            "part0",
-            "part1",
-        ]
-        assert ordered_client.max_active == 1
-
-    asyncio.run(scenario())
-
-
-def test_whisper_retries_degenerate_chunk_once_without_context() -> None:
-    async def scenario() -> None:
-        from sglang_omni.serve.transcription_adapters import resolve_adapter
-
-        loop = "the decoder keeps repeating this terminal phrase " * 3
-        scripted_client = ScriptedChunkClient(
-            ["part0", "part1", "part2", loop, "clean3", "part4"]
-        )
-        texts = await run_chunks(
-            scripted_client,
-            tiny_plan(5),
-            max_concurrent=5,
-            prompt="caller prompt",
-            condition_on_previous_text=True,
-            adapter=resolve_adapter(["WhisperForConditionalGeneration"]),
-        )
-
-        assert texts == ["part0", "part1", "part2", "clean3", "part4"]
-        assert scripted_client.requests == [
-            ("req-chunk-0", "caller prompt"),
-            ("req-chunk-1", "part0"),
-            ("req-chunk-2", "part1"),
-            ("req-chunk-3", "part2"),
-            ("req-chunk-3-retry", None),
-            ("req-chunk-4", "clean3"),
-        ]
-
-    asyncio.run(scenario())
-
-
-def test_whisper_degenerate_retry_is_bounded() -> None:
-    async def scenario() -> None:
-        from sglang_omni.serve.transcription_adapters import resolve_adapter
-
-        first_loop = "the first attempt repeats this terminal phrase " * 3
-        retry_loop = "the retry also repeats this terminal phrase " * 3
-        scripted_client = ScriptedChunkClient([first_loop, retry_loop])
-        texts = await run_chunks(
-            scripted_client,
-            tiny_plan(1),
-            max_concurrent=1,
-            condition_on_previous_text=True,
-            adapter=resolve_adapter(["WhisperForConditionalGeneration"]),
-        )
-
-        assert texts == [retry_loop]
-        assert scripted_client.requests == [
-            ("req-chunk-0", None),
-            ("req-chunk-0-retry", None),
-        ]
-
-    asyncio.run(scenario())
-
-
-def test_whisper_retries_degenerate_caller_prompt_chunk() -> None:
-    async def scenario() -> None:
-        from sglang_omni.serve.transcription_adapters import resolve_adapter
-
-        loop = "the caller context caused this terminal phrase " * 3
-        scripted_client = ScriptedChunkClient([loop, "clean0", "part1"])
-        texts = await run_chunks(
-            scripted_client,
-            tiny_plan(2),
-            max_concurrent=2,
-            prompt="caller prompt",
-            condition_on_previous_text=True,
-            adapter=resolve_adapter(["WhisperForConditionalGeneration"]),
-        )
-
-        assert texts == ["clean0", "part1"]
-        assert scripted_client.requests == [
-            ("req-chunk-0", "caller prompt"),
-            ("req-chunk-0-retry", None),
-            ("req-chunk-1", "clean0"),
-        ]
-
-    asyncio.run(scenario())
-
-
-def test_cancelling_whisper_retry_aborts_the_retry_request() -> None:
-    class HangingRetryClient:
-        def __init__(self) -> None:
-            self.retry_started = asyncio.Event()
-            self.aborted: list[str] = []
-            self.attempts = 0
-
-        async def completion(self, request, *, request_id, **kwargs):
-            from sglang_omni.client.types import CompletionResult
-
-            self.attempts += 1
-            if self.attempts == 1:
-                loop = "the first attempt repeats this terminal phrase " * 3
-                return CompletionResult(request_id=request_id, text=loop)
-            self.retry_started.set()
-            await asyncio.Future()
-
-        async def abort(self, request_id: str) -> None:
-            self.aborted.append(request_id)
-
-    async def scenario() -> None:
-        from sglang_omni.serve.transcription_adapters import resolve_adapter
-
-        hanging_client = HangingRetryClient()
-        work = asyncio.create_task(
-            run_chunks(
-                hanging_client,
-                tiny_plan(1),
-                max_concurrent=1,
-                condition_on_previous_text=True,
-                adapter=resolve_adapter(["WhisperForConditionalGeneration"]),
-            )
-        )
-        await asyncio.wait_for(hanging_client.retry_started.wait(), timeout=10.0)
-        work.cancel()
-        with pytest.raises(asyncio.CancelledError):
-            await work
-        assert hanging_client.aborted == ["req-chunk-0-retry"]
-
-    asyncio.run(scenario())
-
-
-def test_chunk_concurrency_respects_the_limit() -> None:
-    class CountingClient:
-        def __init__(self) -> None:
-            self.active = 0
-            self.max_active = 0
-
-        async def completion(self, request, *, request_id, **kwargs):
-            from sglang_omni.client.types import CompletionResult
-
-            self.active += 1
-            self.max_active = max(self.max_active, self.active)
-            await asyncio.sleep(0.01)
-            self.active -= 1
-            index = request_id.rsplit("-chunk-", 1)[-1]
-            return CompletionResult(request_id=request_id, text=f"part{index}")
-
-    async def scenario() -> None:
-        counting_client = CountingClient()
-        texts = await run_chunks(counting_client, tiny_plan(6), max_concurrent=2)
-        assert texts == [f"part{i}" for i in range(6)]
-        assert counting_client.max_active <= 2
-
-    asyncio.run(scenario())
-
-
-def test_chunk_texts_join_in_span_order_not_completion_order() -> None:
-    class ReversedLatencyClient:
-        async def completion(self, request, *, request_id, **kwargs):
-            from sglang_omni.client.types import CompletionResult
-
-            index = int(request_id.rsplit("-chunk-", 1)[-1])
-            # Later chunks finish first.
-            await asyncio.sleep(0.03 * (3 - index))
-            return CompletionResult(request_id=request_id, text=f"part{index}")
-
-    async def scenario() -> None:
-        texts = await run_chunks(
-            ReversedLatencyClient(), tiny_plan(3), max_concurrent=3
-        )
-        assert texts == ["part0", "part1", "part2"]
-
-    asyncio.run(scenario())
-
-
-def test_chunk_failure_aborts_the_chunks_still_running() -> None:
-    class OneFailsOthersHangClient:
-        def __init__(self) -> None:
-            self.aborted: list[str] = []
-            self.hung = asyncio.Event()
-
-        async def completion(self, request, *, request_id, **kwargs):
-            from sglang_omni.client import ClientError
-
-            index = int(request_id.rsplit("-chunk-", 1)[-1])
-            if index == 1:
-                # Let the others reach their await first.
-                await asyncio.sleep(0.01)
-                raise ClientError("cuda out of memory")
-            self.hung.set()
-            await asyncio.Future()  # hangs until cancelled
-
-        async def abort(self, request_id: str) -> None:
-            self.aborted.append(request_id)
-
-    async def scenario() -> None:
-        hang_client = OneFailsOthersHangClient()
-        from sglang_omni.client import ClientError
-
-        with pytest.raises(ClientError, match="chunk 1"):
-            await run_chunks(hang_client, tiny_plan(3), max_concurrent=3)
-        # The hanging engine requests were aborted by id.
-        assert sorted(hang_client.aborted) == ["req-chunk-0", "req-chunk-2"]
-
-    asyncio.run(scenario())
-
-
-def test_client_disconnect_aborts_all_running_chunks() -> None:
-    from sglang_omni.serve.transcription_adapters.base import (
-        DefaultTranscriptionAdapter,
-    )
-    from sglang_omni.serve.transcriptions import (
-        await_transcription_with_disconnect_abort,
-        transcribe_audio_chunks,
-    )
-
-    class HangingClient:
-        def __init__(self, expected: int) -> None:
-            self.expected = expected
-            self.arrived = 0
-            self.all_started = asyncio.Event()
-            self.aborted: list[str] = []
-
-        async def completion(self, request, *, request_id, **kwargs):
-            self.arrived += 1
-            if self.arrived >= self.expected:
-                self.all_started.set()
-            await asyncio.Future()
-
-        async def abort(self, request_id: str) -> None:
-            self.aborted.append(request_id)
-
-    class DisconnectingRequest:
-        """Reports disconnected only once every chunk is in flight."""
-
-        def __init__(self, all_started: asyncio.Event) -> None:
-            self.all_started = all_started
-
-        async def is_disconnected(self) -> bool:
-            return self.all_started.is_set()
-
-    async def scenario() -> None:
-        hanging_client = HangingClient(expected=2)
-        work = transcribe_audio_chunks(
-            hanging_client,
-            tiny_plan(2),
-            request_id="req",
-            model="asr",
-            filename=None,
-            language=None,
-            prompt=None,
-            temperature=None,
-            repetition_penalty=None,
-            max_new_tokens=None,
-            max_concurrent=2,
-            condition_on_previous_text=False,
-            adapter=DefaultTranscriptionAdapter(),
-        )
-        with pytest.raises(asyncio.CancelledError):
-            await asyncio.wait_for(
-                await_transcription_with_disconnect_abort(
-                    DisconnectingRequest(hanging_client.all_started), work
-                ),
-                timeout=10.0,
-            )
-        assert sorted(hanging_client.aborted) == ["req-chunk-0", "req-chunk-1"]
-
-    asyncio.run(scenario())
-
-
-def test_cancelling_the_wrapper_itself_aborts_running_chunks() -> None:
-    # The wrapper's handler task can be cancelled from outside (server
-    # shutdown, ASGI teardown) rather than via is_disconnected(). The
-    # finally block must stop the work task too, or its engine requests
-    # keep running with nobody left to abort them.
-    from sglang_omni.serve.transcription_adapters.base import (
-        DefaultTranscriptionAdapter,
-    )
-    from sglang_omni.serve.transcriptions import (
-        await_transcription_with_disconnect_abort,
-        transcribe_audio_chunks,
-    )
-
-    class HangingClient:
-        def __init__(self, expected: int) -> None:
-            self.expected = expected
-            self.arrived = 0
-            self.all_started = asyncio.Event()
-            self.aborted: list[str] = []
-
-        async def completion(self, request, *, request_id, **kwargs):
-            self.arrived += 1
-            if self.arrived >= self.expected:
-                self.all_started.set()
-            await asyncio.Future()
-
-        async def abort(self, request_id: str) -> None:
-            self.aborted.append(request_id)
-
-    class NeverDisconnects:
-        async def is_disconnected(self) -> bool:
-            return False
-
-    async def scenario() -> None:
-        hanging_client = HangingClient(expected=2)
-        work = transcribe_audio_chunks(
-            hanging_client,
-            tiny_plan(2),
-            request_id="req",
-            model="asr",
-            filename=None,
-            language=None,
-            prompt=None,
-            temperature=None,
-            repetition_penalty=None,
-            max_new_tokens=None,
-            max_concurrent=2,
-            condition_on_previous_text=False,
-            adapter=DefaultTranscriptionAdapter(),
-        )
-        wrapper_task = asyncio.create_task(
-            await_transcription_with_disconnect_abort(NeverDisconnects(), work)
-        )
-        await asyncio.wait_for(hanging_client.all_started.wait(), timeout=10.0)
-        wrapper_task.cancel()
-        with pytest.raises(asyncio.CancelledError):
-            await wrapper_task
-        # The work task's cleanup may finish just after the bounded wait; give
-        # it a few ticks before asserting the engine-side aborts happened.
-        for _ in range(50):
-            if len(hanging_client.aborted) == 2:
-                break
-            await asyncio.sleep(0.01)
-        assert sorted(hanging_client.aborted) == ["req-chunk-0", "req-chunk-1"]
-
-    asyncio.run(scenario())
-
-
-def m4a_upload(duration_s: float, sample_rate: int = 16000) -> bytes:
-    """Loud AAC/M4A clip -- a format libsndfile cannot inspect."""
-    import io as io_module
-
-    import av
-    import numpy as np
-
-    rng = np.random.default_rng(0)
-    wave = rng.uniform(-0.5, 0.5, int(duration_s * sample_rate)).astype(np.float32)
-    buffer = io_module.BytesIO()
-    container = av.open(buffer, mode="w", format="mp4")
-    audio_stream = container.add_stream("aac", rate=sample_rate)
-    audio_stream.layout = "mono"
-    frame = av.AudioFrame.from_ndarray(
-        wave.reshape(1, -1), format="fltp", layout="mono"
-    )
-    frame.sample_rate = sample_rate
-    for packet in audio_stream.encode(frame):
-        container.mux(packet)
-    for packet in audio_stream.encode():
-        container.mux(packet)
-    container.close()
-    return buffer.getvalue()
-
-
-def test_long_m4a_is_probed_and_chunked() -> None:
-    # libsndfile cannot inspect M4A, but load_audio (torchaudio/FFmpeg) can
-    # decode it. The probe must cover everything the decoder covers --
-    # otherwise a long M4A bypasses chunking and the total-duration guard,
-    # runs as one request, and gets silently truncated at the output budget.
-    transcription_client = ChunkRecordingTranscriptionClient()
-    client = chunking_test_client(transcription_client)
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "asr"},
-        files={"file": ("long.m4a", m4a_upload(2.5), "audio/mp4")},
-    )
-
-    assert response.status_code == 200
-    assert len(transcription_client.requests) > 1
-    assert all(
-        "-chunk-" in request_id for request_id, _ in transcription_client.requests
-    )
-
-
-def test_unprobeable_audio_with_chunking_enabled_stays_one_request() -> None:
-    # soundfile cannot read these bytes, so the duration probe returns 0.0 and
-    # the upload keeps today's behaviour instead of paying a decode.
-    transcription_client = ChunkRecordingTranscriptionClient()
-    client = chunking_test_client(transcription_client)
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "asr"},
-        files={"file": ("mystery.bin", b"RIFF not really audio", "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    assert len(transcription_client.requests) == 1
-    assert (
-        transcription_client.requests[0][1].prompt["audio_bytes"]
-        == b"RIFF not really audio"
-    )
-
-
-def test_transcription_endpoint_returns_text_json() -> None:
-    transcription_client = SuccessfulTranscriptionClient()
-    client = TestClient(
-        create_app(transcription_client, model_name="openai/whisper-large-v3")
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "openai/whisper-large-v3", "language": "en"},
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    assert response.json() == {"text": "hello world"}
-    assert transcription_client.requests
-    request = transcription_client.requests[0]
-    assert request.model == "openai/whisper-large-v3"
-    assert request.prompt["filename"] == "sample.wav"
-    assert request.extra_params["language"] == "en"
-
-
-def test_transcription_endpoint_maps_disallowed_special_token_to_400() -> None:
-    transcription_client = FailingTranscriptionClient(
-        "Encountered text in the prompt corresponding to disallowed "
-        "special token: <|startoftranscript|>."
-    )
-    client = TestClient(
-        create_app(
-            transcription_client,
-            model_name="openai/whisper-large-v3",
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={
-            "model": "openai/whisper-large-v3",
-            "prompt": "<|startoftranscript|> sneaky",
-        },
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 400
-    assert "disallowed special token" in response.json()["detail"]
-
-
-def test_transcription_endpoint_maps_bad_request_error_to_400() -> None:
-
-    bad_request_error = (
-        "Fun-ASR accepts audio up to 30.0 seconds because its official "
-        "VAD segment limit is 30 seconds; split longer audio before inference."
-    )
-    client = TestClient(
-        create_app(
-            fault_client("qwen3-omni", error=bad_request_error),
-            model_name="qwen3-omni",
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "qwen3-omni"},
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 400
-    assert "accepts audio up to" in response.json()["detail"]
-
-
-def test_transcription_endpoint_maps_invalid_audio_error_to_400() -> None:
-    client = TestClient(
-        create_app(
-            fault_client(
-                "qwen3-omni",
-                error=(
-                    "Qwen3-ASR could not decode the uploaded audio; "
-                    "provide a valid audio file."
-                ),
-            ),
-            model_name="qwen3-omni",
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "qwen3-omni"},
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 400
-    assert "could not decode the uploaded audio" in response.json()["detail"]
-
-
-def test_transcription_endpoint_preserves_audio_backend_error_as_500() -> None:
-    client = TestClient(
-        create_app(
-            fault_client("qwen3-omni", error="audio decoder backend unavailable"),
-            model_name="qwen3-omni",
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "qwen3-omni"},
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 500
-    assert "audio decoder backend unavailable" in response.json()["detail"]
-
-
-def test_transcription_endpoint_maps_kv_capacity_error_to_400() -> None:
-    bad_request_error = (
-        "Request requires more tokens than the thinker KV cache can hold "
-        "(input_tokens=1500, max_new_tokens=128, required_tokens=1628, "
-        "kv_capacity=1600)."
-    )
-    client = TestClient(
-        create_app(
-            fault_client("qwen3-omni", error=bad_request_error),
-            model_name="qwen3-omni",
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "qwen3-omni"},
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 400
-    assert "thinker KV cache" in response.json()["detail"]
-
-
-def test_transcription_endpoint_maps_max_new_tokens_error_to_400() -> None:
-    bad_request_error = "max_new_tokens must be between 1 and 200, got 65536"
-    client = TestClient(
-        create_app(
-            fault_client("qwen3-omni", error=bad_request_error),
-            model_name="qwen3-omni",
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "qwen3-omni"},
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 400
-    assert "max_new_tokens must be" in response.json()["detail"]
-
-
-def test_transcription_endpoint_maps_unsupported_language_error_to_400() -> None:
-    bad_request_error = (
-        "Unsupported language: 'Klingon'. Use a supported language code "
-        "(ar, en, zh) or canonical name."
-    )
-    client = TestClient(
-        create_app(
-            fault_client("qwen3-omni", error=bad_request_error),
-            model_name="qwen3-omni",
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "qwen3-omni", "language": "Klingon"},
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 400
-    assert "Unsupported language:" in response.json()["detail"]
-    assert "Use a supported language code" in response.json()["detail"]
-
-
-def test_transcription_endpoint_passes_explicit_max_new_tokens() -> None:
-    transcription_client = SuccessfulTranscriptionClient()
-    client = TestClient(
-        create_app(
-            transcription_client,
-            model_name="OpenMOSS-Team/MOSS-Transcribe-Diarize",
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={
-            "model": "OpenMOSS-Team/MOSS-Transcribe-Diarize",
-            "max_new_tokens": "4096",
-        },
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    assert transcription_client.requests
-    request = transcription_client.requests[0]
-    assert request.model == "OpenMOSS-Team/MOSS-Transcribe-Diarize"
-    assert request.sampling.max_new_tokens == 4096
-    assert request.metadata[EXPLICIT_GENERATION_PARAMS_KEY] == ["max_new_tokens"]
-
-
-def test_transcription_endpoint_maps_input_length_error_to_400() -> None:
-    transcription_client = FailingTranscriptionClient(
-        "Input length (140000 tokens) exceeds the maximum allowed length "
-        "(131071 tokens). Use a shorter input or enable --allow-auto-truncate."
-    )
-    client = TestClient(
-        create_app(
-            transcription_client,
-            model_name="OpenMOSS-Team/MOSS-Transcribe-Diarize",
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "OpenMOSS-Team/MOSS-Transcribe-Diarize"},
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 400
-    assert "exceeds the maximum allowed length" in response.json()["detail"]
-
-
-def test_transcription_endpoint_maps_runtime_input_length_error_to_400() -> None:
-    transcription_client = FailingTranscriptionClient(
-        "Input length (140000 tokens) exceeds the maximum allowed length "
-        "(131071 tokens).",
-        exc_type=RuntimeError,
-    )
-    client = TestClient(
-        create_app(
-            transcription_client,
-            model_name="OpenMOSS-Team/MOSS-Transcribe-Diarize",
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "OpenMOSS-Team/MOSS-Transcribe-Diarize"},
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 400
-
-
-def test_transcription_endpoint_maps_processor_max_length_error_to_400() -> None:
-    transcription_client = FailingTranscriptionClient(
-        "Prompt/audio sequence exceeds max_length=132096"
-    )
-    client = TestClient(
-        create_app(
-            transcription_client,
-            model_name="OpenMOSS-Team/MOSS-Transcribe-Diarize",
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "OpenMOSS-Team/MOSS-Transcribe-Diarize"},
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 400
-    assert "exceeds max_length" in response.json()["detail"]
-
-
-def test_transcription_endpoint_keeps_500_for_server_errors() -> None:
-    transcription_client = FailingTranscriptionClient("scheduler worker crashed")
-    client = TestClient(
-        create_app(
-            transcription_client,
-            model_name="OpenMOSS-Team/MOSS-Transcribe-Diarize",
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "OpenMOSS-Team/MOSS-Transcribe-Diarize"},
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 500
-
-
-def test_transcription_stream_emits_delta_done_and_sentinel() -> None:
-    transcription_client = SuccessfulTranscriptionClient()
-    client = TestClient(
-        create_app(
-            transcription_client,
-            model_name="OpenMOSS-Team/MOSS-Transcribe-Diarize",
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={
-            "model": "OpenMOSS-Team/MOSS-Transcribe-Diarize",
-            "stream": "true",
-        },
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    assert response.headers["content-type"].startswith("text/event-stream")
-    body = response.text
-    first_delta = body.index('"transcript.text.delta"')
-    done_index = body.index('"transcript.text.done"')
-    sentinel_index = body.index("data: [DONE]")
-    assert first_delta < done_index < sentinel_index
-    assert '"delta":"hello "' in body
-    assert '"delta":"world"' in body
-    assert '"text":"hello world"' in body
-
-
-def test_transcription_stream_maps_input_length_error_to_400() -> None:
-    transcription_client = FailingTranscriptionClient(
-        "Input length (140000 tokens) exceeds the maximum allowed length "
-        "(131071 tokens).",
-        exc_type=RuntimeError,
-    )
-    client = TestClient(
-        create_app(
-            transcription_client,
-            model_name="OpenMOSS-Team/MOSS-Transcribe-Diarize",
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={
-            "model": "OpenMOSS-Team/MOSS-Transcribe-Diarize",
-            "stream": "true",
-        },
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 400
-    assert "exceeds the maximum allowed length" in response.json()["detail"]
-
-
-def test_transcription_first_chunk_disconnect_aborts_backend() -> None:
-    async def drive() -> None:
-        aborts: list[str] = []
-        stream_closed = asyncio.Event()
-
-        class AbortRecordingClient:
-            async def abort(self, request_id: str) -> None:
-                aborts.append(request_id)
-
-        async def never_first_chunk():
-            try:
-                await asyncio.Event().wait()
-            finally:
-                stream_closed.set()
-            yield  # unreachable, makes this an async generator
-
-        request = DisconnectingRequest()
-        request.disconnected.set()
-        with pytest.raises(asyncio.CancelledError):
-            await _first_transcription_chunk(
-                request,
-                AbortRecordingClient(),
-                never_first_chunk(),
-                "transcription-1",
-            )
-        assert aborts == ["transcription-1"]
-        assert stream_closed.is_set()
-
-    asyncio.run(drive())
-
-
-def test_transcription_stream_keeps_500_for_server_errors() -> None:
-    transcription_client = FailingTranscriptionClient(
-        "scheduler worker crashed",
-        exc_type=RuntimeError,
-    )
-    client = TestClient(
-        create_app(
-            transcription_client,
-            model_name="OpenMOSS-Team/MOSS-Transcribe-Diarize",
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={
-            "model": "OpenMOSS-Team/MOSS-Transcribe-Diarize",
-            "stream": "true",
-        },
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 500
-
-
-def test_transcription_endpoint_uses_openai_temperature_default() -> None:
-    transcription_client = SuccessfulTranscriptionClient()
-    client = TestClient(
-        create_app(transcription_client, model_name="openai/whisper-large-v3")
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "openai/whisper-large-v3"},
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    assert transcription_client.requests
-    request = transcription_client.requests[0]
-    assert request.sampling.temperature == 0.0
-    assert EXPLICIT_GENERATION_PARAMS_KEY not in request.metadata
-
-
-def test_transcription_endpoint_marks_mtd_request_for_model_sampling_defaults() -> None:
-    transcription_client = SuccessfulTranscriptionClient()
-    client = TestClient(
-        create_app(
-            transcription_client,
-            model_name="OpenMOSS-Team/MOSS-Transcribe-Diarize",
-            architectures=["MossTranscribeDiarizeForConditionalGeneration"],
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "OpenMOSS-Team/MOSS-Transcribe-Diarize"},
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    assert transcription_client.requests
-    request = transcription_client.requests[0]
-    assert request.sampling.temperature == 0.0
-    assert EXPLICIT_GENERATION_PARAMS_KEY not in request.metadata
-
-
-class DiarizationTranscriptionClient:
-    """Stub returning MOSS-style diarized markup for verbose_json tests."""
-
-    async def completion(self, request, *, request_id, audio_format="wav"):
-        from sglang_omni.client.types import CompletionResult
-
-        del request, request_id, audio_format
-        return CompletionResult(
-            request_id="transcription-1",
-            text="[0.00][S01] hello there.[1.20][1.30][S02] bye.[3.00]",
-        )
-
-
-class WhisperTimestampTranscriptionClient(SuccessfulTranscriptionClient):
-    async def completion(self, request, *, request_id, audio_format="wav"):
-        from sglang_omni.client.types import CompletionResult
-
-        del request_id, audio_format
-        self.requests.append(request)
-        return CompletionResult(
-            request_id="transcription-1",
-            text="<|0.00|>hello there.<|1.20|>",
-        )
-
-
-def test_transcription_srt_returns_whisper_timestamp_segments() -> None:
-    transcription_client = WhisperTimestampTranscriptionClient()
-    client = TestClient(
-        create_app(
-            transcription_client,
-            model_name="openai/whisper-large-v3",
-            architectures=["WhisperForConditionalGeneration"],
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "openai/whisper-large-v3", "response_format": "srt"},
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    assert response.text == "1\n00:00:00,000 --> 00:00:01,200\nhello there.\n\n"
-    assert transcription_client.requests[0].extra_params["segment_timestamps"] is True
-
-
-def test_transcription_verbose_json_returns_diarized_segments() -> None:
-    client = TestClient(
-        create_app(
-            DiarizationTranscriptionClient(),
-            model_name="moss-transcribe-diarize",
-            architectures=["MossTranscribeDiarizeForConditionalGeneration"],
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "moss-transcribe-diarize", "response_format": "verbose_json"},
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    body = response.json()
-    assert body["task"] == "transcribe"
-    assert [(s["id"], s["start"], s["end"], s["text"]) for s in body["segments"]] == [
-        (0, 0.0, 1.2, "[S01]hello there."),
-        (1, 1.3, 3.0, "[S02]bye."),
-    ]
-
-
-def test_transcription_srt_returns_diarized_segments() -> None:
-    client = TestClient(
-        create_app(
-            DiarizationTranscriptionClient(),
-            model_name="moss-transcribe-diarize",
-            architectures=["MossTranscribeDiarizeForConditionalGeneration"],
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "moss-transcribe-diarize", "response_format": "srt"},
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    assert response.headers["content-type"].startswith("text/plain")
-    assert response.text == (
-        "1\n"
-        "00:00:00,000 --> 00:00:01,200\n"
-        "[S01]hello there.\n\n"
-        "2\n"
-        "00:00:01,300 --> 00:00:03,000\n"
-        "[S02]bye.\n\n"
-    )
-
-
-def test_transcription_vtt_returns_diarized_segments() -> None:
-    client = TestClient(
-        create_app(
-            DiarizationTranscriptionClient(),
-            model_name="moss-transcribe-diarize",
-            architectures=["MossTranscribeDiarizeForConditionalGeneration"],
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "moss-transcribe-diarize", "response_format": "vtt"},
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    assert response.text.startswith("WEBVTT\n\n")
-
-
-@pytest.mark.parametrize("response_format", ["srt", "vtt"])
-def test_transcription_subtitle_format_requires_model_timestamps(
-    response_format: str,
-) -> None:
-    transcription_client = SuccessfulTranscriptionClient()
-    client = TestClient(
-        create_app(
-            transcription_client,
-            model_name="moss-transcribe-diarize",
-            architectures=["MossTranscribeDiarizeForConditionalGeneration"],
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={
-            "model": "moss-transcribe-diarize",
-            "response_format": response_format,
-        },
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 400
-    assert response.json()["detail"] == "model did not produce segment timestamps"
-    assert len(transcription_client.requests) == 1
-
-
-@pytest.mark.parametrize("response_format", ["srt", "vtt"])
-def test_qwen3_asr_rejects_subtitle_format_before_inference(
-    response_format: str,
-) -> None:
-    transcription_client = SuccessfulTranscriptionClient()
-    client = TestClient(
-        create_app(
-            transcription_client,
-            model_name="Qwen/Qwen3-ASR-1.7B",
-            architectures=["Qwen3ASRForConditionalGeneration"],
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={
-            "model": "Qwen/Qwen3-ASR-1.7B",
-            "response_format": response_format,
-        },
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 400
-    assert "segment-timestamp capability" in response.json()["detail"]
-    assert transcription_client.requests == []
-
-
-@pytest.mark.parametrize("response_format", ["srt", "vtt"])
-def test_streaming_rejects_subtitle_format_before_inference(
-    response_format: str,
-) -> None:
-    transcription_client = SuccessfulTranscriptionClient()
-    client = TestClient(
-        create_app(
-            transcription_client,
-            model_name="moss-transcribe-diarize",
-            architectures=["MossTranscribeDiarizeForConditionalGeneration"],
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={
-            "model": "moss-transcribe-diarize",
-            "response_format": response_format,
-            "stream": "true",
-        },
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 400
-    assert "stream=true supports only" in response.json()["detail"]
-    assert transcription_client.requests == []
-
-
-def test_transcription_verbose_json_falls_back_for_plain_text() -> None:
-    client = TestClient(
-        create_app(
-            SuccessfulTranscriptionClient(),
-            model_name="moss-transcribe-diarize",
-            architectures=["MossTranscribeDiarizeForConditionalGeneration"],
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "moss-transcribe-diarize", "response_format": "verbose_json"},
-        files={"file": ("sample.wav", b"RIFF", "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    body = response.json()
-    assert len(body["segments"]) == 1
-    assert body["segments"][0]["text"] == "[S01]hello world"
-
-
-def wav_bytes(duration_s: float, sample_rate: int = 16000) -> bytes:
-    import io
-
-    import numpy as np
-    import soundfile as sf
-
-    samples = np.zeros(int(duration_s * sample_rate), dtype=np.float32)
-    buf = io.BytesIO()
-    sf.write(buf, samples, sample_rate, format="WAV")
-    return buf.getvalue()
-
-
-def test_transcription_probes_duration_from_real_wav() -> None:
-    client = TestClient(
-        create_app(
-            DiarizationTranscriptionClient(),
-            model_name="moss-transcribe-diarize",
-            architectures=["MossTranscribeDiarizeForConditionalGeneration"],
-        )
-    )
-
-    response = client.post(
-        "/v1/audio/transcriptions",
-        data={"model": "moss-transcribe-diarize", "response_format": "verbose_json"},
-        files={"file": ("sample.wav", wav_bytes(3.5), "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    body = response.json()
-    assert body["usage"] == {"type": "duration", "seconds": 4}
-
-
-def test_speech_request_passes_moss_token_count() -> None:
-    req = CreateSpeechRequest(input="hello", token_count=180)
-
-    gen_req = SpeechRequestValidator(default_model="moss-tts").build_generate_request(
-        req
-    )
-
-    assert gen_req.metadata["tts_params"]["token_count"] == 180
 
 
 # ---------------------------------------------------------------------------
@@ -3430,7 +1004,7 @@ def admin_headers(
 def test_admin_routes_open_when_no_key_configured() -> None:
     """Without a key, all admin routes are accessible with no auth header."""
     admin = AdminClient()
-    client = TestClient(create_app(admin, model_name="qwen3-omni"))
+    client = TestClient(create_app(admin, model_name="voicing-tts"))
 
     resp = client.get("/model_info")
     assert resp.status_code == 200
@@ -3443,7 +1017,7 @@ def test_admin_routes_require_bearer_token_when_key_configured() -> None:
     """When admin_api_key is set, requests without the header are rejected."""
     admin = AdminClient()
     client = TestClient(
-        create_app(admin, model_name="qwen3-omni", admin_api_key=ADMIN_API_KEY)
+        create_app(admin, model_name="voicing-tts", admin_api_key=ADMIN_API_KEY)
     )
 
     for method, path in ADMIN_PATHS_THAT_NEED_AUTH:
@@ -3457,7 +1031,7 @@ def test_admin_routes_require_bearer_token_when_key_configured() -> None:
 def test_admin_routes_reject_wrong_bearer_token() -> None:
     admin = AdminClient()
     client = TestClient(
-        create_app(admin, model_name="qwen3-omni", admin_api_key=ADMIN_API_KEY)
+        create_app(admin, model_name="voicing-tts", admin_api_key=ADMIN_API_KEY)
     )
 
     for method, path in ADMIN_PATHS_THAT_NEED_AUTH:
@@ -3470,7 +1044,7 @@ def test_admin_routes_reject_wrong_bearer_token() -> None:
 def test_admin_routes_accept_correct_bearer_token() -> None:
     admin = AdminClient()
     client = TestClient(
-        create_app(admin, model_name="qwen3-omni", admin_api_key=ADMIN_API_KEY)
+        create_app(admin, model_name="voicing-tts", admin_api_key=ADMIN_API_KEY)
     )
 
     resp = client.get("/model_info", headers=admin_headers(scheme="bearer"))
@@ -3487,7 +1061,7 @@ def test_admin_routes_accept_correct_bearer_token() -> None:
 def test_admin_routes_env_key_is_used_when_no_explicit_key(monkeypatch) -> None:
     monkeypatch.setenv("SGLANG_OMNI_ADMIN_KEY", "env-key")
     admin = AdminClient()
-    client = TestClient(create_app(admin, model_name="qwen3-omni"))
+    client = TestClient(create_app(admin, model_name="voicing-tts"))
 
     resp = client.get("/model_info")
     assert resp.status_code == 401
@@ -3503,7 +1077,7 @@ def test_admin_routes_env_key_is_used_when_no_explicit_key(monkeypatch) -> None:
 
 def test_unimplemented_tensor_weight_update_returns_501() -> None:
     admin = AdminClient()
-    client = TestClient(create_app(admin, model_name="qwen3-omni"))
+    client = TestClient(create_app(admin, model_name="voicing-tts"))
 
     resp = client.post("/update_weights_from_tensor", json={})
     assert resp.status_code == 501
@@ -3513,7 +1087,7 @@ def test_unimplemented_tensor_weight_update_returns_501() -> None:
 
 def test_distributed_weight_update_routes_forward_to_client() -> None:
     admin = AdminClient()
-    client = TestClient(create_app(admin, model_name="qwen3-omni"))
+    client = TestClient(create_app(admin, model_name="voicing-tts"))
 
     init = client.post(
         "/init_weights_update_group",
@@ -3591,7 +1165,7 @@ def test_stub_endpoint_checks_auth_before_501() -> None:
     """Auth check fires before the tensor stub 501 body."""
     admin = AdminClient()
     client = TestClient(
-        create_app(admin, model_name="qwen3-omni", admin_api_key=ADMIN_API_KEY)
+        create_app(admin, model_name="voicing-tts", admin_api_key=ADMIN_API_KEY)
     )
 
     resp = client.post("/update_weights_from_tensor", json={})
@@ -3600,7 +1174,7 @@ def test_stub_endpoint_checks_auth_before_501() -> None:
 
 @pytest.mark.parametrize("stream", [False, True])
 def test_speech_empty_generation_error_allows_next_request(stream: bool) -> None:
-    message = "MOSS-TTS Local generated no audio frames. Please retry the request."
+    message = "Voicing-TTS generated no audio frames. Please retry the request."
 
     class FailOnceClient(SuccessfulSpeechClient):
         failed = False
@@ -3621,9 +1195,9 @@ def test_speech_empty_generation_error_allows_next_request(stream: bool) -> None
         async def abort(self, request_id):
             pass
 
-    client = TestClient(create_app(FailOnceClient(), model_name="moss-tts"))
+    client = TestClient(create_app(FailOnceClient(), model_name="voicing-tts"))
     body = {
-        "model": "moss-tts",
+        "model": "voicing-tts",
         "input": "hello",
         "stream": stream,
         "response_format": "pcm" if stream else "wav",

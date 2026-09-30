@@ -154,8 +154,7 @@ here**; it is described only to mark the scope boundary. Do not add M4b runtime
 code until profiling proves it is worth the extra scheduling surface.
 
 Before building M4b, run cold-cache workloads with different reference audio per
-request at concurrency 8 and 16 for FishAudio S2-Pro, Qwen3-TTS, and
-MOSS-TTS Local. Track preprocessing/reference-encode p50/p95, end-to-end TTFA
+request at concurrency 8 and 16 for Voicing-TTS Base checkpoints. Track preprocessing/reference-encode p50/p95, end-to-end TTFA
 and latency, throughput, cache hit/miss/merge counts, and GPU/CPU utilization.
 Build M4b for a model only if different-key reference encode remains a top
 bottleneck and batching gives at least 15% p95 latency reduction or 20%
@@ -176,10 +175,10 @@ If M4b is built later, it should be an opt-in extension of
 - on a batch failure, retry per item so one bad reference does not fail the
   whole batch.
 
-Model rollout should stay evidence-driven. MOSS-TTS Local already has its own
-batched reference encoder and should not be migrated just to fit this generic
-surface. FishAudio S2-Pro is the first plausible candidate only if profiling
-shows real benefit; its batched path would decode/resample each reference, pad
-waveforms, call the codec once, and split outputs while preserving parity with
-`encode_one`. Qwen3-TTS should remain M4a-only unless the upstream wrapper
-exposes a safe batch primitive for `create_voice_clone_prompt`.
+Model rollout should stay evidence-driven. Voicing-TTS already runs its
+reference and speaker encoders under bucketed CUDA graphs
+(`sglang_omni/models/voicing_tts/reference_encoder_cuda_graph.py` and
+`speaker_encoder_cuda_graph.py`) and should not be migrated just to fit this
+generic surface. A batched path is worth building only if profiling shows real
+benefit; it would decode/resample each reference, pad waveforms, call the
+encoder once, and split outputs while preserving parity with `encode_one`.

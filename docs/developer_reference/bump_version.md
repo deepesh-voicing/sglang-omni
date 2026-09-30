@@ -38,7 +38,7 @@ The other places a version lives:
 | `docker/cpu.Dockerfile` | `SGLANG_IMAGE` (digest of the new tag's `-xeon` manifest) |
 | `docker/xpu.Dockerfile` | `SGLANG_XPU_BRANCH` (the tag); SGLang's XPU manifest pins the `sglang-kernel-xpu` wheel |
 | `pyproject_cpu.toml`, `pyproject_xpu.toml`, `scripts/cpu/install_cpu.sh`, `scripts/xpu/install_xpu.sh` | The verified SGLang tag; the provider pyprojects cannot pin `sglang` because every wheel pulls CUDA torch |
-| `docs/get_started/installation.md`, `docs/get_started/installation_cpu.md`, `docs/get_started/installation_xpu.md`, `docs/basic_usage/tts.md`, `docs/cookbook/*.md`, model READMEs | Version names in install instructions |
+| `docs/get_started/installation.md`, `docs/get_started/installation_cpu.md`, `docs/get_started/installation_xpu.md`, `docs/basic_usage/tts.md`, `docs/cookbook/voicing_tts.md` | Version names in install instructions |
 | Comments in `sglang_omni/` | Never name a version; state the invariant the code relies on so the text survives the next bump |
 
 Search the tree for the old versions and the old image digest; the table is
@@ -75,9 +75,8 @@ the layers, distributed helpers and core types that Omni patches or wants one
 import site for. Check that the module and symbol still exist, that a
 re-export resolves to the same origin, and that the signature or dataclass
 fields are unchanged. An import behind `except ImportError` gets the
-same check: the MOSS-TTS flash attention import was guarded that way, and
-when `sglang.jit_kernel` became `sglang.kernels.ops` it would have fallen
-back to SDPA without a word.
+same check: a flash attention import guarded that way would have fallen back
+to SDPA without a word when `sglang.jit_kernel` became `sglang.kernels.ops`.
 
 **Borrowed and subclassed classes.** `OmniScheduler` looks up the upstream
 `Scheduler` methods it does not override through `__getattr__` and runs them
@@ -116,17 +115,16 @@ phase, and every later reader has to read from where the current release
 stores the value. The bump that introduced the read-only record turned
 several write-then-read-back sites into hard errors.
 
-**Compat overlays.** `sglang_omni/models/dots_tts/compat.py`,
-`sglang_omni/models/qwen3_tts/compat.py` and
-`sglang_omni/models/qwen3_omni/components/vision_compat.py` bridge a pinned
-third-party package to the pinned stack, and each carries its removal
-condition in its docstring. Read the condition against the new stack and
-delete the overlay when it is met. A new overlay is one module that every
-import of the package goes through, with the condition written down.
+**Compat overlays.** `sglang_omni/models/voicing_tts/compat.py` bridges the
+vendored Voicing-TTS model code (`sglang_omni/vendor/voicing_tts/`) to the
+pinned Transformers release. Read what each shim patches against the new stack
+and delete the shim when the stack no longer needs it. A new overlay is one
+module that every import of the package goes through, with its removal
+condition written down.
 
 **Copies of upstream code.** Omni re-implements a few upstream helpers where
 it needs a different shape, for example the seeded sampling transform in
-`moss_tts/sampling_kernels.py` and `qwen3_tts/sampling_kernels.py`. A copy
+`voicing_tts/sampling_kernels.py`. A copy
 imports nothing, so no import or signature diff flags it; find them through
 the comments that name the upstream source and diff them against the new tag
 by hand. When upstream changes a numerical detail (a clamp, an accumulation
@@ -187,11 +185,11 @@ that have cost time:
 - Import guards in model packages. A package that checks the torch and
   torchaudio versions at import refused a torch that torchaudio never
   matched. That is what a compat overlay is for.
-- Floating-point programs. A Transformers upgrade changed the intermediate
-  dtype and reduction order of a vision positional-embedding interpolation.
-  Every API and shape matched and a benchmark score dropped. For a
-  pretrained model the arithmetic that interprets its weights is part of
-  the contract; the overlay preserves the old sequence and is verified on
+- Floating-point programs. A Transformers upgrade once changed the
+  intermediate dtype and reduction order of a positional-embedding
+  interpolation. Every API and shape matched and a benchmark score dropped.
+  For a pretrained model the arithmetic that interprets its weights is part
+  of the contract; an overlay that preserves the old sequence is verified on
   intermediates, not only on the final score.
 - Caches. New Inductor, Triton, FlashInfer and DeepGEMM versions invalidate
   every compiled artifact once, so the first pass in a fresh image measures
@@ -210,16 +208,10 @@ come from the image and only what
 the image lacks is installed on top; `verify_omni_installed_pins.py` then
 checks every exact pin in `pyproject.toml` against what is installed.
 
-The image also installs Qwen-TTS without its conflicting dependencies, system
-SoX, the Descript DAC packages, and the Audar/CosyVoice extras. Apply the
-project's dependency overrides when resolving these packages. CosyVoice itself
-has no package release, so the CI venv setup clones it at the commit the
-Fun-CosyVoice3 cookbook pins, with its Matcha-TTS submodule, and adds both to
-the venv through a `.pth` file. The CI import gate checks Qwen-TTS after the
-compatibility patch, DAC, NeuCodec, CosyVoice and Matcha-TTS imports, and the
-SoX executable. It imports llama.cpp before Torch to catch system NCCL
-conflicts; the image prioritizes Torch's NCCL library. A package listing alone
-does not prove a usable runtime.
+Voicing-TTS vendors the model code it needs under
+`sglang_omni/vendor/voicing_tts/`, so the image needs no model package on top
+of the project dependencies. A package listing alone does not prove a usable
+runtime: import the model package and launch a server on the new image.
 
 Reinstalling even the same FlashInfer wheel refreshes bundled header mtimes.
 The Dockerfile preserves the cache donor's mtimes only for byte-identical
@@ -249,8 +241,8 @@ starts from the right base; the workflow digests and
 ## Validation
 
 Two things prove the bump: the complete unit suite on the new stack, and an
-A/B of every model between the current pin and the target pin. Profiling
-comes in when the A/B moves a number.
+A/B of every Voicing-TTS variant between the current pin and the target pin.
+Profiling comes in when the A/B moves a number.
 
 Run the complete unit suite, default and accelerator selections, inside the
 new image. A failure is one of three things: a test that patches an upstream
@@ -261,18 +253,18 @@ that was missed.
 The A/B compares `main` at the merge base on the current image with the
 branch on the new image, on the same host with the same datasets and
 concurrency, from a warm server (the first pass in a fresh image is
-discarded). Run the CI presets and gates for the families the workflows
-cover, and a manual launch with one non-streaming and one streaming request
-for the families they do not, at the CI concurrency and at concurrency 1,
-where per-request host cost shows. The families that consume something
-nothing else does, such as the diffusion runtime, the dLLM scheduler or the
-weight-share topology, are the ones most likely to break without a test
-noticing.
+discarded). Run the CI presets and gates for the Voicing-TTS variants the
+workflows cover, and a manual launch with one non-streaming and one streaming
+request for the variants and platform configs they do not, at the CI
+concurrency and at concurrency 1, where per-request host cost shows. The paths
+that consume something nothing else does, such as the streaming vocoder's
+CUDA graphs or MPS data-parallel replicas, are the ones most likely to break
+without a test noticing.
 
 Compare accuracy gates per sample rather than by aggregate score: a sample
 that flips between two runs of one arm is noise, a sample that is stable on
 each arm and differs across arms is the bump. Compare the startup logs too:
-CUDA graphs captured for the families that enable them, the same set of
+CUDA graphs captured for the stages that enable them, the same set of
 fallback warnings, the KV pool size, and time to ready from a warm cache. A
 gate that `main` also fails is not the bump's to retune; it belongs to a
 calibration PR of its own.
@@ -296,19 +288,14 @@ commits and image digests, sample counts and the profiler attribution for
 any delta outside noise. Measurements and inferences are labeled as what
 they are.
 
-GPU CI needs the `run-ci` label. Model selectors choose presets within each
-family: TTS (`run-higgs`, `run-moss`, `run-qwen3-tts`, `run-cosyvoice3`,
-`run-qwen3-tts-custom-voice`), ASR (`run-fun-asr`, `run-qwen3-asr`,
-`run-whisper-asr`), and Omni (`run-qwen3-omni`, `run-minicpmo`). Apply them
-with `/tag-and-rerun-ci <selectors>`, for example
-`/tag-and-rerun-ci moss fun-asr minicpmo`. The Omni model defaults to
-Qwen3-Omni. The
-selectors within a family are exclusive, so each preset gets its own run on
-the new image before merge.
+GPU CI needs the `run-ci` label. Model selector labels, defined in the
+workflows under `.github/workflows/`, choose the Voicing-TTS presets to run.
+Apply them with `/tag-and-rerun-ci <selectors>`. The selectors are exclusive,
+so each preset gets its own run on the new image before merge.
 
 After the merge, everyone pulls the new image and rebuilds their
 virtualenvs; an environment built against the old pins does not run `main`.
 
 A full CI calibration must follow the merge. The new stack moves throughput
 and latency, so the thresholds in the workflows still describe the old image.
-Recalibrate every family on the merged commit, in its own PR.
+Recalibrate every preset on the merged commit, in its own PR.

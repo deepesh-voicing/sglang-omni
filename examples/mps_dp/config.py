@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import Any
 
 import yaml
 
@@ -15,47 +14,19 @@ from sglang_omni.config.runtime import (
     resolve_stage_factory_kwargs,
     resolve_stage_typed_kwargs,
 )
+from sglang_omni.config.schema import PipelineConfig, StageConfig
 from sglang_omni.utils.gpu_memory import format_bytes_gib, get_gpu_device_info
-
-# Note (Jiaxin Deng): the machine-readable weight-share support registry:
-# pipeline configs whose documented launch.sh command passed shared-DP
-# end-to-end validation (boot, attach, concurrent correctness, teardown),
-# paired with the SGLang engine architecture each config serves. Unit tests
-# enforce the implication chain, not an identity: a launcher-supported config
-# implies its architecture is gate-enabled, a shipped example config exists,
-# and the docs mark it supported. An architecture may back several configs;
-# an architecture audit alone does not add a row here.
-WEIGHT_SHARE_VALIDATED_CONFIGS: dict[str, str] = {
-    "HiggsTtsPipelineConfig": "HiggsMultimodalQwen3ForConditionalGeneration",
-    "MossTTSLocalPipelineConfig": "MossTTSLocalSGLangModel",
-    "MossTTSPipelineConfig": "MossTTSDelaySGLangModel",
-    "MossTTSSingleProcessPipelineConfig": "MossTTSDelaySGLangModel",
-    "MossTranscribeDiarizePipelineConfig": (
-        "MossTranscribeDiarizeForConditionalGeneration"
-    ),
-    "Qwen3ASRPipelineConfig": "Qwen3ASRForConditionalGeneration",
-    "WhisperASRPipelineConfig": "WhisperForConditionalGeneration",
-    "FunASRPipelineConfig": "FunAsrNanoForConditionalGeneration",
-}
 
 
 def _resolve_generation_stage(
     config_path: str | Path,
     *,
     require_single_sglang_engine: bool = False,
-    weight_share: bool = False,
-) -> tuple[Any, Any, Any]:
+) -> tuple[PipelineConfig, type[PipelineConfig], StageConfig]:
     """Return the pipeline config, its type, and the generation stage."""
 
     pipeline_config = ConfigManager.from_file(str(config_path)).config
     config_type = type(pipeline_config)
-    if weight_share and config_type.__name__ not in WEIGHT_SHARE_VALIDATED_CONFIGS:
-        raise ValueError(
-            f"weight sharing is not supported for {config_type.__name__}: it has "
-            "not passed end-to-end validation on this launcher (an architecture "
-            "audit alone does not enable sharing). Validated configs: "
-            f"{', '.join(sorted(WEIGHT_SHARE_VALIDATED_CONFIGS))}"
-        )
     engine_stage_names = [
         stage.name
         for stage in pipeline_config.stages
@@ -67,13 +38,14 @@ def _resolve_generation_stage(
             "the mps_dp launcher only drives pipelines with exactly one SGLang "
             "generation engine"
         )
-    if require_single_sglang_engine and len(engine_stage_names) != 1:
+    elif require_single_sglang_engine and len(engine_stage_names) != 1:
         raise ValueError(
             "KV verification requires CONFIG with one SGLang engine stage; "
             f"found {sorted(engine_stage_names)}"
         )
-    # In pipeline order, the generation engine comes first; every launcher-
-    # validated config has exactly one engine stage anyway.
+    else:
+        pass
+    # In pipeline order, the generation engine comes first.
     stage_name = engine_stage_names[0]
 
     stage = next(
@@ -84,6 +56,8 @@ def _resolve_generation_stage(
         raise ValueError(
             f"generation stage {stage_name!r} is missing from the pipeline"
         )
+    else:
+        pass
     return pipeline_config, config_type, stage
 
 
@@ -93,14 +67,13 @@ def _resolve_mps_memory_budget(
     replicas: int,
     *,
     allow_missing_budget: bool,
-    weight_share: bool = False,
 ) -> dict[str, int | str] | None:
     if replicas <= 0:
         raise ValueError("replicas must be a positive integer")
+    else:
+        pass
 
-    _, config_type, stage = _resolve_generation_stage(
-        config_path, weight_share=weight_share
-    )
+    _, config_type, stage = _resolve_generation_stage(config_path)
     kv_cache_bytes = stage.engine.kv_cache_bytes if stage.engine is not None else None
     total_reserve_bytes = stage.total_reserve_bytes
     if kv_cache_bytes is None and not allow_missing_budget:
@@ -108,8 +81,10 @@ def _resolve_mps_memory_budget(
             f"{config_type.__name__} generation stage {stage.name!r} must define "
             "positive engine.kv_cache_bytes for MPS byte-budget preflight"
         )
-    if kv_cache_bytes is None and total_reserve_bytes is None:
+    elif kv_cache_bytes is None and total_reserve_bytes is None:
         return None
+    else:
+        pass
 
     device_info = get_gpu_device_info(gpu_id)
     if device_info.total_memory_bytes is None:
@@ -118,6 +93,8 @@ def _resolve_mps_memory_budget(
             f"GPU {gpu_id} ({name}) total VRAM metadata is unavailable; cannot "
             "preflight byte budgets"
         )
+    else:
+        pass
     total_memory_bytes = device_info.total_memory_bytes
     gpu_name = device_info.name or "unknown GPU"
 
@@ -128,13 +105,12 @@ def _resolve_mps_memory_budget(
             "unknown" if device_info.device_id is None else device_info.device_id
         ),
         "replicas": replicas,
-        "weight_share": "1" if weight_share else "0",
         "total_vram_bytes": total_memory_bytes,
         "total_vram_gib": format_bytes_gib(total_memory_bytes),
     }
 
     # Note (Jiaxin Deng): the pass criteria only ever multiply numbers the user
-    # wrote; the KV bound holds with WEIGHT_SHARE too (KV pools stay private).
+    # wrote.
     if kv_cache_bytes is not None:
         total_kv_bytes = replicas * kv_cache_bytes
         if total_kv_bytes > total_memory_bytes:
@@ -146,10 +122,14 @@ def _resolve_mps_memory_budget(
                 f"= {format_bytes_gib(total_kv_bytes)} of KV pools alone. Lower "
                 "engine.kv_cache_bytes or reduce the replica count."
             )
+        else:
+            pass
         budget["per_replica_kv_cache_bytes"] = kv_cache_bytes
         budget["per_replica_kv_cache_gib"] = format_bytes_gib(kv_cache_bytes)
         budget["total_kv_cache_bytes"] = total_kv_bytes
         budget["total_kv_cache_gib"] = format_bytes_gib(total_kv_bytes)
+    else:
+        pass
 
     if total_reserve_bytes is None:
         if replicas >= 2:
@@ -163,40 +143,14 @@ def _resolve_mps_memory_budget(
                 "total_reserve_bytes explicitly to enable the full check.",
                 file=sys.stderr,
             )
+        else:
+            pass
         return budget
+    else:
+        pass
 
     budget["per_replica_total_reserve_bytes"] = total_reserve_bytes
     budget["per_replica_total_reserve_gib"] = format_bytes_gib(total_reserve_bytes)
-    if weight_share:
-        # One full reservation covers replica 0 (weights resident once); every
-        # further replica still owns a private KV pool.
-        shared_floor_bytes = total_reserve_bytes
-        if kv_cache_bytes is not None:
-            shared_floor_bytes += (replicas - 1) * kv_cache_bytes
-        if shared_floor_bytes > total_memory_bytes:
-            raise ValueError(
-                "MPS byte-budget preflight exceeds physical VRAM: "
-                f"GPU {gpu_id} ({gpu_name}) has "
-                f"{format_bytes_gib(total_memory_bytes)}, but one replica's "
-                "total_reserve_bytes="
-                f"{format_bytes_gib(total_reserve_bytes)} plus {replicas - 1} "
-                "further private KV pool(s) totals "
-                f"{format_bytes_gib(shared_floor_bytes)}. Lower "
-                "total_reserve_bytes or engine.kv_cache_bytes, or "
-                "reduce the replica count."
-            )
-        print(
-            "warning: WEIGHT_SHARE=1 - MPS byte-budget preflight only checked "
-            "the KV pool lower bound and one replica's reservation "
-            f"({format_bytes_gib(total_reserve_bytes)}) against GPU {gpu_id} "
-            f"VRAM ({format_bytes_gib(total_memory_bytes)}). The {replicas}-way "
-            "total is NOT validated, because the shared weight size is unknown "
-            "until a replica boots. Use autodp.sh to size shared-weight DP "
-            "from a measured footprint.",
-            file=sys.stderr,
-        )
-        return budget
-
     requested_total_bytes = replicas * total_reserve_bytes
     budget["requested_total_bytes"] = requested_total_bytes
     budget["requested_total_gib"] = format_bytes_gib(requested_total_bytes)
@@ -209,6 +163,8 @@ def _resolve_mps_memory_budget(
             f"requested={format_bytes_gib(requested_total_bytes)}. Lower "
             "total_reserve_bytes or reduce the replica count."
         )
+    else:
+        pass
     return budget
 
 
@@ -221,14 +177,12 @@ def resolve_max_total_tokens(
     max_total_tokens_override: int | None = None,
     *,
     require_single_sglang_engine: bool = False,
-    weight_share: bool = False,
-) -> int | None:
-    """Return the effective generation-stage KV cap, or None when unpinned."""
+) -> tuple[str, int | None]:
+    """Return the generation stage name and its KV cap, or None when unpinned."""
 
     pipeline_config, _, stage = _resolve_generation_stage(
         config_path,
         require_single_sglang_engine=require_single_sglang_engine,
-        weight_share=weight_share,
     )
 
     value = max_total_tokens_override
@@ -246,6 +200,8 @@ def resolve_max_total_tokens(
             resolve_stage_typed_kwargs(stage).get("server_args_overrides") or {}
         )
         value = overrides.get("max_total_tokens")
+    else:
+        pass
     if (
         value is not None
         and stage.engine is not None
@@ -256,13 +212,14 @@ def resolve_max_total_tokens(
             "generation stage's KV capacity; keep exactly one (a lower token "
             "cap would silently shrink the byte-derived pool)"
         )
-    if value is None:
+    elif value is None:
         return stage.name, None
-    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+    elif isinstance(value, bool) or not isinstance(value, int) or value <= 0:
         raise ValueError(
             "the generation stage must define a positive integer max_total_tokens"
         )
-    return stage.name, value
+    else:
+        return stage.name, value
 
 
 def main() -> None:
@@ -270,7 +227,6 @@ def main() -> None:
     parser.add_argument("config", help="SGLang Omni pipeline config")
     parser.add_argument("--max-total-tokens", type=int)
     parser.add_argument("--require-single-sglang-engine", action="store_true")
-    parser.add_argument("--weight-share", action="store_true")
     parser.add_argument(
         "--print-stage",
         action="store_true",
@@ -286,34 +242,38 @@ def main() -> None:
     args = parser.parse_args()
     try:
         if args.print_kv_cache_bytes:
-            _, _, stage = _resolve_generation_stage(
-                args.config, weight_share=args.weight_share
-            )
+            _, _, stage = _resolve_generation_stage(args.config)
             if stage.engine is not None and stage.engine.kv_cache_bytes is not None:
                 print(stage.engine.kv_cache_bytes)
+            else:
+                pass
         elif args.print_mps_memory_budget:
             if args.gpu_id is None or args.replicas is None:
                 parser.error(
-                    "--print-mps-memory-budget requires both --gpu-id and " "--replicas"
+                    "--print-mps-memory-budget requires both --gpu-id and --replicas"
                 )
+            else:
+                pass
             budget = _resolve_mps_memory_budget(
                 args.config,
                 gpu_id=args.gpu_id,
                 replicas=args.replicas,
                 allow_missing_budget=True,
-                weight_share=args.weight_share,
             )
             if budget is not None:
                 print(_serialize_mps_memory_budget_manifest(budget))
+            else:
+                pass
         else:
             stage_name, value = resolve_max_total_tokens(
                 args.config,
                 args.max_total_tokens,
                 require_single_sglang_engine=args.require_single_sglang_engine,
-                weight_share=args.weight_share,
             )
             if value is not None:
                 print(f"{stage_name} {value}" if args.print_stage else value)
+            else:
+                pass
     except (OSError, KeyError, ValueError, yaml.YAMLError) as exc:
         parser.error(str(exc))
 

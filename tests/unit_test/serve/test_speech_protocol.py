@@ -215,7 +215,7 @@ def test_speech_service_rejects_reference_text_with_instructions_when_configured
     None
 ):
     service = SpeechRequestValidator(
-        default_model="cosyvoice",
+        default_model="voicing-tts",
         required_speech_reference_count=1,
         speech_reference_text_excludes_instructions=True,
     )
@@ -335,10 +335,6 @@ def test_speech_service_rejects_boolean_seed() -> None:
         ({"input": "hello", "language": "Klingon"}, "language"),
         ({"input": "hello", "task_type": "Narration"}, "task_type"),
         ({"input": "hello", "max_new_tokens": 0}, "max_new_tokens"),
-        ({"input": "hello", "token_count": 0}, "token_count"),
-        ({"input": "hello", "token_count": -1}, "token_count"),
-        ({"input": "hello", "duration_tokens": 0}, "duration_tokens"),
-        ({"input": "hello", "duration_tokens": -1}, "duration_tokens"),
     ],
 )
 def test_speech_service_rejects_invalid_boundary_values(
@@ -351,27 +347,6 @@ def test_speech_service_rejects_invalid_boundary_values(
 
     assert exc_info.value.status_code == 400
     assert exc_info.value.param == expected_param
-
-
-@pytest.mark.parametrize(
-    ("field_name", "value"),
-    [
-        ("token_count", "5"),
-        ("token_count", True),
-        ("duration_tokens", "5"),
-        ("duration_tokens", True),
-    ],
-)
-def test_speech_service_rejects_invalid_duration_field_types(
-    field_name: str, value: object
-) -> None:
-    service = SpeechRequestValidator(default_model="tts")
-
-    with pytest.raises(SpeechAPIError) as exc_info:
-        service.parse_request({"input": "hello", field_name: value})
-
-    assert exc_info.value.status_code == 400
-    assert exc_info.value.param == field_name
 
 
 def test_speech_service_normalizes_tts_extension_fields_into_tts_params() -> None:

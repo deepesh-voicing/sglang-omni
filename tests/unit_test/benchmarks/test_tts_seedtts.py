@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""SeedTTS benchmark entry-point: model profiles, server lifecycle, WER filter."""
+"""SeedTTS benchmark entry-point: server lifecycle, external ASR, WER filter."""
 
 import json
 import sys
@@ -14,36 +14,11 @@ import requests
 from benchmarks.eval import benchmark_tts_seedtts as tts
 from benchmarks.metrics.wer import SampleOutput, calculate_wer_metrics
 from benchmarks.tasks import asr
-from tests.utils import QWEN3_ASR_WER_CONCURRENCY, assert_wer_partitioned
+from tests.utils import WER_ASR_CONCURRENCY, assert_wer_partitioned
 
 
-@pytest.mark.parametrize(
-    "model, is_auk",
-    [
-        ("tencent/AuK", True),
-        ("tencent/AuK-Flash", True),
-        ("tencent/AuK@revision", True),
-        ("/ckpt/auk-flash", True),
-        ("fishaudio/s2-pro", False),
-    ],
-)
-def test_cli_defaults_follow_checkpoint_name(monkeypatch, model, is_auk):
-    monkeypatch.setattr(sys, "argv", ["benchmark", "--model", model])
-    args, profile = tts._parse_args(
-        tts._build_arg_parser()
-    )  # noqa: leading-underscore  # production name
-    config = tts._config_from_args(args)  # noqa: leading-underscore  # production name
-    assert profile.forward_sglang_engine is not is_auk
-    if is_auk:
-        assert config.concurrency == config.warmup == 1
-        assert config.seed == 1234
-        assert config.output_dir == "results/auk_seedtts"
-    else:
-        assert profile.argument_defaults == {}
-
-
-@pytest.mark.parametrize("model", ["tencent/AuK", "fishaudio/s2-pro"])
-def test_evaluation_releases_tts_server_before_starting_asr(monkeypatch, model):
+def test_evaluation_releases_tts_server_before_external_asr(monkeypatch):
+    model = "checkpoints/voicing-tts-12hz-1.7b-base"
     events = []
     servers = []
 
@@ -61,7 +36,8 @@ def test_evaluation_releases_tts_server_before_starting_asr(monkeypatch, model):
         events.append("generate")
 
     def transcribe(config, **kwargs):
-        assert kwargs["asr_router_port"] == 18280
+        assert kwargs["asr_router_port"] == 30001
+        assert kwargs["asr_host"] == "asr.internal"
         events.append("transcribe")
 
     monkeypatch.setattr(
@@ -75,6 +51,10 @@ def test_evaluation_releases_tts_server_before_starting_asr(monkeypatch, model):
             "18280",
             "--max-samples",
             "2",
+            "--asr-host",
+            "asr.internal",
+            "--asr-port",
+            "30001",
         ],
     )
     monkeypatch.setattr(tts, "managed_omni_server", server)
@@ -82,16 +62,12 @@ def test_evaluation_releases_tts_server_before_starting_asr(monkeypatch, model):
     monkeypatch.setattr(tts, "run_tts_seedtts_transcribe", transcribe)
     tts.main()
 
-    assert events == ["start", "generate", "stop", "start", "transcribe", "stop"]
+    # WER runs on an external ASR server, so only the TTS server is managed.
+    assert events == ["start", "generate", "stop", "transcribe"]
+    assert len(servers) == 1
     assert servers[0]["model_path"] == model
-    assert servers[1]["model_path"] != model
-    if model == "tencent/AuK":
-        assert "max_running_requests" not in servers[0]
-        assert "cuda_graph_max_bs" not in servers[0]
-        assert servers[0]["server_config"] is None
-    else:
-        assert servers[0]["max_running_requests"] == 64
-        assert servers[0]["cuda_graph_max_bs"] == 64
+    assert servers[0]["max_running_requests"] == 64
+    assert servers[0]["cuda_graph_max_bs"] == 64
 
 
 def test_filtered_wer_mean_keeps_exactly_50_percent_and_excludes_failures():
@@ -111,44 +87,12 @@ def test_filtered_wer_mean_keeps_exactly_50_percent_and_excludes_failures():
     assert metrics["skipped"] == 1
 
 
-def test_explicit_cli_overrides_model_profile_defaults(monkeypatch):
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "benchmark",
-            "--model",
-            "tencent/AuK",
-            "--max-concurrency",
-            "3",
-            "--warmup",
-            "0",
-            "--seed",
-            "7",
-            "--output-dir",
-            "custom-results",
-            "--server-config",
-            "custom.yaml",
-        ],
-    )
-
-    args, _ = tts._parse_args(
-        tts._build_arg_parser()
-    )  # noqa: leading-underscore  # production name
-    config = tts._config_from_args(args)  # noqa: leading-underscore  # production name
-    assert config.concurrency == 3
-    assert config.warmup == 0
-    assert config.seed == 7
-    assert config.output_dir == "custom-results"
-    assert config.server_config == "custom.yaml"
-
-
 def test_wer_fanout_preserves_all_twenty_samples_at_long_audio_admission_cap(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     # note (wenyao): routing can send every request to one four-slot worker.
     slots = threading.BoundedSemaphore(4)
-    cohort = threading.Barrier(min(QWEN3_ASR_WER_CONCURRENCY, 20))
+    cohort = threading.Barrier(min(WER_ASR_CONCURRENCY, 20))
     uploaded: list[str] = []
 
     def post(
@@ -194,7 +138,7 @@ def test_wer_fanout_preserves_all_twenty_samples_at_long_audio_admission_cap(
         "en",
         "cuda:0",
         asr_router_port=12345,
-        asr_concurrency=QWEN3_ASR_WER_CONCURRENCY,
+        asr_concurrency=WER_ASR_CONCURRENCY,
     )
 
     assert len(uploaded) == len(set(uploaded)) == 20

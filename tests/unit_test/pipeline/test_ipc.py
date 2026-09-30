@@ -65,7 +65,7 @@ class StubCoordinator:
 
 def make_config(base_path: Path) -> PipelineConfig:
     return PipelineConfig(
-        model_path="Qwen/Qwen3-Omni-30B-A3B-Instruct",
+        model_path="checkpoints/voicing-tts-12hz-1.7b-base",
         entry_stage="preprocessing",
         stages=[
             StageConfig(
@@ -291,7 +291,7 @@ async def test_mp_runner_startup_failure_includes_child_factory_traceback(
     tmp_path: Path,
 ) -> None:
     config = PipelineConfig(
-        model_path="Qwen/Qwen3-Omni-30B-A3B-Instruct",
+        model_path="checkpoints/voicing-tts-12hz-1.7b-base",
         name="x",
         entry_stage="preprocessing",
         stages=[
@@ -499,14 +499,14 @@ async def test_launcher_passes_one_resolved_custom_voice_config(
 
 
 @pytest.mark.asyncio
-async def test_launcher_passes_moss_tts_speech_input_limit(
+async def test_launcher_passes_voicing_tts_speech_input_limit(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from sglang_omni.models.moss_tts.config import MossTTSPipelineConfig
+    from sglang_omni.models.voicing_tts.config import VoicingTTSPipelineConfig
 
-    config = MossTTSPipelineConfig(
-        model_path="OpenMOSS-Team/MOSS-TTS-v1.5",
+    config = VoicingTTSPipelineConfig(
+        model_path="checkpoints/voicing-tts-12hz-1.7b-base",
         endpoints=EndpointsConfig(base_path=str(tmp_path)),
     )
     _, app, _ = await run_launcher_with_fake_runner(
@@ -515,7 +515,10 @@ async def test_launcher_passes_moss_tts_speech_input_limit(
         monkeypatch=monkeypatch,
     )
 
-    assert app.state.create_app_kwargs["max_speech_input_chars"] is None
+    assert (
+        app.state.create_app_kwargs["max_speech_input_chars"]
+        == VoicingTTSPipelineConfig.max_speech_input_chars
+    )
 
 
 @pytest.mark.asyncio

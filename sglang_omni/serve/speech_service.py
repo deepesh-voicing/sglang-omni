@@ -301,8 +301,6 @@ class SpeechRequestValidator:
             pass
 
         validate_positive_int(request.max_new_tokens, param="max_new_tokens")
-        validate_positive_int(request.token_count, param="token_count")
-        validate_positive_int(request.duration_tokens, param="duration_tokens")
         validate_non_negative_int(
             request.initial_codec_chunk_frames,
             param=INITIAL_CODEC_CHUNK_FRAMES_PARAM,
@@ -704,8 +702,6 @@ class SpeechRequestValidator:
         else:
             pass
         validate_positive_int(batch.max_new_tokens, param="max_new_tokens")
-        validate_positive_int(batch.token_count, param="token_count")
-        validate_positive_int(batch.duration_tokens, param="duration_tokens")
         validate_non_negative_int(
             batch.initial_codec_chunk_frames,
             param=INITIAL_CODEC_CHUNK_FRAMES_PARAM,
@@ -805,8 +801,6 @@ class SpeechRequestValidator:
         for field_name in (
             "max_new_tokens",
             "initial_codec_chunk_frames",
-            "token_count",
-            "duration_tokens",
             "seed",
         ):
             if field_name in payload and payload[field_name] is not None:
@@ -999,14 +993,6 @@ def build_tts_params(
         tts_params[INITIAL_CODEC_CHUNK_FRAMES_PARAM] = (
             request.initial_codec_chunk_frames
         )
-    else:
-        pass
-    if request.token_count is not None:
-        tts_params["token_count"] = request.token_count
-    else:
-        pass
-    if request.duration_tokens is not None:
-        tts_params["duration_tokens"] = request.duration_tokens
     else:
         pass
     if request.seed is not None:

@@ -1,4 +1,4 @@
-# Extra installations for CosyVoice3
+# Extra NPU installations for TorchCodec-based audio decoding.
 set -euo pipefail
 PYPROJECT_BACKUP=$(mktemp)
 DEVICE_TYPE=${1:?"Error: DEVICE_TYPE argument is required. Usage: $0 [910b|A3]"}
@@ -46,5 +46,5 @@ SGLANG_KERNEL_NPU_TAG="2026.8.10"
 git clone https://github.com/sgl-project/sgl-kernel-npu.git
 (cd sgl-kernel-npu && git checkout $SGLANG_KERNEL_NPU_TAG && bash build.sh && pip install ./output/deep_ep*.whl ./output/sgl_kernel_npu*.whl)
 
-# Install CosyVoice dependency
-pip install -v -e ".[fun-cosyvoice3]"
+# Install sglang-omni
+pip install -v -e .

@@ -6,7 +6,6 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 import torch
-from sglang.srt.arg_groups.model_override_base import resolved_view
 from sglang.srt.platforms.device_mixin import PlatformEnum
 
 from sglang_omni.platforms.interface import OmniPlatform
@@ -14,8 +13,6 @@ from sglang_omni.platforms.interface import OmniPlatform
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from sglang.srt.configs.model_config import ModelConfig
-    from sglang.srt.server_args import ServerArgs
     from torch.nn.attention import SDPBackend
 
     from sglang_omni.pipeline.stage_workers import StageLaunchConfig
@@ -36,27 +33,6 @@ class XPUOmniPlatform(OmniPlatform):
         index = device.index if isinstance(device, torch.device) else int(device)
         torch.xpu.set_device(0 if index is None else index)
 
-    def enable_code2wav_graph(self):
-        return True
-
-    def get_fused_qk_norm_rope_with_cos_sin_cache(self):
-        try:
-            from sgl_kernel import fused_inplace_qknorm_rope
-        except ImportError as exc:
-            logger.info(
-                f"XPU sgl_kernel has no cos/sin-cache fused QK-norm-RoPE kernel "
-                f"({exc}); falling back to the unfused QK-norm and RoPE path"
-            )
-            return None
-        return fused_inplace_qknorm_rope
-
-    def enable_talker_graph(self) -> bool:
-        return True
-
-    def enable_thinker_decode_graph(self) -> bool:
-        # Capture leaves the scheduler thread's stream recording; host reads fail.
-        return False
-
     def _get_device_graph_backend(self) -> DeviceGraphBackend:
         from sglang_omni.platforms.device_graph import XpuDeviceGraphBackend
 
@@ -74,33 +50,6 @@ class XPUOmniPlatform(OmniPlatform):
         from torch.nn.attention import SDPBackend
 
         return (SDPBackend.FLASH_ATTENTION, SDPBackend.MATH)
-
-    def apply_model_worker_backend_policy(
-        self,
-        server_args: ServerArgs,
-        model_config: ModelConfig,
-        model_arch_override: str | None,
-    ) -> str | None:
-        effective_quantization = super().apply_model_worker_backend_policy(
-            server_args, model_config, model_arch_override
-        )
-
-        cfg = resolved_view(server_args)
-        moe_runner_backend = cfg.moe_runner_backend
-        if model_arch_override in (
-            "Qwen3OmniTalker",
-            "Qwen3OmniThinkerForCausalLM",
-        ) and moe_runner_backend in ("flashinfer_cutlass", "cutlass"):
-            raise ValueError(
-                f"Qwen3-Omni on Intel XPU cannot use "
-                f"moe_runner_backend={moe_runner_backend!r}; the CUTLASS "
-                "MoE runners are CUDA-only. Leave the backend as 'auto' or pass "
-                "'triton'."
-            )
-        else:
-            pass
-
-        return effective_quantization
 
     def get_stage_process_env(
         self,

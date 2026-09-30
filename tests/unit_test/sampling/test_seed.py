@@ -25,8 +25,8 @@ def test_resolve_row_seed_modes():
 
 
 def test_derive_sampling_seed_is_stable_and_namespaced():
-    first = derive_sampling_seed("qwen3-tts", 123456, "semantic")
-    assert first == 709979716
-    assert derive_sampling_seed("qwen3-tts", 123456, "semantic") == first
-    assert derive_sampling_seed("qwen3-tts", 123456, "subtalker") != first
-    assert derive_sampling_seed("moss-tts", 123456) != first
+    first = derive_sampling_seed("voicing-tts", 123456, "semantic")
+    assert first == 280683620
+    assert derive_sampling_seed("voicing-tts", 123456, "semantic") == first
+    assert derive_sampling_seed("voicing-tts", 123456, "subtalker") != first
+    assert derive_sampling_seed("voicing-tts-custom-voice", 123456) != first

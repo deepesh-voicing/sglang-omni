@@ -4,19 +4,16 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import pytest
 
 from benchmarks.benchmarker import utils as benchmark_utils
 from benchmarks.tasks.asr import QWEN3_ASR_MODEL_PATH
-
-if TYPE_CHECKING:
-    from tests.test_model.omni_router_utils import ManagedRouterHandle
 
 STARTUP_TIMEOUT = benchmark_utils.STARTUP_TIMEOUT
 REPO_ROOT = benchmark_utils.REPO_ROOT
@@ -32,11 +29,14 @@ wait_for_gpu_memory_release = benchmark_utils.wait_for_gpu_memory_release
 wait_healthy = benchmark_utils.wait_healthy
 start_server_from_cmd = benchmark_utils.start_server_from_cmd
 
-QWEN3_ASR_WER_MODEL_PATH = QWEN3_ASR_MODEL_PATH
 # note (wenyao): bound WER to one worker's four-long-audio admission cap;
 # dedicated ASR speed benchmarks retain concurrency 32.
-QWEN3_ASR_WER_CONCURRENCY = 4
-QWEN3_ASR_ROUTER_STARTUP_TIMEOUT = 600
+WER_ASR_CONCURRENCY = 4
+# The WER stages transcribe on an external OpenAI-compatible ASR server, since
+# this repository serves Voicing-TTS only.
+WER_ASR_HOST_ENV = "WER_ASR_HOST"
+WER_ASR_PORT_ENV = "WER_ASR_PORT"
+WER_ASR_MODEL_ENV = "WER_ASR_MODEL"
 
 
 @dataclass
@@ -87,27 +87,32 @@ class MetricCheckCollector:
         )
 
 
-@pytest.fixture
-def qwen3_asr_wer_router(
-    tmp_path_factory: pytest.TempPathFactory,
-) -> Iterator["ManagedRouterHandle"]:
-    """Launch Qwen3-ASR router for WER after upstream servers release GPU."""
-    from tests.test_model.omni_router_utils import (
-        CiRouterTopology,
-        launch_managed_router,
-    )
+@dataclass(frozen=True)
+class ExternalAsrServer:
+    """Address and served model name of the ASR server the WER stages use."""
 
-    wait_for_gpu_memory_release()
-    with launch_managed_router(
-        tmp_path_factory=tmp_path_factory,
-        model_path=QWEN3_ASR_WER_MODEL_PATH,
-        model_name=QWEN3_ASR_WER_MODEL_PATH,
-        worker_extra_args="",
-        router_topology=CiRouterTopology.ASR,
-        wait_timeout=QWEN3_ASR_ROUTER_STARTUP_TIMEOUT,
-        log_prefix="asr_wer_router_logs",
-    ) as router:
-        yield router
+    host: str
+    port: int
+    model_path: str
+
+
+@pytest.fixture
+def external_wer_asr() -> ExternalAsrServer:
+    """Resolve the external ASR server for WER, or skip when none is set."""
+    port_text = os.environ.get(WER_ASR_PORT_ENV, "").strip()
+    if not port_text:
+        pytest.skip(
+            f"WER needs an external ASR server; set {WER_ASR_PORT_ENV} "
+            f"(and {WER_ASR_HOST_ENV} if it is not local)"
+        )
+    else:
+        pass
+    return ExternalAsrServer(
+        host=os.environ.get(WER_ASR_HOST_ENV, "").strip() or "127.0.0.1",
+        port=int(port_text),
+        model_path=os.environ.get(WER_ASR_MODEL_ENV, "").strip()
+        or QWEN3_ASR_MODEL_PATH,
+    )
 
 
 def metric_collector(

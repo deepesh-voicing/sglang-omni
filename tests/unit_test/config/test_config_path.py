@@ -19,9 +19,9 @@ MEM_FRACTION = "stages.thinker.engine.mem_fraction_static"
 class TestParsing:
     def test_typed_leaf_carries_its_declared_type(self, pipeline_config):
         path = ConfigPath.parse(
-            "stages.thinker.factory.max_seq_len", type(pipeline_config)
+            "stages.thinker.factory.max_new_tokens", type(pipeline_config)
         )
-        assert path.parts == ("stages", "thinker", "factory", "max_seq_len")
+        assert path.parts == ("stages", "thinker", "factory", "max_new_tokens")
         # The declared type plus its static Field constraints (gt=0), so
         # coerce enforces the same rule the rebuild does.
         import typing

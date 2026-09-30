@@ -10,11 +10,6 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
 from sglang_omni.platforms import current_platform
-from sglang_omni.quantization import (
-    needs_quant_config_normalization,
-    normalize_quant_config,
-    resolve_quant_config,
-)
 from sglang_omni.utils.misc import model_config_has_moe
 from sglang_omni.vendor.sglang.server_args import override_server_args
 
@@ -35,8 +30,6 @@ class ModelWorkerConfig:
     total_gpu_memory_fraction: float | None = None
     kv_cache_bytes: int | None = None
     enable_prefill_input_embeds: bool = False
-    mlx_model_path: str | None = None
-    mlx_model_revision: str | None = None
 
 
 @dataclass(slots=True)
@@ -48,18 +41,7 @@ class PrefillCudaGraphUsage:
 
 
 _ARCH_CONFIG_MAP: dict[str, tuple[str, str | None]] = {
-    "BailingMoeV2ForCausalLM": ("llm_config", None),
-    "DotsTTSForConditionalGeneration": ("llm_config", None),
-    "MingTTSSGLangModel": ("llm_config", None),
-    "Qwen3OmniTalker": ("talker_config", "text_config"),
-    "Qwen3OmniThinkerForCausalLM": ("thinker_config", "text_config"),
-    "Qwen3ASRForConditionalGeneration": ("thinker_config", "text_config"),
-    "FunAsrNanoForConditionalGeneration": ("text_config", None),
-    "Qwen3TTSTalker": ("talker_config", None),
     "VoicingTTSTalker": ("talker_config", None),
-    "MossTTSDelaySGLangModel": ("language_config", None),
-    "MossTTSLocalSGLangModel": ("language_config", None),
-    "MossTranscribeDiarizeForConditionalGeneration": ("text_config", None),
 }
 
 
@@ -90,7 +72,6 @@ class ModelWorker:
             self.model_config, effective_quantization
         )
         self.init_model_runner()
-        self.init_dllm_algorithm()
         self.prefill_cuda_graph_usage = PrefillCudaGraphUsage()
 
         self.device = self.model_runner.device
@@ -105,39 +86,6 @@ class ModelWorker:
         set_random_seed(self.random_seed)
 
     def init_model_config(self):
-        if self.model_arch_override == "BailingMoeV2ForCausalLM":
-            from sglang_omni.models.ming_omni.registration import (
-                register_ming_hf_config,
-            )
-
-            register_ming_hf_config()
-        else:
-            pass
-        if self.model_arch_override == "MingTTSSGLangModel":
-            from sglang_omni.models.ming_tts.hf_config import (
-                register_ming_tts_hf_config,
-            )
-
-            register_ming_tts_hf_config()
-        else:
-            pass
-        if self.model_arch_override == "MiniCPMO":
-            from sglang_omni.models.minicpm_o.hf_config import (
-                register_minicpm_o_hf_config,
-            )
-
-            register_minicpm_o_hf_config()
-        else:
-            pass
-        if self.model_arch_override == "DotsTTSForConditionalGeneration":
-            from sglang_omni.models.dots_tts.hf_config import (
-                register_dots_tts_hf_config,
-            )
-
-            register_dots_tts_hf_config()
-        else:
-            pass
-
         from sglang.srt.configs.model_config import ModelConfig
 
         self.model_config = ModelConfig.from_server_args(
@@ -154,42 +102,6 @@ class ModelWorker:
     def apply_arch_override(model_config: ModelConfig, arch: str) -> None:
         """Override model config for a sub-model architecture."""
         model_config.hf_config.architectures = [arch]
-        if arch == "WhisperForConditionalGeneration":
-            cfg = model_config.hf_config
-            model_config.hf_text_config = cfg
-            model_config.is_encoder_decoder = True
-            model_config.hidden_size = int(cfg.d_model)
-            model_config.num_attention_heads = int(cfg.decoder_attention_heads)
-            model_config.num_key_value_heads = int(cfg.decoder_attention_heads)
-            model_config.num_hidden_layers = int(cfg.decoder_layers)
-            model_config.num_attention_layers = int(cfg.decoder_layers) * 2
-            model_config.vocab_size = int(cfg.vocab_size)
-            model_config.head_dim = int(cfg.d_model) // int(cfg.decoder_attention_heads)
-            model_config.v_head_dim = model_config.head_dim
-            return
-        else:
-            pass
-        if arch == "MiniCPMOTalkerForCausalLM":
-            # note (MayDomine): KV sizing must use the talker, not thinker, config.
-            cfg = model_config.hf_config.tts_config
-            if not isinstance(cfg, dict):
-                cfg = cfg.to_dict()
-            else:
-                pass
-            model_config.hf_text_config = SimpleNamespace(**cfg)
-            model_config.hidden_size = int(cfg["hidden_size"])
-            model_config.num_attention_heads = int(cfg["num_attention_heads"])
-            model_config.num_key_value_heads = int(cfg["num_key_value_heads"])
-            model_config.num_hidden_layers = int(cfg["num_hidden_layers"])
-            model_config.num_attention_layers = model_config.num_hidden_layers
-            model_config.head_dim = (
-                model_config.hidden_size // model_config.num_attention_heads
-            )
-            model_config.v_head_dim = model_config.head_dim
-            model_config.vocab_size = int(cfg["num_audio_tokens"])
-            return
-        else:
-            pass
         entry = _ARCH_CONFIG_MAP.get(arch)
         if entry is None:
             return
@@ -210,24 +122,8 @@ class ModelWorker:
         # note(ratish): SGLang sizes the KV pool from the larger of these two
         # and set the second from the root text config at construction.
         model_config.num_attention_layers = text_cfg.num_hidden_layers
-        if arch == "MingTTSSGLangModel":
-            model_config.head_dim = int(text_cfg.head_dim)
-            model_config.v_head_dim = model_config.head_dim
-            model_config.vocab_size = int(text_cfg.vocab_size)
-        else:
-            pass
 
     def configure_backend_policy(self) -> str | None:
-        # Apply Omni-specific quantization adapters (stage-local checkpoint name
-        # normalization) before SGLang builds its quant config, then run the
-        # model_worker backend policy.
-        apply_omni_quantization_adapters(self.model_config)
-
-        apply_model_worker_backend_common_policy(
-            self.server_args,
-            self.model_arch_override,
-        )
-
         return current_platform.apply_model_worker_backend_policy(
             self.server_args,
             self.model_config,
@@ -301,52 +197,8 @@ class ModelWorker:
             kv_cache_bytes=self.kv_cache_bytes,
         )
 
-    def init_dllm_algorithm(self):
-        if self.server_args.dllm_algorithm is None:
-            self.dllm_algorithm = None
-            return
-        else:
-            pass
-
-        from sglang.srt.dllm.algorithm.base import DllmAlgorithm
-
-        self.dllm_algorithm = DllmAlgorithm.from_server_args(self.server_args)
-
-    def forward_batch_generation(
-        self,
-        forward_batch,
-        *,
-        batch=None,
-    ):
+    def forward_batch_generation(self, forward_batch):
         from sglang.srt.managers.scheduler import GenerationBatchResult
-
-        if self.dllm_algorithm is not None:
-            algo_states = None
-            if self.dllm_algorithm.fdfo and batch is not None:
-                algo_states = [req.dllm_algo_state for req in batch.reqs]
-            else:
-                pass
-
-            (
-                logits_output,
-                next_token_ids,
-                accept_length_per_req_cpu,
-                dllm_algo_state,
-                can_run_cuda_graph,
-            ) = self.dllm_algorithm.run(
-                self.model_runner,
-                forward_batch,
-                algo_states,
-            )
-            return GenerationBatchResult(
-                logits_output=logits_output,
-                next_token_ids=next_token_ids,
-                accept_length_per_req_cpu=accept_length_per_req_cpu,
-                dllm_algo_state=dllm_algo_state,
-                can_run_cuda_graph=can_run_cuda_graph,
-            )
-        else:
-            pass
 
         out = self.model_runner.forward(forward_batch=forward_batch)
         logits_output, can_run_cuda_graph = out.logits_output, out.can_run_graph
@@ -386,10 +238,6 @@ class ModelWorker:
         actual_bucket = buckets[bisect_left(buckets, len(forward_batch.input_ids))]
         self.prefill_cuda_graph_usage.replay_count += 1
         self.prefill_cuda_graph_usage.replay_buckets[int(actual_bucket)] += 1
-
-    def record_custom_prefill_eager(self) -> None:
-        """Record a custom prefill forward that bypasses SGLang graph dispatch."""
-        self.prefill_cuda_graph_usage.custom_eager_count += 1
 
     def prefill_cuda_graph_info(self) -> dict[str, Any]:
         from sglang.srt.model_executor.runner.prefill_cuda_graph_runner import (
@@ -594,46 +442,6 @@ def resolve_nccl_port() -> int:
 
     os.environ["MASTER_PORT"] = str(port)
     return port
-
-
-def apply_model_worker_backend_common_policy(
-    server_args: ServerArgs,
-    model_arch_override: str | None,
-) -> str | None:
-    from sglang.srt.arg_groups.model_override_base import resolved_view
-
-    cfg = resolved_view(server_args)
-    is_qwen3_omni_arch = model_arch_override in (
-        "Qwen3OmniTalker",
-        "Qwen3OmniThinkerForCausalLM",
-    )
-    if is_qwen3_omni_arch and cfg.ep_size != 1:
-        raise ValueError(
-            "Qwen3-Omni ModelWorker does not support expert parallelism; "
-            "use ep_size=1."
-        )
-    else:
-        pass
-
-
-def apply_omni_quantization_adapters(model_config: ModelConfig) -> None:
-    """Apply Omni-specific quantization adapters before SGLang builds its config.
-
-    SGLang owns detection, config parsing, layer construction, and post-load
-    hooks. The only Omni-specific step needed here is stage-local checkpoint
-    name normalization for methods whose per-block quant names are matched
-    against runtime module names, currently AutoRound.
-    """
-    quant_dict = resolve_quant_config(model_config.hf_config)
-    if quant_dict is None:
-        return
-    else:
-        pass
-
-    if needs_quant_config_normalization(quant_dict):
-        normalize_quant_config(model_config)
-    else:
-        pass
 
 
 def initialize_model_worker_backend_globals(

@@ -22,11 +22,8 @@ stages:
     process: pipeline
 ```
 
-MOSS-TTS delay ships the isolated layout as its default, with declared GPU
-memory fractions 0.10 / 0.72 / 0.18 for `preprocessing`, `tts_engine` and
-`vocoder`. `config_cls: MossTTSSingleProcessPipelineConfig` selects the
-single-process variant, which the bounded 24 GB and 32 GB configurations and
-the MPS DP2 recipe pin because their measured budgets describe that layout.
+Voicing-TTS ships the single-process layout as its default: `preprocessing`,
+`tts_engine` and `vocoder` all run in the `pipeline` process.
 
 ## Changing Placement at Launch
 
@@ -36,25 +33,37 @@ editing the source config:
 ```bash
 # put the vocoder in its own process
 python -m sglang_omni.cli serve \
-  --model-path MODEL \
+  --config examples/configs/voicing_tts_1_7b.yaml \
+  --tts_engine.gpu_memory_fraction 0.85 \
+  --vocoder.gpu_memory_fraction 0.10 \
   --vocoder.process vocoder
 ```
 
-Repeating one process name colocates stages in it. The following override
-produces the topology already declared by the built-in Higgs-TTS config:
+Both GPU stages now share GPU 0 from separate processes, so each declares its
+`gpu_memory_fraction`. Each override names the process a stage runs in, so the
+following launch splits all three stages apart. The preprocessing stage then
+needs its own GPU and memory fraction, because outside the engine process it
+loads a prompt frontend:
 
 ```bash
 python -m sglang_omni.cli serve \
-  --model-path bosonai/higgs-tts-3-4b \
+  --config examples/configs/voicing_tts_1_7b.yaml \
   --preprocessing.process tts_frontend \
-  --audio_encoder.process tts_frontend
+  --preprocessing.gpu 0 \
+  --preprocessing.gpu_memory_fraction 0.05 \
+  --tts_engine.gpu_memory_fraction 0.72 \
+  --tts_engine.engine.mem_fraction_static 0.72 \
+  --vocoder.gpu_memory_fraction 0.15 \
+  --vocoder.process vocoder
 ```
 
 ```text
-tts_frontend : preprocessing, audio_encoder
+tts_frontend : preprocessing
 pipeline     : tts_engine
 vocoder      : vocoder
 ```
+
+Repeating one process name colocates stages in it.
 
 Setting a stage to the process it already runs in is an idempotent no-op.
 Writing one stage's `process` twice with different values is refused as a
@@ -75,20 +84,16 @@ startup:
 - TP rank process names must not collide with other process groups.
 
 Not every handoff tolerates a process boundary: some stages exchange state
-through process-local registries a second process cannot read (for example,
-MOSS-TTS pipelines hand prepared requests from preprocessing to the AR engine
-through a process-local queue). A model declares those edges through
-`PipelineConfig.process_local_edges`, and splitting one is refused during
-topology compilation, before any worker starts.
+through process-local registries a second process cannot read. A model
+declares those edges through `PipelineConfig.process_local_edges`, and
+splitting one is refused during topology compilation, before any worker starts.
 
-Qwen3-TTS keeps prepared requests in process-local module state only while
+Voicing-TTS keeps prepared requests in process-local module state only while
 `preprocessing` and `tts_engine` share a process; placed in its own process the
 preprocessing stage loads a prompt frontend and ships the prepared prompt
 tensors through `tensor_cpu` payload fields, so that edge can cross too. The
 `tensor_cpu` codec keeps each tensor's own dtype and lets the relay carry it
 outside the control plane, which `typed_tensor` would not do.
-
-Ming-Omni-TTS carries preprocessing fields in `StagePayload.data` and serializes the reference encoder's `spk_emb` and `prompt_latent` tensors with the `typed_tensor` wire codec. Both `preprocessing -> reference_encode` and `reference_encode -> tts_engine` can therefore cross process boundaries.
 
 ## Resource and Performance Trade-offs
 

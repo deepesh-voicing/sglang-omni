@@ -1,8 +1,8 @@
 # Omni Router Usage
 
-The SGLang-Omni Router is an external HTTP router for Omni V1 deployments. It
-fronts multiple complete Omni V1 API servers and exposes one OpenAI-compatible
-endpoint to clients.
+The SGLang-Omni Router is an external HTTP router for Voicing-TTS deployments.
+It fronts multiple complete SGLang-Omni API servers and exposes one
+OpenAI-compatible speech endpoint to clients.
 
 Use the router when you launch more than one `sgl-omni serve` process and want
 one stable endpoint for request distribution, health tracking, and worker-pool
@@ -22,7 +22,7 @@ sgl-omni-router-py
   +-- sgl-omni serve worker B
 ```
 
-Each worker is a complete Omni V1 HTTP server. The router does not load model
+Each worker is a complete SGLang-Omni HTTP server. The router does not load model
 weights or split a single request across workers. It selects one routable worker
 for each request, forwards the original request bytes, and returns the worker
 response with router diagnostic headers.
@@ -32,11 +32,14 @@ response with router diagnostic headers.
 For a local homogeneous pool, `sgl-omni-router-py` can start the worker replicas
 and then start the router after all managed workers pass `/health`:
 
+Save the launcher config below as `voicing_tts_router.yaml`, then start the
+router:
+
 ```bash
 sgl-omni-router-py \
   --host 0.0.0.0 \
   --port 8008 \
-  --launcher-config examples/configs/qwen3_omni_router.yaml \
+  --launcher-config voicing_tts_router.yaml \
   --policy round_robin \
   --health-failure-threshold 2 \
   --health-success-threshold 1 \
@@ -49,106 +52,76 @@ Example launcher config:
 ```yaml
 launcher:
   backend: local
-  model_path: Qwen/Qwen3-Omni-30B-A3B-Instruct
-  model_name: qwen3-omni
+  model_path: checkpoints/voicing-tts-12hz-1.7b-base
+  model_name: voicing-tts
   num_workers: 2
   num_gpus_per_worker: 1
   worker_host: 127.0.0.1
   worker_base_port: 8011
-  worker_extra_args: "--config examples/configs/qwen3_omni_colocated_h20.yaml --colocate"
+  worker_extra_args: "--config examples/configs/voicing_tts_1_7b.yaml"
   wait_timeout: 600
 ```
 
+`model_path` must point at a converted Voicing-TTS checkpoint; see the
+[Voicing-TTS cookbook](../cookbook/voicing_tts.md) for the conversion step.
+
 `backend: local` means the router process starts and manages worker
-subprocesses on the same machine. The launched workers are complete Omni V1
+subprocesses on the same machine. The launched workers are complete SGLang-Omni
 servers started with `sgl-omni serve`; they are not partial
 pipeline stages. The router waits for every managed worker to pass `/health`
 before it starts accepting client traffic, and it stops those managed workers
 when the router exits.
 
-`num_gpus_per_worker` controls automatic GPU grouping. The default Qwen3-Omni
-router example uses colocated workers: each complete speech worker runs on one
-GPU through `examples/configs/qwen3_omni_colocated_h20.yaml`. With
-`num_workers: 2` and `num_gpus_per_worker: 1`, the launcher assigns GPU `0` to
-the first worker and GPU `1` to the second worker when two CUDA devices are
-visible.
-
-Use `examples/configs/qwen3_omni_colocated_h200.yaml` instead for single-H200
-workers.
+`num_gpus_per_worker` controls automatic GPU grouping. Each Voicing-TTS worker
+runs its whole pipeline on one GPU. With `num_workers: 2` and
+`num_gpus_per_worker: 1`, the launcher assigns GPU `0` to the first worker and
+GPU `1` to the second worker when two CUDA devices are visible.
 
 Set `worker_gpu_ids` only when you need explicit placement. Each entry maps one
 `CUDA_VISIBLE_DEVICES` value to one worker, for example
-`worker_gpu_ids: ["0", "1"]` for two one-GPU colocated Qwen3-Omni workers. Use
-`worker_extra_args: "--text-only"` only if you intentionally want text-output
-workers instead of speech-output workers.
+`worker_gpu_ids: ["0", "1"]` for two one-GPU Voicing-TTS workers.
 
-Use `worker_extra_args` for public Omni V1 serve options that are specific to
-the worker process, such as `--mem-fraction-static`, `--thinker.tp_size`, or
-`--text-only`. These arguments are passed to `sgl-omni serve`
-after the launcher-owned flags. When no memory flags are provided, Omni V1 uses
-its normal auto-sizing path.
+Use `worker_extra_args` for public serve options that are specific to the
+worker process, such as `--config` or `--mem-fraction-static`. These arguments
+are passed to `sgl-omni serve` after the launcher-owned flags. When no memory
+flags are provided, the worker uses its normal auto-sizing path.
 
 Use `worker_capabilities` when managed workers intentionally expose only part
-of the Omni API surface. For example, text-only workers should not advertise
-speech or audio-output support:
+of the API surface. For example, CustomVoice workers use built-in speakers and
+accept no reference audio, so they should not advertise `audio_input`:
 
 ```yaml
 launcher:
   backend: local
-  model_path: Qwen/Qwen3-Omni-30B-A3B-Instruct
-  model_name: qwen3-omni
+  model_path: checkpoints/voicing-tts-12hz-1.7b-customvoice
+  model_name: voicing-tts-customvoice
   num_workers: 2
   num_gpus_per_worker: 1
-  worker_extra_args: "--text-only"
+  worker_extra_args: "--config examples/configs/voicing_tts_1_7b_customvoice.yaml"
   worker_capabilities:
-    - chat
+    - speech
     - streaming
-    - image_input
-    - audio_input
-    - video_input
 ```
-
-If `worker_capabilities` is omitted and `worker_extra_args` contains
-`--text-only`, the router registers the managed workers with the same text-only
-capability set shown above.
-
-For short audio-input / text-output MMSU-style workloads, use the fused
-text-path Qwen3-Omni config instead of the default speech-colocated worker:
-
-```yaml
-launcher:
-  backend: local
-  model_path: Qwen/Qwen3-Omni-30B-A3B-Instruct
-  model_name: qwen3-omni
-  num_workers: 2
-  num_gpus_per_worker: 1
-  worker_extra_args: "--config examples/configs/qwen3_omni_mmsu.yaml --text-only"
-```
-
-This keeps preprocessing, encoders, aggregation, thinker, and decode in one
-worker process while leaving the general speech-colocated topology unchanged.
 
 ## Launch Worker Servers Manually
 
-Start each Omni V1 worker separately. The example below launches two colocated
-Qwen3-Omni speech workers on different GPUs and ports:
+Start each worker separately. The example below launches two Voicing-TTS Base
+workers on different GPUs and ports:
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 sgl-omni serve \
-  --model-path Qwen/Qwen3-Omni-30B-A3B-Instruct \
-  --model-name qwen3-omni \
-  --config examples/configs/qwen3_omni_colocated_h20.yaml \
-  --colocate \
+  --config examples/configs/voicing_tts_1_7b.yaml \
+  --model-path checkpoints/voicing-tts-12hz-1.7b-base \
+  --model-name voicing-tts \
   --host 0.0.0.0 \
   --port 8011
 ```
 
 ```bash
 CUDA_VISIBLE_DEVICES=1 sgl-omni serve \
-  --model-path Qwen/Qwen3-Omni-30B-A3B-Instruct \
-  --model-name qwen3-omni \
-  --config examples/configs/qwen3_omni_colocated_h20.yaml \
-  --colocate \
+  --config examples/configs/voicing_tts_1_7b.yaml \
+  --model-path checkpoints/voicing-tts-12hz-1.7b-base \
+  --model-name voicing-tts \
   --host 0.0.0.0 \
   --port 8012
 ```
@@ -181,7 +154,7 @@ The table below lists the router command-line arguments.
 |---|---|---|
 | `--host` | `0.0.0.0` | Host interface for the router HTTP server. |
 | `--port` | `8000` | Port for the router HTTP server. |
-| `--worker-urls` | not set | Space-separated Omni V1 worker base URLs for a homogeneous worker pool. |
+| `--worker-urls` | not set | Space-separated worker base URLs for a homogeneous worker pool. |
 | `--worker-config` | not set | JSON file that defines workers and optional per-worker model/capability metadata. |
 | `--launcher-config` | not set | YAML file for a managed local worker pool. Do not use with `--worker-urls` or `--worker-config`. |
 | `--policy` | `round_robin` | Routing policy: `round_robin`, `least_request`, or `random`. |
@@ -211,20 +184,22 @@ Routing policies:
 
 Pass exactly one of `--launcher-config`, `--worker-urls`, or
 `--worker-config`. Use `--worker-config` when workers serve different models or
-only a subset of Omni capabilities:
+only a subset of capabilities. The example below pairs a Voicing-TTS Base worker,
+which owns uploaded voices and accepts reference audio, with a CustomVoice
+worker:
 
 ```json
 {
   "workers": [
     {
       "url": "http://127.0.0.1:8011",
-      "model": "qwen3-omni",
-      "capabilities": ["chat", "image_input", "video_input"]
+      "model": "voicing-tts",
+      "capabilities": ["speech", "streaming", "audio_input"]
     },
     {
       "url": "http://127.0.0.1:8012",
-      "model": "qwen3-omni",
-      "capabilities": ["chat", "audio_input", "audio_output", "speech"]
+      "model": "voicing-tts-customvoice",
+      "capabilities": ["speech", "streaming"]
     }
   ]
 }
@@ -271,35 +246,38 @@ The endpoints have different meanings:
 Point clients at the router port instead of the worker ports. The request schema
 is the same OpenAI-compatible schema used by each worker server.
 
-Image input with text output:
+Voice cloning with a Base worker:
 
 ```bash
-curl -i http://127.0.0.1:8008/v1/chat/completions \
+curl -i http://127.0.0.1:8008/v1/audio/speech \
   -H "Content-Type: application/json" \
-  -H "x-request-id: router-image-1" \
+  -H "x-request-id: router-speech-1" \
   -d '{
-    "model": "qwen3-omni",
-    "messages": [
-      {"role": "user", "content": "How many cars are there in the image? Answer briefly."}
-    ],
-    "images": ["tests/data/cars.jpg"],
-    "modalities": ["text"],
-    "max_tokens": 16
-  }'
+    "model": "voicing-tts",
+    "voice": "default",
+    "input": "Hello from the router.",
+    "references": [{
+      "audio_path": "https://huggingface.co/datasets/zhaochenyang20/seed-tts-eval-mini/resolve/main/en/prompt-wavs/common_voice_en_10119832.wav",
+      "text": "We asked over twenty different people, and they all said it was his."
+    }]
+  }' \
+  --output output.wav
 ```
 
-Streaming text:
+Streaming PCM with a CustomVoice worker:
 
 ```bash
-curl -N http://127.0.0.1:8008/v1/chat/completions \
+curl -N http://127.0.0.1:8008/v1/audio/speech \
   -H "Content-Type: application/json" \
   -H "x-request-id: router-stream-1" \
   -d '{
-    "model": "qwen3-omni",
-    "messages": [{"role": "user", "content": "Say hello briefly."}],
+    "model": "voicing-tts-customvoice",
+    "voice": "Ryan",
+    "input": "Say hello briefly.",
     "stream": true,
-    "max_tokens": 16
-  }'
+    "response_format": "pcm"
+  }' \
+  --output output.pcm
 ```
 
 The router preserves the original request body. For ordinary JSON requests, it
@@ -313,7 +291,7 @@ Add a worker at runtime:
 ```bash
 curl -s http://127.0.0.1:8008/workers \
   -H "Content-Type: application/json" \
-  -d '{"url":"http://127.0.0.1:8013","model":"qwen3-omni"}'
+  -d '{"url":"http://127.0.0.1:8013","model":"voicing-tts"}'
 ```
 
 Disable a worker without deleting it:
@@ -354,24 +332,12 @@ state is not partially changed.
 The router only selects workers that are healthy, not disabled, and capable of
 serving the request.
 
-The default worker capability set represents a complete Omni V1 replica:
-
-- `chat`
-- `speech`
-- `streaming`
-- `image_input`
-- `audio_input`
-- `video_input`
-- `audio_output`
+The default worker capability set represents a complete replica and includes
+the capabilities that speech routing uses: `speech`, `streaming`, and
+`audio_input`.
 
 The router infers required capabilities from each request:
 
-- `/v1/chat/completions` requires `chat`
-- `stream: true` requires `streaming`
-- `images`, `image`, or image message parts require `image_input`
-- `audios`, `audio_inputs`, or audio message parts require `audio_input`
-- `videos`, `video`, or video message parts require `video_input`
-- `modalities: ["audio"]` or `audio` output fields require `audio_output`
 - `/v1/audio/speech` and `/v1/audio/speech/batch` require `speech`;
   `/v1/audio/speech` also requires `streaming` when `stream: true` (batch speech
   does not support streaming)
@@ -381,15 +347,6 @@ The router infers required capabilities from each request:
   plus `audio_input` when configured with reference audio
 - `/v1/audio/voices` management and synthesis using an uploaded voice require
   the owner worker, which has both `speech` and `audio_input`
-- `/v1/audio/transcriptions` and `/v1/audio/translations` require
-  `audio_input` (also for `streaming` when the `stream` form field is true.) are multipart uploads, so the router reads the `model` and `stream` form
-  fields with a single linear pass that skips the uploaded file to avoid cpu
-  overhead, so in a pool that mixes ASR models the request lands on a worker
-  registered with that model name. When the router cannot read a field it
-  falls back to `X-SGLang-Omni-Route-Model` and `X-SGLang-Omni-Route-Stream`;
-  when a field and its header are both present they must agree or the router
-  answers `400`. Translation support is per model, and a worker that does not
-  support it answers `400`.
 
 Register narrower worker capabilities only when a worker cannot serve one of
 those request classes.
@@ -430,13 +387,13 @@ The router hydrates this registry through the compact
 reference metadata.
 
 Large JSON requests are not fully parsed by the router. With a homogeneous pool
-of complete Omni V1 replicas, no extra headers are needed. With mixed models,
+of complete replicas, no extra headers are needed. With mixed models,
 provide a model hint. With mixed worker capabilities, provide a capability hint
 when the router cannot infer a single safe worker set:
 
 - `X-SGLang-Omni-Route-Model`: requested model for mixed-model pools
 - `X-SGLang-Omni-Route-Capabilities`: comma-separated capabilities such as
-  `image_input`, `audio_input`, `video_input`, `audio_output`, or `streaming`
+  `speech`, `audio_input`, or `streaming`
 - `X-SGLang-Omni-Route-Stream`: `true` or `false` for large streaming requests
 
 Speech and speech-batch JSON bodies larger than 1 MiB are conservatively pinned
@@ -602,8 +559,7 @@ At `N >= 2` the router runs as a small process tree:
 
 - A **supervisor** binds the public port once and passes the listening socket
   to `N` **data-plane (DP)** processes, which accept from the shared queue and
-  relay the model routes (`/generate`, `/v1/chat/completions`,
-  `/v1/audio/speech`, `/v1/audio/transcriptions`, `/v1/audio/translations`).
+  relay the model route (`/v1/audio/speech`).
 - One **control plane (CP)** owns the worker registry, health checks, and the
   admin surface. DPs learn the routable-worker set from a snapshot file the CP
   republishes on every state change and on a fixed keepalive cadence. Admin

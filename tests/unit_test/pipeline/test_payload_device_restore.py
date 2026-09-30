@@ -43,7 +43,7 @@ def test_host_only_stage_keeps_an_accelerator_origin_tensor_on_the_host() -> Non
 
 def test_a_raw_stream_ref_carries_its_source_device() -> None:
     """A raw DataRef had nowhere to record residency, so a host-shm hop lost it.
-    Qwen3-TTS emits device-resident codec chunks, and a process-isolated vocoder
+    Voicing-TTS emits device-resident codec chunks, and a process-isolated vocoder
     (--vocoder.process vocoder) would otherwise feed CPU codes to an accelerator decoder.
     """
     from sglang_omni.comm.data_ref import (
@@ -122,7 +122,7 @@ async def stream_round_trip(local_device: str | None, *, with_metadata: bool):
 
 
 def test_a_metadata_bearing_chunk_keeps_its_source_device() -> None:
-    """Qwen3-TTS attaches metadata to every codec chunk, and the metadata rebuild
+    """Voicing-TTS attaches metadata to every codec chunk, and the metadata rebuild
     used to drop the outer device, so an isolated vocoder got the shm CPU tensor.
     """
     import asyncio

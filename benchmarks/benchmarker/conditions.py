@@ -125,18 +125,6 @@ def add_fingerprint_argument(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def add_talker_sampling_arguments(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
-        "--talker-temperature",
-        type=float,
-        default=None,
-        help="Talker sampling temperature. Unset keeps the server default.",
-    )
-    parser.add_argument("--talker-top-p", type=float, default=None)
-    parser.add_argument("--talker-top-k", type=int, default=None)
-    parser.add_argument("--talker-repetition-penalty", type=float, default=None)
-
-
 def aggregate_numbers(values: list[float | int | None]) -> MetricAggregate:
     present: list[float] = []
     for value in values:

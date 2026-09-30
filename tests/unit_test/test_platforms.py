@@ -1,15 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
-import builtins
-import sys
 from contextlib import nullcontext
-from types import ModuleType, SimpleNamespace
-from unittest.mock import Mock
+from types import SimpleNamespace
 
 import pytest
 import torch
-from sglang.srt.arg_groups.overrides import resolution_result
 from sglang.srt.platforms.device_mixin import DeviceMixin, PlatformEnum
 from sglang.srt.platforms.interface import SRTPlatform
 from sglang.srt.platforms.rocm import RocmSRTPlatform
@@ -39,62 +35,6 @@ class VendorDeviceMixin(DeviceMixin):
 
 class VendorSRTPlatform(SRTPlatform, VendorDeviceMixin):
     pass
-
-
-@pytest.mark.parametrize(
-    "platform_type",
-    [
-        OmniPlatform,
-        CPUOmniPlatform,
-        ROCMOmniPlatform,
-        XPUOmniPlatform,
-        platforms.NPUOmniPlatform,
-        platforms.MUSAOmniPlatform,
-        platforms.AppleOmniPlatform,
-    ],
-)
-def test_joint_rope_is_unavailable_without_a_platform_provider(
-    monkeypatch: pytest.MonkeyPatch, platform_type
-) -> None:
-    cuda_provider = Mock(side_effect=AssertionError("Must not use NVIDIA provider"))
-    monkeypatch.setattr(
-        CUDAOmniPlatform, "get_joint_rope_inplace_kernel", cuda_provider
-    )
-
-    assert platform_type().get_joint_rope_inplace_kernel() is None
-    cuda_provider.assert_not_called()
-
-
-def test_cuda_joint_rope_getter_returns_upstream_kernel_without_calling_it(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    module_name = "sglang.kernels.ops.attention.rope"
-    rope_module = ModuleType(module_name)
-    kernel = Mock(side_effect=AssertionError("Getter must not execute the kernel"))
-    rope_module.apply_rope_inplace = kernel
-    monkeypatch.setitem(sys.modules, module_name, rope_module)
-
-    assert CUDAOmniPlatform().get_joint_rope_inplace_kernel() is kernel
-    kernel.assert_not_called()
-
-
-def test_cuda_joint_rope_getter_propagates_import_failure(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    original_import = builtins.__import__
-    error = ImportError("Joint RoPE provider is unavailable")
-
-    def import_without_rope(name, *args, **kwargs):
-        if name == "sglang.kernels.ops.attention.rope":
-            raise error
-        return original_import(name, *args, **kwargs)
-
-    monkeypatch.setattr(builtins, "__import__", import_without_rope)
-
-    with pytest.raises(ImportError, match="Joint RoPE provider") as raised:
-        CUDAOmniPlatform().get_joint_rope_inplace_kernel()
-
-    assert raised.value is error
 
 
 def test_cpu_platform_needs_no_stage_process_env() -> None:
@@ -179,35 +119,6 @@ def test_rocm_platform_uses_conservative_omni_capabilities() -> None:
     assert platform.get_fused_qk_norm_rope() is None
 
 
-def test_rocm_talker_keeps_auto_moe_backend() -> None:
-    server_args = SimpleNamespace(
-        quantization=None,
-        moe_runner_backend="auto",
-    )
-    model_config = SimpleNamespace(quantization=None)
-
-    ROCMOmniPlatform().apply_model_worker_backend_policy(
-        server_args,
-        model_config,
-        "Qwen3OmniTalker",
-    )
-
-    assert resolution_result(server_args, "moe_runner_backend") == "auto"
-
-
-@pytest.mark.parametrize("backend", ["flashinfer_cutlass", "cutlass"])
-def test_rocm_qwen3_omni_rejects_cutlass_moe_backends(backend: str) -> None:
-    server_args = SimpleNamespace(quantization=None, moe_runner_backend=backend)
-    model_config = SimpleNamespace(quantization=None)
-
-    with pytest.raises(ValueError, match="NVIDIA CUDA-only"):
-        ROCMOmniPlatform().apply_model_worker_backend_policy(
-            server_args,
-            model_config,
-            "Qwen3OmniThinkerForCausalLM",
-        )
-
-
 def test_srt_plugin_identity_round_trips_to_spawned_process() -> None:
     qualname = f"{__name__}.VendorSRTPlatform"
     platform = platforms.load_platform_class(qualname)()
@@ -265,25 +176,13 @@ def test_xpu_names_the_decode_graph_backend_sglang_leaves_off() -> None:
     assert CPUOmniPlatform().get_decode_cuda_graph_backend() is None
 
 
-def test_xpu_captures_the_qwen3_omni_talker_decode() -> None:
-    assert xpu_platform.XPUOmniPlatform().enable_talker_graph() is True
-    assert OmniPlatform().enable_talker_graph() is True
-    assert CPUOmniPlatform().enable_talker_graph() is True
-
-
-def test_xpu_keeps_the_qwen3_omni_thinker_decode_eager() -> None:
-    assert xpu_platform.XPUOmniPlatform().enable_thinker_decode_graph() is False
-    assert OmniPlatform().enable_thinker_decode_graph() is True
-    assert CPUOmniPlatform().enable_thinker_decode_graph() is True
-
-
-def test_xpu_captures_the_qwen3_tts_code_predictor() -> None:
+def test_xpu_captures_the_voicing_tts_code_predictor() -> None:
     assert xpu_platform.XPUOmniPlatform().enable_tts_predictor_graph() is True
     assert OmniPlatform().enable_tts_predictor_graph() is True
     assert CPUOmniPlatform().enable_tts_predictor_graph() is True
 
 
-def test_musa_captures_the_qwen3_tts_code_predictor() -> None:
+def test_musa_captures_the_voicing_tts_code_predictor() -> None:
     from sglang_omni.platforms.musa import MUSAOmniPlatform
 
     assert MUSAOmniPlatform().enable_tts_predictor_graph() is True

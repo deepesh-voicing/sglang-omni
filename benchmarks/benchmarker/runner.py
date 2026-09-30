@@ -104,7 +104,7 @@ class BenchmarkRunner:
 
         # note (luojiaxuan): The measured cohort reuses this same sample list,
         # so warming distinct samples would pre-fill per-sample server caches,
-        # such as the MOSS-TTS reference-audio cache, for requests that are
+        # such as the reference-audio cache, for requests that are
         # about to be timed. Repeat one sample to get the concurrency shape
         # without widening that bias as concurrency grows.
         results = await asyncio.gather(*(_limited(samples[0]) for _ in range(count)))

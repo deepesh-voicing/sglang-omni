@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "sglang-omni"
 dynamic = ["version"]
-description = "Multi-stage pipeline framework for omni models"
+description = "Multi-stage Voicing-TTS serving runtime"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
@@ -36,9 +36,7 @@ dependencies = [
     "logger",
     "httpx",
     "xxhash>=3.0.0",
-    "sox>=1.4.1",
     "av>=16.1.0",
-    "qwen-vl-utils==0.0.11",
     "numba==0.65.1",
     "librosa>=0.11.0",
     "pandas",
@@ -60,26 +58,9 @@ dependencies = [
     "scipy>=1.10.0",
     "openai-whisper==20250625",
     "s3prl>=0.4.18",
-    # S2-Pro
-    "tiktoken",
-    "hydra-core",
-    "omegaconf",
     "torchcodec==0.11.1",
     # Gradio playground
     "gradio>=4.0.0",
-    # dots.tts model operators
-    "dots.tts==0.2.1",
-    # Ming-Omni
-    "diffusers==0.37.0",
-    "x-transformers",
-    # ZONOS2 written-to-spoken text normalization
-    "nemo_text_processing==1.2.0",
-]
-
-[project.optional-dependencies]
-audar-tts = [
-    "llama-cpp-python==0.3.34",
-    "neucodec==0.0.6",
 ]
 
 [project.scripts]
@@ -116,6 +97,4 @@ namespaces = true
 version = {attr = "sglang_omni.__version__"}
 
 [tool.setuptools.package-data]
-"sglang_omni.models.fishaudio_s2_pro" = ["fish_speech/configs/*.yaml"]
-"sglang_omni.models.higgs_tts" = ["configs/*.json"]
-"sglang_omni.models.zonos2" = ["moe_configs/*/*.json"]
+"sglang_omni.vendor.voicing_tts" = ["LICENSE"]

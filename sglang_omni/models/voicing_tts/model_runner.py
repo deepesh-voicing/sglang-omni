@@ -648,10 +648,7 @@ class VoicingTTSModelRunner(ModelRunner):
     def peek_next_decode_inputs(
         data: SGLangARRequestData,
     ) -> tuple[torch.Tensor, torch.Tensor] | None:
-        """The feedback row and the text row of the next decode input. None
-        while the feedback row is missing, or while the text row is missing
-        and the text stream is still open. After the stream has closed, the
-        pad embedding stands in for the text row."""
+        """Return the next feedback and text rows when feedback is ready."""
         feedback = VoicingTTSModelRunner.peek_left(data.pending_feedback_queue)
         if feedback is None:
             return None
@@ -659,10 +656,6 @@ class VoicingTTSModelRunner(ModelRunner):
             pass
         next_text = VoicingTTSModelRunner.peek_left(data.pending_text_queue)
         if next_text is None:
-            if not data.thinker_chunks_done:
-                return None
-            else:
-                pass
             next_text = data.tts_pad_embed
         else:
             pass

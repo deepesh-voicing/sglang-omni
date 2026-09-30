@@ -237,7 +237,7 @@ def test_comm_router_uses_cuda_ipc_for_cuda_stream_chunks_only() -> None:
 
 def cross_gpu_router() -> CommRouter:
     return CommRouter(
-        stage_name="minimax_ttm_ar",
+        stage_name="tts_engine",
         gpu_id=0,
         placement_gpu_id=0,
         same_process_targets=set(),

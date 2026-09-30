@@ -10,7 +10,7 @@ from sglang_omni.scheduling.speaker_cache import SpeakerArtifactCache, SpeakerCa
 def test_speaker_cache_tracks_hits_misses_and_voice_invalidation() -> None:
     cache = SpeakerArtifactCache(max_bytes=1024)
     key = SpeakerCacheKey(
-        model_type="higgs",
+        model_type="voicing_tts",
         voice_name="speaker-a",
         voice_version=1,
         artifact_kind="ref_codes",
@@ -35,8 +35,8 @@ def test_speaker_cache_tracks_hits_misses_and_voice_invalidation() -> None:
 
 def test_speaker_cache_evicts_oldest_entry_under_memory_pressure() -> None:
     cache = SpeakerArtifactCache(max_bytes=64)
-    first = SpeakerCacheKey("higgs", "a", 1, "embedding")
-    second = SpeakerCacheKey("higgs", "b", 1, "embedding")
+    first = SpeakerCacheKey("voicing_tts", "a", 1, "embedding")
+    second = SpeakerCacheKey("voicing_tts", "b", 1, "embedding")
 
     cache.put(first, np.arange(12, dtype=np.float32))
     cache.put(second, np.arange(12, dtype=np.float32))

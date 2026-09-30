@@ -1726,13 +1726,13 @@ class OmniScheduler:
         elif mem_fraction is not None:
             mem_hint = (
                 f" Current mem_fraction_static is {mem_fraction:.3f}; try setting "
-                "--thinker-mem-fraction-static higher."
+                "--mem-fraction-static higher."
             )
         else:
-            mem_hint = " Try setting a higher --thinker-mem-fraction-static value."
+            mem_hint = " Try setting a higher --mem-fraction-static value."
 
         return (
-            "Request requires more tokens than the thinker KV cache can hold "
+            "Request requires more tokens than the KV cache can hold "
             f"(input_tokens={input_len}, max_new_tokens={max_new_tokens}, "
             f"required_tokens={required_tokens}, kv_capacity={kv_capacity})."
             f"{mem_hint}"
@@ -1862,8 +1862,7 @@ class OmniScheduler:
     def _run_batch(self, batch, pp_proxy_tensors=None):
         """Run a batch through the model runner.
 
-        The custom model runner (for example ThinkerModelRunner or a
-        model-specific talker runner)
+        The custom model runner (for example the Voicing-TTS talker runner)
         accepts a ``SchedulerOutput`` wrapper and returns a
         ``ModelRunnerOutput``.  The upstream ``process_batch_result`` expects
         a ``GenerationBatchResult``.  We bridge the two formats here.

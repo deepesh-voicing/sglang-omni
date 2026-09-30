@@ -3,8 +3,7 @@
 
 SGLang owns quantization end-to-end: it parses `quantization_config`,
 constructs quantized layers, and executes post-load hooks. This module only
-provides the Qwen3-Omni-specific compatibility SGLang cannot infer by itself:
-stage-local AutoRound config normalization and FP8 scale preprocessing for
+provides what SGLang cannot infer by itself: FP8 scale preprocessing for
 custom weight loaders.
 """
 
@@ -24,14 +23,8 @@ WeightPreprocessor = Callable[[str, "torch.Tensor"], "torch.Tensor"]
 _QUANT_METADATA_KEYS: tuple[str, ...] = ("quantization_config", "compression_config")
 _NESTED_QUANT_CONFIG_ATTRS: tuple[str, ...] = (
     "text_config",
-    "thinker_config",
     "talker_config",
 )
-_STAGE_PREFIX_BY_ARCH: dict[str, str] = {
-    "Qwen3OmniThinkerForCausalLM": "thinker.",
-    "Qwen3ASRForConditionalGeneration": "thinker.",
-    "Qwen3OmniTalker": "talker.",
-}
 
 __all__ = [
     "resolve_quant_config",
@@ -39,8 +32,6 @@ __all__ = [
     "is_fp8_block_quant",
     "convert_fp8_weight_scale_inv",
     "get_weight_preprocessor",
-    "needs_quant_config_normalization",
-    "normalize_quant_config",
 ]
 
 
@@ -184,172 +175,3 @@ def get_weight_preprocessor(
     else:
         pass
     return identity_preprocessor
-
-
-def needs_quant_config_normalization(quant_dict: dict[str, Any] | None) -> bool:
-    """True when the checkpoint's method uses stage-local per-block quant names."""
-    method = quant_method_name(quant_dict)
-    return method == "auto-round"
-
-
-def strip_stage_prefix(pattern: str, plain_prefix: str, escaped_prefix: str) -> str:
-    """Strip the stage prefix from the start of a regex pattern."""
-    if pattern.startswith(escaped_prefix):
-        return pattern[len(escaped_prefix) :]
-    else:
-        pass
-    if pattern.startswith(plain_prefix):
-        return pattern[len(plain_prefix) :]
-    else:
-        pass
-    leading_wildcard_escaped = r".*" + escaped_prefix
-    if pattern.startswith(leading_wildcard_escaped):
-        # Drop only the prefix part; keep the leading ".*" wildcard so the
-        # normalized regex still matches stage-local module names.
-        return r".*" + pattern[len(leading_wildcard_escaped) :]
-    else:
-        pass
-    return pattern
-
-
-def normalize_extra_config_keys(
-    quant_config: dict[str, Any], stage_prefix: str
-) -> bool:
-    """Strip `stage_prefix` from the leading edge of every regex key."""
-    extra_config = quant_config.get("extra_config")
-    if not (isinstance(extra_config, dict) and extra_config):
-        return False
-    else:
-        pass
-
-    escaped_prefix = stage_prefix.replace(".", r"\.")
-    normalized_extra: dict[str, Any] = {}
-    changed = False
-    for key, value in extra_config.items():
-        normalized_key = strip_stage_prefix(key, stage_prefix, escaped_prefix)
-        changed = changed or normalized_key != key
-        normalized_extra[normalized_key] = value
-
-    if not changed:
-        return False
-    else:
-        pass
-
-    quant_config["extra_config"] = normalized_extra
-    return True
-
-
-def normalize_block_name_to_quantize(
-    quant_config: dict[str, Any], stage_prefix: str
-) -> bool:
-    """Strip `stage_prefix` from every entry of `block_name_to_quantize`."""
-    blocks = quant_config.get("block_name_to_quantize")
-    if isinstance(blocks, str):
-        block_list = [b.strip() for b in blocks.split(",") if b.strip()]
-        was_list = False
-    elif isinstance(blocks, list):
-        block_list = [str(b) for b in blocks]
-        was_list = True
-    else:
-        return False
-    if not block_list:
-        return False
-    else:
-        pass
-
-    normalized_blocks = [
-        entry[len(stage_prefix) :] if entry.startswith(stage_prefix) else entry
-        for entry in block_list
-    ]
-    if normalized_blocks == block_list:
-        return False
-    else:
-        pass
-
-    quant_config["block_name_to_quantize"] = (
-        normalized_blocks if was_list else ",".join(normalized_blocks)
-    )
-    return True
-
-
-def load_writable_quant_config(
-    hf_config: Any,
-) -> tuple[Any, str, dict[str, Any], bool] | None:
-    """Return `(owner, metadata_key, quant_config, needs_writeback)` for the
-    quant metadata discovered on `hf_config` or a nested stage sub-config,
-    or `None` if none is found."""
-    visited: set[int] = set()
-
-    def _search(node: Any) -> tuple[Any, str, dict[str, Any], bool] | None:
-        if node is None or id(node) in visited:
-            return None
-        else:
-            pass
-        visited.add(id(node))
-
-        for metadata_key in _QUANT_METADATA_KEYS:
-            quant_config_raw = read_metadata(node, metadata_key)
-            if quant_config_raw is None:
-                continue
-            else:
-                pass
-
-            quant_config = to_mutable_dict(quant_config_raw, metadata_key)
-            # If we created a new dict from a non-dict object, we must write it
-            # back after mutation so downstream consumers see the normalized names.
-            needs_writeback = quant_config is not quant_config_raw
-            return node, metadata_key, quant_config, needs_writeback
-
-        for attr in _NESTED_QUANT_CONFIG_ATTRS:
-            found = _search(read_metadata(node, attr))
-            if found is not None:
-                return found
-            else:
-                pass
-        return None
-
-    return _search(hf_config)
-
-
-def resolve_stage_prefix(hf_config: Any) -> str | None:
-    """Return the checkpoint prefix for the active stage architecture."""
-    architectures = getattr(hf_config, "architectures", None) or []
-    if not architectures:
-        return None
-    else:
-        pass
-    return _STAGE_PREFIX_BY_ARCH.get(architectures[0])
-
-
-def normalize_quant_config(model_config: Any) -> None:
-    """Strip the active stage's checkpoint prefix from the quant config"""
-    hf_config = getattr(model_config, "hf_config", None)
-    if hf_config is None:
-        return
-    else:
-        pass
-
-    loaded = load_writable_quant_config(hf_config)
-    if loaded is None:
-        return
-    else:
-        pass
-    owner, metadata_key, quant_config, needs_writeback = loaded
-
-    stage_prefix = resolve_stage_prefix(hf_config)
-    if not stage_prefix:
-        return
-    else:
-        pass
-
-    blocks_changed = normalize_block_name_to_quantize(quant_config, stage_prefix)
-    extra_changed = normalize_extra_config_keys(quant_config, stage_prefix)
-    if not (blocks_changed or extra_changed):
-        return
-    else:
-        pass
-
-    if needs_writeback:
-        setattr(owner, metadata_key, quant_config)
-    else:
-        pass

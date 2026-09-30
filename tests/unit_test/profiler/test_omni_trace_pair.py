@@ -206,7 +206,7 @@ def test_first_call_loads_are_reported_not_fatal_on_a_trace_with_stacks(
 ) -> None:
     """``Lazy Function Loading`` also marks the first use of an ordinary kernel.
 
-    Two real CosyVoice mapping traces failed on five of these and nothing else,
+    Two real mapping traces failed on five of these and nothing else,
     tens of microseconds each, no compile marker beside them. With stacks on, a
     compile would have matched a path marker too, so the marker only rejected
     traces that were fine for location. It is still printed, being warmup the run

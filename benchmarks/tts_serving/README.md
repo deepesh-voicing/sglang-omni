@@ -185,7 +185,13 @@ for this delete-specific response.
 
 ## Basic Usage
 
-Start a compatible TTS service, then run the checked-in serving-stress spec:
+Start a Voicing-TTS service from the repo root, then run the checked-in
+serving-stress spec:
+
+```bash
+sgl-omni serve --config examples/configs/voicing_tts_1_7b.yaml \
+  --allowed-local-media-path docs/_static/audio --port 8000
+```
 
 ```bash
 python -m benchmarks.eval.benchmark_tts_serving \
@@ -193,8 +199,8 @@ python -m benchmarks.eval.benchmark_tts_serving \
   --out results/tts_serving/stress
 ```
 
-The checked-in spec targets a Higgs TTS service through the `base_url` and
-`model_name` fields in `examples/stress.json`. It also sends a reference clip
+The checked-in spec targets a Voicing-TTS Base service through the `base_url`
+and `model_name` fields in `examples/stress.json`. It also sends a reference clip
 from `docs/_static/audio`, so launch the target service from the repo root with
 `--allowed-local-media-path docs/_static/audio`. Update the spec fields, and
 `auth.api_key_env` when needed, for a different target.
