@@ -33,7 +33,7 @@ stages:
 
 ```bash
 # CLI: dotted flags, the stages. prefix implied
-sgl-omni serve --config omni.yaml \
+sgl-omni serve --config examples/configs/voicing_tts_1_7b.yaml \
     --tts_engine.tp_size 2 \
     --tts_engine.factory.max_concurrency 8 \
     --tts_engine.engine.mem_fraction_static 0.7
@@ -53,24 +53,24 @@ the factory's signature is the check.
 1. Add the parameter to your stage factory's signature, with its default:
 
 ```python
-# sglang_omni/models/dots_tts/stages.py
+# sglang_omni/models/voicing_tts/stages.py
 def create_vocoder_executor(
     model_path: str,
     *,
-    stream_slots: int = 16,
+    followup_worker_count: int = 2,
     ...
-) -> DotsTTSStreamingVocoder:
+) -> SimpleScheduler:
 ```
 
 2. There is no step 2. Users can immediately set it:
 
 ```bash
-sgl-omni serve ... --vocoder.factory.stream_slots 8
+sgl-omni serve ... --vocoder.factory.followup_worker_count 4
 ```
 
 The runtime overlays `factory.*` values onto the author's kwargs by name and
 **refuses a key the factory does not accept** — a typo like
-`--vocoder.factory.stream_slotz 8` fails at launch with the stage and
+`--vocoder.factory.followup_worker_cnt 4` fails at launch with the stage and
 parameter named. This only works because factories declare every parameter
 explicitly: never add a `**kwargs` catch-all to a stage factory, it turns
 both typos and silently-ignored settings into no-ops.
@@ -84,7 +84,7 @@ declare the field with its static constraints, and type the stage with it.
 
 ```python
 class VocoderFactoryArgs(FactoryArgs):
-    stream_slots: int | None = Field(default=None, ge=1, le=64)
+    followup_worker_count: int | None = Field(default=None, ge=1, le=8)
 
 class VocoderStageConfig(StageConfig):
     factory: VocoderFactoryArgs = Field(default_factory=VocoderFactoryArgs)
@@ -95,7 +95,7 @@ class MyPipelineConfig(PipelineConfig):
     }
 ```
 
-`stages.vocoder.factory.stream_slots` is now a typed path with identical
+`stages.vocoder.factory.followup_worker_count` is now a typed path with identical
 treatment to a field declared on `FactoryArgs` itself, scoped to one stage:
 the static range is enforced at resolution, the lossless conversion rule
 applies to CLI text and YAML scalars, and `config explain` enumerates it.
@@ -108,11 +108,11 @@ at resolve time too, because the resolver rebuilds and re-validates the
 pipeline class on every merge:
 
 - **Cross-field and cross-stage rules** go in the pipeline class's
-  `model_post_init` — Ming-TTS validates its audio-decode cadence and batch
-  contract there, and Ming-Omni its GPU-collision rule.
+  `model_post_init` — for example, a rule that two stages must not be placed
+  on colliding GPUs.
 - **Rules that need the consumer's runtime state** stay in the consumer —
-  the dots vocoder refuses a `stream_slots` that disagrees with the latent
-  engine's admission limit, a relationship only known at launch.
+  for example, a vocoder slot count that must agree with the engine's
+  admission limit, a relationship only known at launch.
 
 A parameter with no rules beyond "the factory accepts it" needs none of
 this; the signature default and the built-in unknown-kwarg refusal are
@@ -192,10 +192,10 @@ the pair through one shared helper. See "Device and GPU placement contract" in
 Whole-pipeline values (`model_path`, `name`, `placement.*`) are top-level
 `PipelineConfig` fields, written without a stage prefix (`--model_path ...`,
 YAML top level). Model-specific pipeline classes may add their own fields the
-same way (see `MossTTSLocalPipelineConfig`'s cache and cuda-graph fields).
-Cross-stage invariants for one model belong in that pipeline class's
-`model_post_init` — e.g. Ming-Omni refusing a talker GPU that collides with
-the thinker's TP range.
+same way (see `VoicingTTSPipelineConfig`'s `enable_deterministic_inference`
+field). Cross-stage invariants for one model belong in that pipeline class's
+`model_post_init` — e.g. refusing a stage GPU that collides with another
+stage's TP range.
 
 ## Values users do not set
 
@@ -204,7 +204,7 @@ Reach for them last.
 
 **Author-derived factory kwargs** — `stage_factory_kwargs(stage_name)` on the
 pipeline class returns launch-time constructor kwargs for one stage. Use it
-when the pipeline author knows better than a static default (e.g. qwen3-tts
+when the pipeline author knows better than a static default (e.g. Voicing-TTS
 pinning deterministic-inference settings). Two hard rules: the config channel
 wins per key (an explicit `factory.*` value overrides the hook's), and the
 hook must not read *other* stages' config — cross-stage sharing is the user's
@@ -216,7 +216,7 @@ shared:
   - select: {engine: true}          # every SGLang engine stage
     engine:
       mem_fraction_static: 0.6
-  - select: {stages: [talker, vocoder]}
+  - select: {stages: [tts_engine, vocoder]}
     factory:
       dtype: bfloat16
 ```
@@ -237,11 +237,11 @@ Every rule has exactly one home, chosen by what the rule needs to see:
 
 | Rule needs | Site | Example |
 |---|---|---|
-| Only the value | Static `Field` constraint / `Literal` — on the shared group, or a per-stage group subclass for one model | `mem_fraction_static: Field(gt=0, lt=1)`; `VocoderFactoryArgs.stream_slots` |
+| Only the value | Static `Field` constraint / `Literal` — on the shared group, or a per-stage group subclass for one model | `mem_fraction_static: Field(gt=0, lt=1)`; `VocoderFactoryArgs.followup_worker_count` |
 | The right conversion | Nothing — lossless coercion is built in | bool refused on int fields |
 | Sibling fields on one object | `model_post_init` on that model | TP `gpu` list matches `tp_size` |
-| Several stages of one pipeline | The pipeline class's `model_post_init` | Ming GPU-collision check; Ming-TTS audio-decode contract |
-| The consumer's runtime state | The consumer, at the point of use | vocoder `stream_slots` vs. latent engine |
+| Several stages of one pipeline | The pipeline class's `model_post_init` | Cross-stage GPU-collision check |
+| The consumer's runtime state | The consumer, at the point of use | vocoder slot count vs. engine admission limit |
 | The factory's parameter list | Nothing — the signature check is built in | unknown `factory.*` key refused |
 
 Anti-patterns, each removed from this codebase at least once — do not

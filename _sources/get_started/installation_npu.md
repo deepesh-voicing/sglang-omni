@@ -139,13 +139,24 @@ visible devices (`gpu: 0` selects the first visible device).
 
 The runtime is already installed. Skip the source installation below and do
 not run the TorchCodec stack-upgrade script inside this image.
-Qwen3-TTS dependencies are included; skip its cookbook's dependency installation.
-Continue with the [API Server Quickstart](apiserver_quickstart.md) to launch
-`sgl-omni serve` and send requests. Use the container model path under `/models`
-and pass the selected model's NPU pipeline configuration with `--config` when
-required. Model-specific inputs belong in the corresponding cookbook, such as
-the [Qwen3-TTS guide](../cookbook/qwen3_tts.md); GPU-specific configurations
-there should not be assumed to work unchanged on NPU.
+
+Convert a Qwen3-TTS checkpoint into a Voicing-TTS checkpoint, then launch with
+an NPU pipeline configuration (`examples/configs/voicing_tts_*_npu.yaml`):
+
+```bash
+python -m sglang_omni.models.voicing_tts.convert_checkpoint \
+    /models/Qwen3-TTS-12Hz-1.7B-Base checkpoints/voicing-tts-12hz-1.7b-base
+
+sgl-omni serve --config examples/configs/voicing_tts_1_7b_npu.yaml \
+    --model-path checkpoints/voicing-tts-12hz-1.7b-base --port 8000
+```
+
+The NPU configurations are `voicing_tts_0_6b_npu.yaml`,
+`voicing_tts_0_6b_customvoice_npu.yaml`, `voicing_tts_1_7b_npu.yaml`, and
+`voicing_tts_1_7b_voicedesign_npu.yaml`. Request examples and variant-specific
+inputs are in the [Voicing-TTS cookbook](../cookbook/voicing_tts.md);
+GPU-specific configurations there should not be assumed to work unchanged on
+NPU.
 
 ## 🛠️ Option B: Manual install
 
@@ -155,7 +166,7 @@ Install the Ascend software stack and NPU build of SGLang before installing
 `sglang-omni` and the Python dependencies declared in
 [`pyproject_npu.toml`](../../pyproject_npu.toml), using the
 same installation flow as Docker. Prepare
-FFmpeg, libsndfile and SoX separately, or pass `--install-system-deps` as root.
+FFmpeg and libsndfile separately, or pass `--install-system-deps` as root.
 The Ascend software stack and SGLang must already be installed.
 
 ### Prerequisites
@@ -169,7 +180,6 @@ linked documentation. Python 3.11 is the verified configuration.
 | PyTorch and `torch_npu` | Matching releases | Yes | Yes | [Official documentation](https://www.hiascend.com/developer/software/ai-frameworks/pytorch/download?versionId=177&ids=89dda9ba9de741349efa03687a487678%2C204%2C200%2C1%2C6%2C177%2C) |
 | `triton-ascend` | Match the selected PyTorch and CANN releases | Yes | Yes | [Official documentation](https://gitcode.com/Ascend/triton-ascend/blob/main/docs/en/quick_start.md) |
 | `sgl-kernel-npu` | Match PyTorch, Python, CANN, hardware, and architecture | Yes | Yes | [Official documentation](https://github.com/sgl-project/sgl-kernel-npu/releases) |
-| `memfabric-hybrid` | Compatible release | No (PD disaggregation only) | Yes | [Official documentation](https://docs.sglang.io/docs/hardware-platforms/ascend-npus/ascend_npu) |
 | SGLang for NPU | `sglang-version` in [`pyproject_npu.toml`](../../pyproject_npu.toml) | Yes | Yes | [Official documentation](https://docs.sglang.io/docs/hardware-platforms/ascend-npus/ascend_npu) |
 
 ### Install sglang-omni
@@ -199,9 +209,9 @@ small NPU matrix multiplication. Run `bash scripts/npu/install_npu.sh --help`
 for optional extras, non-editable installation, and environments where devices
 are intentionally not exposed during the build.
 
-### TorchCodec installation for TTS models
+### TorchCodec installation for Voicing-TTS
 
-Models in the TTS models utilize **`torchcodec`** for high-efficiency, native-streaming audio decoding directly into PyTorch tensors.
+Voicing-TTS uses **`torchcodec`** for high-efficiency, native-streaming audio decoding directly into PyTorch tensors.
 
 The helper script `scripts/npu/install_npu_torchcodec.sh` automatically installs:
 * **Audio codec:** `ffmpeg`

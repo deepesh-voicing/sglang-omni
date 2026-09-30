@@ -51,15 +51,13 @@
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'basic_usage/python_router';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
-    <script src="../_static/js/qwen3_omni_server_generator.js?v=d7738e8a"></script>
-    <script src="../_static/js/ming_omni_server_generator.js?v=7979a72f"></script>
     <link rel="icon" href="../_static/logo.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="0.1.6" />
-    <meta name="docbuild:last-update" content="Sep 28, 2026"/>
+    <meta name="docbuild:last-update" content="Sep 30, 2026"/>
   
     
     <script src="../_static/searchtools.js"></script>
@@ -214,34 +212,10 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Cookbook</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/higgs_tts.html">Higgs TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/voxtral_tts.html">Voxtral TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/fishaudio_s2_pro.html">Fish Audio S2-Pro</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/qwen3_tts.html">Qwen3 TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/ming_tts.html">Ming-Omni-TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/moss_tts.html">MOSS-TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/moss_tts_local.html">MOSS-TTS-Local</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/dots_tts.html">dots.tts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/minimax_music3.html">MiniMax Music 3</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/zonos2.html">ZONOS2</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/qwen3_asr.html">Qwen3-ASR</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/fun_asr.html">Fun-ASR-Nano</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/arkasr.html">ARK-ASR-3B</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/moss_transcribe_diarize.html">MOSS-Transcribe-Diarize</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/whisper_asr.html">Whisper ASR</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/qwen3_omni.html">Qwen3-Omni</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/minicpm_o.html">MiniCPM-o Reference Audio</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/ming_omni.html">Ming-Omni</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/nemotron_voicechat.html">NemotronLabs VoiceChat</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/personaplex.html">PersonaPlex</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/llada2_uni.html">LLaDA2.0-Uni</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/fun_cosyvoice3.html">Fun-CosyVoice3</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/auk.html">AuK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cookbook/voicing_tts.html">Voicing-TTS</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">General Usage</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="qwen3_omni.html">Omni Model Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="audio_translations.html">Audio Translations</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tts.html">TTS Model Usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="process_topology.html">Process Topology, Replicas, and GPU Sharing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tts_process_topology.html">TTS Process Topology</a></li>
@@ -252,7 +226,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Benchmarks</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../benchmarks/relay.html">Benchmark Relay</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../benchmarks/qwen3_tts_leading_silence.html">Qwen3-TTS Base: Leading Silence in X-Vector Voice Cloning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../benchmarks/voicing_tts_leading_silence.html">Voicing-TTS Base: Leading Silence in X-Vector Voice Cloning</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Developer Reference</span></p>
 <ul class="nav bd-sidenav">
@@ -264,7 +238,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/communication.html">Communication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/reference_encode_service.html">Reference Encode Service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/profiler.html">Request-level profiler</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../developer_reference/qwen3_asr_concurrency_profile.html">Qwen3-ASR High-Concurrency Benchmark and Bottleneck Profile</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/rl_admin_control.html">RL Admin Control</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/bump_version.html">Bumping the SGLang Pin</a></li>
 </ul>
@@ -533,9 +506,9 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="omni-router-usage">
 <h1>Omni Router Usage<a class="headerlink" href="#omni-router-usage" title="Link to this heading">#</a></h1>
-<p>The SGLang-Omni Router is an external HTTP router for Omni V1 deployments. It
-fronts multiple complete Omni V1 API servers and exposes one OpenAI-compatible
-endpoint to clients.</p>
+<p>The SGLang-Omni Router is an external HTTP router for Voicing-TTS deployments.
+It fronts multiple complete SGLang-Omni API servers and exposes one
+OpenAI-compatible speech endpoint to clients.</p>
 <p>Use the router when you launch more than one <code class="docutils literal notranslate"><span class="pre">sgl-omni</span> <span class="pre">serve</span></code> process and want
 one stable endpoint for request distribution, health tracking, and worker-pool
 control.</p>
@@ -551,7 +524,7 @@ sgl-omni-router-py
   +-- sgl-omni serve worker B
 </pre></div>
 </div>
-<p>Each worker is a complete Omni V1 HTTP server. The router does not load model
+<p>Each worker is a complete SGLang-Omni HTTP server. The router does not load model
 weights or split a single request across workers. It selects one routable worker
 for each request, forwards the original request bytes, and returns the worker
 response with router diagnostic headers.</p>
@@ -560,10 +533,12 @@ response with router diagnostic headers.</p>
 <h2>Launch Workers and Router From YAML<a class="headerlink" href="#launch-workers-and-router-from-yaml" title="Link to this heading">#</a></h2>
 <p>For a local homogeneous pool, <code class="docutils literal notranslate"><span class="pre">sgl-omni-router-py</span></code> can start the worker replicas
 and then start the router after all managed workers pass <code class="docutils literal notranslate"><span class="pre">/health</span></code>:</p>
+<p>Save the launcher config below as <code class="docutils literal notranslate"><span class="pre">voicing_tts_router.yaml</span></code>, then start the
+router:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sgl-omni-router-py<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--host<span class="w"> </span><span class="m">0</span>.0.0.0<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--port<span class="w"> </span><span class="m">8008</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--launcher-config<span class="w"> </span>examples/configs/qwen3_omni_router.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--launcher-config<span class="w"> </span>voicing_tts_router.yaml<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--policy<span class="w"> </span>round_robin<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--health-failure-threshold<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--health-success-threshold<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
@@ -574,93 +549,67 @@ and then start the router after all managed workers pass <code class="docutils l
 <p>Example launcher config:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">launcher</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">backend</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
-<span class="w">  </span><span class="nt">model_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Qwen/Qwen3-Omni-30B-A3B-Instruct</span>
-<span class="w">  </span><span class="nt">model_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">qwen3-omni</span>
+<span class="w">  </span><span class="nt">model_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">checkpoints/voicing-tts-12hz-1.7b-base</span>
+<span class="w">  </span><span class="nt">model_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">voicing-tts</span>
 <span class="w">  </span><span class="nt">num_workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
 <span class="w">  </span><span class="nt">num_gpus_per_worker</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
 <span class="w">  </span><span class="nt">worker_host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">127.0.0.1</span>
 <span class="w">  </span><span class="nt">worker_base_port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8011</span>
-<span class="w">  </span><span class="nt">worker_extra_args</span><span class="p">:</span><span class="w"> </span><span class="s">"--config</span><span class="nv"> </span><span class="s">examples/configs/qwen3_omni_colocated_h20.yaml</span><span class="nv"> </span><span class="s">--colocate"</span>
+<span class="w">  </span><span class="nt">worker_extra_args</span><span class="p">:</span><span class="w"> </span><span class="s">"--config</span><span class="nv"> </span><span class="s">examples/configs/voicing_tts_1_7b.yaml"</span>
 <span class="w">  </span><span class="nt">wait_timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">600</span>
 </pre></div>
 </div>
+<p><code class="docutils literal notranslate"><span class="pre">model_path</span></code> must point at a converted Voicing-TTS checkpoint; see the
+<a class="reference internal" href="../cookbook/voicing_tts.html"><span class="std std-doc">Voicing-TTS cookbook</span></a> for the conversion step.</p>
 <p><code class="docutils literal notranslate"><span class="pre">backend:</span> <span class="pre">local</span></code> means the router process starts and manages worker
-subprocesses on the same machine. The launched workers are complete Omni V1
+subprocesses on the same machine. The launched workers are complete SGLang-Omni
 servers started with <code class="docutils literal notranslate"><span class="pre">sgl-omni</span> <span class="pre">serve</span></code>; they are not partial
 pipeline stages. The router waits for every managed worker to pass <code class="docutils literal notranslate"><span class="pre">/health</span></code>
 before it starts accepting client traffic, and it stops those managed workers
 when the router exits.</p>
-<p><code class="docutils literal notranslate"><span class="pre">num_gpus_per_worker</span></code> controls automatic GPU grouping. The default Qwen3-Omni
-router example uses colocated workers: each complete speech worker runs on one
-GPU through <code class="docutils literal notranslate"><span class="pre">examples/configs/qwen3_omni_colocated_h20.yaml</span></code>. With
-<code class="docutils literal notranslate"><span class="pre">num_workers:</span> <span class="pre">2</span></code> and <code class="docutils literal notranslate"><span class="pre">num_gpus_per_worker:</span> <span class="pre">1</span></code>, the launcher assigns GPU <code class="docutils literal notranslate"><span class="pre">0</span></code> to
-the first worker and GPU <code class="docutils literal notranslate"><span class="pre">1</span></code> to the second worker when two CUDA devices are
-visible.</p>
-<p>Use <code class="docutils literal notranslate"><span class="pre">examples/configs/qwen3_omni_colocated_h200.yaml</span></code> instead for single-H200
-workers.</p>
+<p><code class="docutils literal notranslate"><span class="pre">num_gpus_per_worker</span></code> controls automatic GPU grouping. Each Voicing-TTS worker
+runs its whole pipeline on one GPU. With <code class="docutils literal notranslate"><span class="pre">num_workers:</span> <span class="pre">2</span></code> and
+<code class="docutils literal notranslate"><span class="pre">num_gpus_per_worker:</span> <span class="pre">1</span></code>, the launcher assigns GPU <code class="docutils literal notranslate"><span class="pre">0</span></code> to the first worker and
+GPU <code class="docutils literal notranslate"><span class="pre">1</span></code> to the second worker when two CUDA devices are visible.</p>
 <p>Set <code class="docutils literal notranslate"><span class="pre">worker_gpu_ids</span></code> only when you need explicit placement. Each entry maps one
 <code class="docutils literal notranslate"><span class="pre">CUDA_VISIBLE_DEVICES</span></code> value to one worker, for example
-<code class="docutils literal notranslate"><span class="pre">worker_gpu_ids:</span> <span class="pre">[&quot;0&quot;,</span> <span class="pre">&quot;1&quot;]</span></code> for two one-GPU colocated Qwen3-Omni workers. Use
-<code class="docutils literal notranslate"><span class="pre">worker_extra_args:</span> <span class="pre">&quot;--text-only&quot;</span></code> only if you intentionally want text-output
-workers instead of speech-output workers.</p>
-<p>Use <code class="docutils literal notranslate"><span class="pre">worker_extra_args</span></code> for public Omni V1 serve options that are specific to
-the worker process, such as <code class="docutils literal notranslate"><span class="pre">--mem-fraction-static</span></code>, <code class="docutils literal notranslate"><span class="pre">--thinker.tp_size</span></code>, or
-<code class="docutils literal notranslate"><span class="pre">--text-only</span></code>. These arguments are passed to <code class="docutils literal notranslate"><span class="pre">sgl-omni</span> <span class="pre">serve</span></code>
-after the launcher-owned flags. When no memory flags are provided, Omni V1 uses
-its normal auto-sizing path.</p>
+<code class="docutils literal notranslate"><span class="pre">worker_gpu_ids:</span> <span class="pre">[&quot;0&quot;,</span> <span class="pre">&quot;1&quot;]</span></code> for two one-GPU Voicing-TTS workers.</p>
+<p>Use <code class="docutils literal notranslate"><span class="pre">worker_extra_args</span></code> for public serve options that are specific to the
+worker process, such as <code class="docutils literal notranslate"><span class="pre">--config</span></code> or <code class="docutils literal notranslate"><span class="pre">--mem-fraction-static</span></code>. These arguments
+are passed to <code class="docutils literal notranslate"><span class="pre">sgl-omni</span> <span class="pre">serve</span></code> after the launcher-owned flags. When no memory
+flags are provided, the worker uses its normal auto-sizing path.</p>
 <p>Use <code class="docutils literal notranslate"><span class="pre">worker_capabilities</span></code> when managed workers intentionally expose only part
-of the Omni API surface. For example, text-only workers should not advertise
-speech or audio-output support:</p>
+of the API surface. For example, CustomVoice workers use built-in speakers and
+accept no reference audio, so they should not advertise <code class="docutils literal notranslate"><span class="pre">audio_input</span></code>:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">launcher</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">backend</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
-<span class="w">  </span><span class="nt">model_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Qwen/Qwen3-Omni-30B-A3B-Instruct</span>
-<span class="w">  </span><span class="nt">model_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">qwen3-omni</span>
+<span class="w">  </span><span class="nt">model_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">checkpoints/voicing-tts-12hz-1.7b-customvoice</span>
+<span class="w">  </span><span class="nt">model_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">voicing-tts-customvoice</span>
 <span class="w">  </span><span class="nt">num_workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
 <span class="w">  </span><span class="nt">num_gpus_per_worker</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
-<span class="w">  </span><span class="nt">worker_extra_args</span><span class="p">:</span><span class="w"> </span><span class="s">"--text-only"</span>
+<span class="w">  </span><span class="nt">worker_extra_args</span><span class="p">:</span><span class="w"> </span><span class="s">"--config</span><span class="nv"> </span><span class="s">examples/configs/voicing_tts_1_7b_customvoice.yaml"</span>
 <span class="w">  </span><span class="nt">worker_capabilities</span><span class="p">:</span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">chat</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">speech</span>
 <span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">streaming</span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">image_input</span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">audio_input</span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">video_input</span>
 </pre></div>
 </div>
-<p>If <code class="docutils literal notranslate"><span class="pre">worker_capabilities</span></code> is omitted and <code class="docutils literal notranslate"><span class="pre">worker_extra_args</span></code> contains
-<code class="docutils literal notranslate"><span class="pre">--text-only</span></code>, the router registers the managed workers with the same text-only
-capability set shown above.</p>
-<p>For short audio-input / text-output MMSU-style workloads, use the fused
-text-path Qwen3-Omni config instead of the default speech-colocated worker:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">launcher</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">backend</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
-<span class="w">  </span><span class="nt">model_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Qwen/Qwen3-Omni-30B-A3B-Instruct</span>
-<span class="w">  </span><span class="nt">model_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">qwen3-omni</span>
-<span class="w">  </span><span class="nt">num_workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
-<span class="w">  </span><span class="nt">num_gpus_per_worker</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
-<span class="w">  </span><span class="nt">worker_extra_args</span><span class="p">:</span><span class="w"> </span><span class="s">"--config</span><span class="nv"> </span><span class="s">examples/configs/qwen3_omni_mmsu.yaml</span><span class="nv"> </span><span class="s">--text-only"</span>
-</pre></div>
-</div>
-<p>This keeps preprocessing, encoders, aggregation, thinker, and decode in one
-worker process while leaving the general speech-colocated topology unchanged.</p>
 </section>
 <section id="launch-worker-servers-manually">
 <h2>Launch Worker Servers Manually<a class="headerlink" href="#launch-worker-servers-manually" title="Link to this heading">#</a></h2>
-<p>Start each Omni V1 worker separately. The example below launches two colocated
-Qwen3-Omni speech workers on different GPUs and ports:</p>
+<p>Start each worker separately. The example below launches two Voicing-TTS Base
+workers on different GPUs and ports:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>sgl-omni<span class="w"> </span>serve<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--model-path<span class="w"> </span>Qwen/Qwen3-Omni-30B-A3B-Instruct<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--model-name<span class="w"> </span>qwen3-omni<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--config<span class="w"> </span>examples/configs/qwen3_omni_colocated_h20.yaml<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--colocate<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--config<span class="w"> </span>examples/configs/voicing_tts_1_7b.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--model-path<span class="w"> </span>checkpoints/voicing-tts-12hz-1.7b-base<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--model-name<span class="w"> </span>voicing-tts<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--host<span class="w"> </span><span class="m">0</span>.0.0.0<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--port<span class="w"> </span><span class="m">8011</span>
 </pre></div>
 </div>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>sgl-omni<span class="w"> </span>serve<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--model-path<span class="w"> </span>Qwen/Qwen3-Omni-30B-A3B-Instruct<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--model-name<span class="w"> </span>qwen3-omni<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--config<span class="w"> </span>examples/configs/qwen3_omni_colocated_h20.yaml<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--colocate<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--config<span class="w"> </span>examples/configs/voicing_tts_1_7b.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--model-path<span class="w"> </span>checkpoints/voicing-tts-12hz-1.7b-base<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--model-name<span class="w"> </span>voicing-tts<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--host<span class="w"> </span><span class="m">0</span>.0.0.0<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--port<span class="w"> </span><span class="m">8012</span>
 </pre></div>
@@ -705,7 +654,7 @@ fragments.</p>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--worker-urls</span></code></p></td>
 <td><p>not set</p></td>
-<td><p>Space-separated Omni V1 worker base URLs for a homogeneous worker pool.</p></td>
+<td><p>Space-separated worker base URLs for a homogeneous worker pool.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--worker-config</span></code></p></td>
 <td><p>not set</p></td>
@@ -795,18 +744,20 @@ requests, then round-robins among ties.</p></li>
 </ul>
 <p>Pass exactly one of <code class="docutils literal notranslate"><span class="pre">--launcher-config</span></code>, <code class="docutils literal notranslate"><span class="pre">--worker-urls</span></code>, or
 <code class="docutils literal notranslate"><span class="pre">--worker-config</span></code>. Use <code class="docutils literal notranslate"><span class="pre">--worker-config</span></code> when workers serve different models or
-only a subset of Omni capabilities:</p>
+only a subset of capabilities. The example below pairs a Voicing-TTS Base worker,
+which owns uploaded voices and accepts reference audio, with a CustomVoice
+worker:</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
 <span class="w">  </span><span class="nt">"workers"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
 <span class="w">      </span><span class="nt">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://127.0.0.1:8011"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"qwen3-omni"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"chat"</span><span class="p">,</span><span class="w"> </span><span class="s2">"image_input"</span><span class="p">,</span><span class="w"> </span><span class="s2">"video_input"</span><span class="p">]</span>
+<span class="w">      </span><span class="nt">"model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"voicing-tts"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"speech"</span><span class="p">,</span><span class="w"> </span><span class="s2">"streaming"</span><span class="p">,</span><span class="w"> </span><span class="s2">"audio_input"</span><span class="p">]</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
 <span class="w">      </span><span class="nt">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://127.0.0.1:8012"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"qwen3-omni"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"chat"</span><span class="p">,</span><span class="w"> </span><span class="s2">"audio_input"</span><span class="p">,</span><span class="w"> </span><span class="s2">"audio_output"</span><span class="p">,</span><span class="w"> </span><span class="s2">"speech"</span><span class="p">]</span>
+<span class="w">      </span><span class="nt">"model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"voicing-tts-customvoice"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"speech"</span><span class="p">,</span><span class="w"> </span><span class="s2">"streaming"</span><span class="p">]</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
@@ -850,31 +801,34 @@ counters, and last error.</p></li>
 <h2>Send Requests Through the Router<a class="headerlink" href="#send-requests-through-the-router" title="Link to this heading">#</a></h2>
 <p>Point clients at the router port instead of the worker ports. The request schema
 is the same OpenAI-compatible schema used by each worker server.</p>
-<p>Image input with text output:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>-i<span class="w"> </span>http://127.0.0.1:8008/v1/chat/completions<span class="w"> </span><span class="se">\</span>
+<p>Voice cloning with a Base worker:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>-i<span class="w"> </span>http://127.0.0.1:8008/v1/audio/speech<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-H<span class="w"> </span><span class="s2">"x-request-id: router-image-1"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">"x-request-id: router-speech-1"</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-d<span class="w"> </span><span class="s1">'{</span>
-<span class="s1">    "model": "qwen3-omni",</span>
-<span class="s1">    "messages": [</span>
-<span class="s1">      {"role": "user", "content": "How many cars are there in the image? Answer briefly."}</span>
-<span class="s1">    ],</span>
-<span class="s1">    "images": ["tests/data/cars.jpg"],</span>
-<span class="s1">    "modalities": ["text"],</span>
-<span class="s1">    "max_tokens": 16</span>
-<span class="s1">  }'</span>
+<span class="s1">    "model": "voicing-tts",</span>
+<span class="s1">    "voice": "default",</span>
+<span class="s1">    "input": "Hello from the router.",</span>
+<span class="s1">    "references": [{</span>
+<span class="s1">      "audio_path": "https://huggingface.co/datasets/zhaochenyang20/seed-tts-eval-mini/resolve/main/en/prompt-wavs/common_voice_en_10119832.wav",</span>
+<span class="s1">      "text": "We asked over twenty different people, and they all said it was his."</span>
+<span class="s1">    }]</span>
+<span class="s1">  }'</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--output<span class="w"> </span>output.wav
 </pre></div>
 </div>
-<p>Streaming text:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>-N<span class="w"> </span>http://127.0.0.1:8008/v1/chat/completions<span class="w"> </span><span class="se">\</span>
+<p>Streaming PCM with a CustomVoice worker:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>-N<span class="w"> </span>http://127.0.0.1:8008/v1/audio/speech<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">"x-request-id: router-stream-1"</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-d<span class="w"> </span><span class="s1">'{</span>
-<span class="s1">    "model": "qwen3-omni",</span>
-<span class="s1">    "messages": [{"role": "user", "content": "Say hello briefly."}],</span>
+<span class="s1">    "model": "voicing-tts-customvoice",</span>
+<span class="s1">    "voice": "Ryan",</span>
+<span class="s1">    "input": "Say hello briefly.",</span>
 <span class="s1">    "stream": true,</span>
-<span class="s1">    "max_tokens": 16</span>
-<span class="s1">  }'</span>
+<span class="s1">    "response_format": "pcm"</span>
+<span class="s1">  }'</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--output<span class="w"> </span>output.pcm
 </pre></div>
 </div>
 <p>The router preserves the original request body. For ordinary JSON requests, it
@@ -886,7 +840,7 @@ the original bytes to the selected worker.</p>
 <p>Add a worker at runtime:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>-s<span class="w"> </span>http://127.0.0.1:8008/workers<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"url":"http://127.0.0.1:8013","model":"qwen3-omni"}'</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"url":"http://127.0.0.1:8013","model":"voicing-tts"}'</span>
 </pre></div>
 </div>
 <p>Disable a worker without deleting it:</p>
@@ -918,24 +872,11 @@ state is not partially changed.</p>
 <h2>Routing Behavior<a class="headerlink" href="#routing-behavior" title="Link to this heading">#</a></h2>
 <p>The router only selects workers that are healthy, not disabled, and capable of
 serving the request.</p>
-<p>The default worker capability set represents a complete Omni V1 replica:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">chat</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">speech</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">streaming</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">image_input</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">audio_input</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">video_input</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">audio_output</span></code></p></li>
-</ul>
+<p>The default worker capability set represents a complete replica and includes
+the capabilities that speech routing uses: <code class="docutils literal notranslate"><span class="pre">speech</span></code>, <code class="docutils literal notranslate"><span class="pre">streaming</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">audio_input</span></code>.</p>
 <p>The router infers required capabilities from each request:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">/v1/chat/completions</span></code> requires <code class="docutils literal notranslate"><span class="pre">chat</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">stream:</span> <span class="pre">true</span></code> requires <code class="docutils literal notranslate"><span class="pre">streaming</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">images</span></code>, <code class="docutils literal notranslate"><span class="pre">image</span></code>, or image message parts require <code class="docutils literal notranslate"><span class="pre">image_input</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">audios</span></code>, <code class="docutils literal notranslate"><span class="pre">audio_inputs</span></code>, or audio message parts require <code class="docutils literal notranslate"><span class="pre">audio_input</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">videos</span></code>, <code class="docutils literal notranslate"><span class="pre">video</span></code>, or video message parts require <code class="docutils literal notranslate"><span class="pre">video_input</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">modalities:</span> <span class="pre">[&quot;audio&quot;]</span></code> or <code class="docutils literal notranslate"><span class="pre">audio</span></code> output fields require <code class="docutils literal notranslate"><span class="pre">audio_output</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">/v1/audio/speech</span></code> and <code class="docutils literal notranslate"><span class="pre">/v1/audio/speech/batch</span></code> require <code class="docutils literal notranslate"><span class="pre">speech</span></code>;
 <code class="docutils literal notranslate"><span class="pre">/v1/audio/speech</span></code> also requires <code class="docutils literal notranslate"><span class="pre">streaming</span></code> when <code class="docutils literal notranslate"><span class="pre">stream:</span> <span class="pre">true</span></code> (batch speech
 does not support streaming)</p></li>
@@ -945,15 +886,6 @@ does not support streaming)</p></li>
 plus <code class="docutils literal notranslate"><span class="pre">audio_input</span></code> when configured with reference audio</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">/v1/audio/voices</span></code> management and synthesis using an uploaded voice require
 the owner worker, which has both <code class="docutils literal notranslate"><span class="pre">speech</span></code> and <code class="docutils literal notranslate"><span class="pre">audio_input</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">/v1/audio/transcriptions</span></code> and <code class="docutils literal notranslate"><span class="pre">/v1/audio/translations</span></code> require
-<code class="docutils literal notranslate"><span class="pre">audio_input</span></code> (also for <code class="docutils literal notranslate"><span class="pre">streaming</span></code> when the <code class="docutils literal notranslate"><span class="pre">stream</span></code> form field is true.) are multipart uploads, so the router reads the <code class="docutils literal notranslate"><span class="pre">model</span></code> and <code class="docutils literal notranslate"><span class="pre">stream</span></code> form
-fields with a single linear pass that skips the uploaded file to avoid cpu
-overhead, so in a pool that mixes ASR models the request lands on a worker
-registered with that model name. When the router cannot read a field it
-falls back to <code class="docutils literal notranslate"><span class="pre">X-SGLang-Omni-Route-Model</span></code> and <code class="docutils literal notranslate"><span class="pre">X-SGLang-Omni-Route-Stream</span></code>;
-when a field and its header are both present they must agree or the router
-answers <code class="docutils literal notranslate"><span class="pre">400</span></code>. Translation support is per model, and a worker that does not
-support it answers <code class="docutils literal notranslate"><span class="pre">400</span></code>.</p></li>
 </ul>
 <p>Register narrower worker capabilities only when a worker cannot serve one of
 those request classes.</p>
@@ -990,13 +922,13 @@ The router hydrates this registry through the compact
 <code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/v1/audio/voices?names_only=true</span></code> response rather than transferring stored
 reference metadata.</p>
 <p>Large JSON requests are not fully parsed by the router. With a homogeneous pool
-of complete Omni V1 replicas, no extra headers are needed. With mixed models,
+of complete replicas, no extra headers are needed. With mixed models,
 provide a model hint. With mixed worker capabilities, provide a capability hint
 when the router cannot infer a single safe worker set:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">X-SGLang-Omni-Route-Model</span></code>: requested model for mixed-model pools</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">X-SGLang-Omni-Route-Capabilities</span></code>: comma-separated capabilities such as
-<code class="docutils literal notranslate"><span class="pre">image_input</span></code>, <code class="docutils literal notranslate"><span class="pre">audio_input</span></code>, <code class="docutils literal notranslate"><span class="pre">video_input</span></code>, <code class="docutils literal notranslate"><span class="pre">audio_output</span></code>, or <code class="docutils literal notranslate"><span class="pre">streaming</span></code></p></li>
+<code class="docutils literal notranslate"><span class="pre">speech</span></code>, <code class="docutils literal notranslate"><span class="pre">audio_input</span></code>, or <code class="docutils literal notranslate"><span class="pre">streaming</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">X-SGLang-Omni-Route-Stream</span></code>: <code class="docutils literal notranslate"><span class="pre">true</span></code> or <code class="docutils literal notranslate"><span class="pre">false</span></code> for large streaming requests</p></li>
 </ul>
 <p>Speech and speech-batch JSON bodies larger than 1 MiB are conservatively pinned
@@ -1151,8 +1083,7 @@ them.</p>
 <ul class="simple">
 <li><p>A <strong>supervisor</strong> binds the public port once and passes the listening socket
 to <code class="docutils literal notranslate"><span class="pre">N</span></code> <strong>data-plane (DP)</strong> processes, which accept from the shared queue and
-relay the model routes (<code class="docutils literal notranslate"><span class="pre">/generate</span></code>, <code class="docutils literal notranslate"><span class="pre">/v1/chat/completions</span></code>,
-<code class="docutils literal notranslate"><span class="pre">/v1/audio/speech</span></code>, <code class="docutils literal notranslate"><span class="pre">/v1/audio/transcriptions</span></code>, <code class="docutils literal notranslate"><span class="pre">/v1/audio/translations</span></code>).</p></li>
+relay the model route (<code class="docutils literal notranslate"><span class="pre">/v1/audio/speech</span></code>).</p></li>
 <li><p>One <strong>control plane (CP)</strong> owns the worker registry, health checks, and the
 admin surface. DPs learn the routable-worker set from a snapshot file the CP
 republishes on every state change and on a fixed keepalive cadence. Admin
@@ -1465,7 +1396,7 @@ By SGLang-Omni Team
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on Sep 28, 2026.
+  Last updated on Sep 30, 2026.
   <br/>
 </p>
   </div>

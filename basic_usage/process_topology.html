@@ -51,8 +51,6 @@
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'basic_usage/process_topology';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
-    <script src="../_static/js/qwen3_omni_server_generator.js?v=d7738e8a"></script>
-    <script src="../_static/js/ming_omni_server_generator.js?v=7979a72f"></script>
     <link rel="icon" href="../_static/logo.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -61,7 +59,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="0.1.6" />
-    <meta name="docbuild:last-update" content="Sep 28, 2026"/>
+    <meta name="docbuild:last-update" content="Sep 30, 2026"/>
   
     
     <script src="../_static/searchtools.js"></script>
@@ -214,34 +212,10 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Cookbook</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/higgs_tts.html">Higgs TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/voxtral_tts.html">Voxtral TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/fishaudio_s2_pro.html">Fish Audio S2-Pro</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/qwen3_tts.html">Qwen3 TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/ming_tts.html">Ming-Omni-TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/moss_tts.html">MOSS-TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/moss_tts_local.html">MOSS-TTS-Local</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/dots_tts.html">dots.tts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/minimax_music3.html">MiniMax Music 3</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/zonos2.html">ZONOS2</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/qwen3_asr.html">Qwen3-ASR</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/fun_asr.html">Fun-ASR-Nano</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/arkasr.html">ARK-ASR-3B</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/moss_transcribe_diarize.html">MOSS-Transcribe-Diarize</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/whisper_asr.html">Whisper ASR</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/qwen3_omni.html">Qwen3-Omni</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/minicpm_o.html">MiniCPM-o Reference Audio</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/ming_omni.html">Ming-Omni</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/nemotron_voicechat.html">NemotronLabs VoiceChat</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/personaplex.html">PersonaPlex</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/llada2_uni.html">LLaDA2.0-Uni</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/fun_cosyvoice3.html">Fun-CosyVoice3</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/auk.html">AuK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cookbook/voicing_tts.html">Voicing-TTS</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">General Usage</span></p>
 <ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="qwen3_omni.html">Omni Model Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="audio_translations.html">Audio Translations</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tts.html">TTS Model Usage</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Process Topology, Replicas, and GPU Sharing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tts_process_topology.html">TTS Process Topology</a></li>
@@ -252,7 +226,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Benchmarks</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../benchmarks/relay.html">Benchmark Relay</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../benchmarks/qwen3_tts_leading_silence.html">Qwen3-TTS Base: Leading Silence in X-Vector Voice Cloning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../benchmarks/voicing_tts_leading_silence.html">Voicing-TTS Base: Leading Silence in X-Vector Voice Cloning</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Developer Reference</span></p>
 <ul class="nav bd-sidenav">
@@ -264,7 +238,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/communication.html">Communication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/reference_encode_service.html">Reference Encode Service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/profiler.html">Request-level profiler</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../developer_reference/qwen3_asr_concurrency_profile.html">Qwen3-ASR High-Concurrency Benchmark and Bottleneck Profile</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/rl_admin_control.html">RL Admin Control</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/bump_version.html">Bumping the SGLang Pin</a></li>
 </ul>
@@ -504,11 +477,9 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#process-replicas">Process replicas</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#placement">Placement</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cuda-mps">CUDA MPS</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cuda-ipc-weight-sharing">CUDA IPC weight sharing</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#putting-it-together">Putting it together</a><ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#replicas-across-gpus">Replicas across GPUs</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#replicas-on-one-gpu">Replicas on one GPU</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#replicas-on-one-gpu-with-mps-and-weight-sharing">Replicas on one GPU with MPS and weight sharing</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#replicas-on-one-gpu-with-mps">Replicas on one GPU with MPS</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#performance-and-correctness">Performance and correctness</a></li>
@@ -533,7 +504,6 @@ compose, and each answers a different question:</p>
 <li><p><strong>Process replicas</strong> define how many copies run.</p></li>
 <li><p><strong>Placement</strong> defines where they run.</p></li>
 <li><p><strong>CUDA MPS</strong> improves kernel scheduling between processes on one GPU.</p></li>
-<li><p><strong>CUDA IPC weight sharing</strong> removes duplicate weight copies on one GPU.</p></li>
 </ol>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
@@ -564,11 +534,6 @@ compose, and each answers a different question:</p>
 <td><p>kernel overlap between colocated CUDA contexts</p></td>
 <td><p>routing, weight or KV sharing</p></td>
 </tr>
-<tr class="row-even"><td><p>CUDA IPC weight sharing</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">weight_share</span></code></p></td>
-<td><p>followers alias the leader’s immutable weights</p></td>
-<td><p>KV, CUDA graphs, sampler, request state</p></td>
-</tr>
 </tbody>
 </table>
 </div>
@@ -597,10 +562,6 @@ compose, and each answers a different question:</p>
 <td><p>CUDA MPS</p></td>
 <td><p>replica creation and request routing</p></td>
 </tr>
-<tr class="row-even"><td><p>Full replicas on one GPU do not fit in VRAM?</p></td>
-<td><p>CUDA IPC weight sharing</p></td>
-<td><p>KV, CUDA graph, and request-state sharing</p></td>
-</tr>
 </tbody>
 </table>
 </div>
@@ -615,11 +576,14 @@ and local dispatch path; GPU members also share one CUDA context. A TP stage
 owns its logical Process and materializes one OS process per rank.</p>
 <p>A logical Process is a grouping, spawn, and placement boundary. It is not a
 recovery boundary: any child stage process dying still stops the pipeline.</p>
+<p>The Voicing-TTS pipeline runs <code class="docutils literal notranslate"><span class="pre">preprocessing</span></code>, <code class="docutils literal notranslate"><span class="pre">tts_engine</span></code>, and <code class="docutils literal notranslate"><span class="pre">vocoder</span></code> in
+one Process named <code class="docutils literal notranslate"><span class="pre">pipeline</span></code> by default. To move the vocoder into its own
+Process:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">stages</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">talker_ar</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">process</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">talker_ar</span>
-<span class="w">  </span><span class="nt">code2wav</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">process</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">code2wav</span>
+<span class="w">  </span><span class="nt">tts_engine</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">process</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pipeline</span>
+<span class="w">  </span><span class="nt">vocoder</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">process</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vocoder</span>
 </pre></div>
 </div>
 <p>Inspect the resolved result with <code class="docutils literal notranslate"><span class="pre">sgl-omni</span> <span class="pre">config</span> <span class="pre">resolve</span> <span class="pre">--config</span> <span class="pre">&lt;config.yaml&gt;</span> <span class="pre">--show</span> <span class="pre">config</span></code>.</p>
@@ -636,10 +600,7 @@ request lifetime, across payload, stream, completion, and abort paths. The
 default policy is per-Process thread-safe round robin, chosen independently for
 each Process.</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">processes</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">talker_ar</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">num_replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
-<span class="w">    </span><span class="nt">replica_devices</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">2</span><span class="p p-Indicator">]</span>
-<span class="w">  </span><span class="nt">code2wav</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">pipeline</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">num_replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
 <span class="w">    </span><span class="nt">replica_devices</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">2</span><span class="p p-Indicator">]</span>
 </pre></div>
@@ -663,7 +624,7 @@ carry an index — the card comes from <code class="docutils literal notranslate
 Different replicas may repeat a device id, which is how same-GPU data
 parallelism is expressed:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">processes</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">code2wav</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">pipeline</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">num_replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
 <span class="w">    </span><span class="nt">replica_devices</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">]</span>
 </pre></div>
@@ -675,8 +636,8 @@ involved must declare <code class="docutils literal notranslate"><span class="pr
 colocation check is enabled. The value is a placement-time budget, not a
 runtime memory limit:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">stages</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">code2wav</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">gpu_memory_fraction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.014</span>
+<span class="w">  </span><span class="nt">vocoder</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">gpu_memory_fraction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.10</span>
 </pre></div>
 </div>
 </section>
@@ -702,46 +663,6 @@ error instead of a warning.</p></li>
 <a class="reference internal" href="mps_dp.html"><span class="std std-doc">Same-GPU Data Parallelism with CUDA MPS</span></a> for the full lifecycle,
 verification, and operator notes.</p>
 </section>
-<section id="cuda-ipc-weight-sharing">
-<h2>CUDA IPC weight sharing<a class="headerlink" href="#cuda-ipc-weight-sharing" title="Link to this heading">#</a></h2>
-<p>Weight sharing removes duplicate weight VRAM; it does not change scheduling.
-Within one sharing group, the lowest replica index is the leader: it loads the
-checkpoint and publishes CUDA-IPC handles. Followers build the same module tree
-with dummy weights and alias the leader’s immutable parameters and buffers by
-assignment. KV cache, CUDA graphs, sampler state, request state, and any tensor
-the architecture’s share policy marks replica-private stay per replica.</p>
-<p>Use it to make a replica count fit, or to free VRAM for KV, CUDA graphs, and
-more replicas. It is a capacity mechanism, not a throughput optimization.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sgl-omni<span class="w"> </span>serve<span class="w"> </span>--config<span class="w"> </span>&lt;config.yaml&gt;<span class="w"> </span>--mps<span class="w"> </span>on<span class="w"> </span>--weight-share<span class="w"> </span>on<span class="w"> </span>--port<span class="w"> </span><span class="m">8091</span>
-</pre></div>
-</div>
-<p><code class="docutils literal notranslate"><span class="pre">weight_share</span></code> is <code class="docutils literal notranslate"><span class="pre">off</span></code> or <code class="docutils literal notranslate"><span class="pre">on</span></code> (default <code class="docutils literal notranslate"><span class="pre">off</span></code>). When <code class="docutils literal notranslate"><span class="pre">on</span></code>, every logical
-Process whose replicas repeat a GPU id becomes a sharing group on that GPU, and
-the runtime assigns roles itself; <code class="docutils literal notranslate"><span class="pre">SGLANG_OMNI_WEIGHT_SHARE</span></code> must not be set in
-the environment. Replicas of the same Process that are alone on their GPU keep
-loading their own weights and still serve requests normally.</p>
-<p>Requirements, all checked before any process is spawned:</p>
-<ul class="simple">
-<li><p>the sharing Process has exactly one SGLang engine stage, with <code class="docutils literal notranslate"><span class="pre">tp=pp=1</span></code>;</p></li>
-<li><p>that stage pins <code class="docutils literal notranslate"><span class="pre">max_total_tokens</span></code>, because a follower attaches after its
-dummy weights are freed and memory profiling cannot derive a stable KV
-budget;</p></li>
-<li><p>the architecture is on the share-policy allowlist, which the engine enforces
-when the leader loads.</p></li>
-</ul>
-<p>Because sharing rides on process replicas, it is available to a model only when
-that model’s GPU stage factories accept <code class="docutils literal notranslate"><span class="pre">gpu_id</span></code> as described under Placement.
-Models on the allowlist whose factories do not can still share weights through
-the multi-serve <code class="docutils literal notranslate"><span class="pre">examples/mps_dp/launch.sh</span></code> recipe.</p>
-<p>Followers are spawned only after every leader is ready, and are shut down
-before their leader. Sharing is a whole-group lifecycle: the leader must
-outlive its followers, online weight updates are refused while sharing is
-active, and a dead leader fails the pipeline rather than serving aliased
-memory. Restart the pipeline as a whole.</p>
-<p>Weight sharing does not require MPS, and MPS does not require weight sharing.
-<code class="docutils literal notranslate"><span class="pre">--mps</span> <span class="pre">on</span> <span class="pre">--weight-share</span> <span class="pre">on</span></code> is the usual same-GPU DP combination: MPS gives
-the replicas kernel overlap, weight sharing gives them room to fit.</p>
-</section>
 <section id="putting-it-together">
 <h2>Putting it together<a class="headerlink" href="#putting-it-together" title="Link to this heading">#</a></h2>
 <p>Configure in this order:</p>
@@ -749,53 +670,19 @@ the replicas kernel overlap, weight sharing gives them room to fit.</p>
 <li><p>decide which stages share a process;</p></li>
 <li><p>choose the replica count;</p></li>
 <li><p>place each replica on a GPU;</p></li>
-<li><p>enable MPS when processes share a GPU;</p></li>
-<li><p>enable weight sharing when duplicate weights are the capacity limit.</p></li>
+<li><p>enable MPS when processes share a GPU.</p></li>
 </ol>
-<section id="replicas-across-gpus">
-<h3>Replicas across GPUs<a class="headerlink" href="#replicas-across-gpus" title="Link to this heading">#</a></h3>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">config_cls</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Qwen3OmniSpeechPipelineConfig</span>
-<span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">qwen3-omni-speech-replica2</span>
-<span class="nt">model_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Qwen/Qwen3-Omni-30B-A3B-Instruct</span>
-
-<span class="nt">stages</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">talker_ar</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">gpu_memory_fraction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.123</span>
-<span class="w">  </span><span class="nt">code2wav</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">gpu_memory_fraction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.014</span>
-
-<span class="nt">processes</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">talker_ar</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">num_replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
-<span class="w">    </span><span class="nt">replica_devices</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">2</span><span class="p p-Indicator">]</span>
-<span class="w">  </span><span class="nt">code2wav</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">num_replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
-<span class="w">    </span><span class="nt">replica_devices</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">2</span><span class="p p-Indicator">]</span>
-</pre></div>
-</div>
-<p>Resolved layout:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">GPU</span> <span class="mi">0</span><span class="p">:</span> <span class="n">image_encoder</span> <span class="o">+</span> <span class="n">audio_encoder</span> <span class="o">+</span> <span class="n">thinker</span>
-<span class="n">GPU</span> <span class="mi">1</span><span class="p">:</span> <span class="n">talker_ar</span><span class="nd">@r0</span> <span class="o">+</span> <span class="n">code2wav</span><span class="nd">@r0</span>
-<span class="n">GPU</span> <span class="mi">2</span><span class="p">:</span> <span class="n">talker_ar</span><span class="nd">@r1</span> <span class="o">+</span> <span class="n">code2wav</span><span class="nd">@r1</span>
-</pre></div>
-</div>
-<p>Run it with <code class="docutils literal notranslate"><span class="pre">sgl-omni</span> <span class="pre">serve</span> <span class="pre">--config</span> <span class="pre">examples/configs/qwen3_omni_speech_replica2.yaml</span> <span class="pre">--port</span> <span class="pre">8091</span></code>; the full file is
-<a class="reference external" href="https://github.com/sgl-project/sglang-omni/blob/main/examples/configs/qwen3_omni_speech_replica2.yaml"><code class="docutils literal notranslate"><span class="pre">qwen3_omni_speech_replica2.yaml</span></code></a>.</p>
-</section>
 <section id="replicas-on-one-gpu">
 <h3>Replicas on one GPU<a class="headerlink" href="#replicas-on-one-gpu" title="Link to this heading">#</a></h3>
 <p>Repeat the device id and declare the memory budget for every GPU stage on
-that card. Without <code class="docutils literal notranslate"><span class="pre">--mps</span></code>, the replicas time-slice the GPU. MOSS TTS local is
-used here because its engine factory accepts <code class="docutils literal notranslate"><span class="pre">gpu_id</span></code> and its architecture is
-on the weight-share allowlist, so the same file also serves the next example:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">config_cls</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">MossTTSLocalPipelineConfig</span>
-<span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mossl</span>
-<span class="nt">model_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">OpenMOSS-Team/MOSS-TTS-Local-Transformer-v1.5</span>
+that card. Without <code class="docutils literal notranslate"><span class="pre">--mps</span></code>, the replicas time-slice the GPU. The
+<code class="docutils literal notranslate"><span class="pre">preprocessing</span></code> stage declares no GPU of its own, so it needs no fraction. The
+fractions below are illustrative; size them for your card:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">config_cls</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">VoicingTTSPipelineConfig</span>
+<span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">voicing-tts-dp2</span>
+<span class="nt">model_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">checkpoints/voicing-tts-12hz-1.7b-base</span>
 
 <span class="nt">stages</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">preprocessing</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">gpu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
-<span class="w">    </span><span class="nt">gpu_memory_fraction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.05</span>
 <span class="w">  </span><span class="nt">tts_engine</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">gpu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
 <span class="w">    </span><span class="nt">gpu_memory_fraction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.35</span>
@@ -804,7 +691,7 @@ on the weight-share allowlist, so the same file also serves the next example:</p
 <span class="w">      </span><span class="nt">max_total_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30000</span>
 <span class="w">  </span><span class="nt">vocoder</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">gpu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
-<span class="w">    </span><span class="nt">gpu_memory_fraction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.15</span>
+<span class="w">    </span><span class="nt">gpu_memory_fraction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.10</span>
 
 <span class="nt">processes</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">pipeline</span><span class="p">:</span>
@@ -813,15 +700,13 @@ on the weight-share allowlist, so the same file also serves the next example:</p
 </pre></div>
 </div>
 </section>
-<section id="replicas-on-one-gpu-with-mps-and-weight-sharing">
-<h3>Replicas on one GPU with MPS and weight sharing<a class="headerlink" href="#replicas-on-one-gpu-with-mps-and-weight-sharing" title="Link to this heading">#</a></h3>
-<p>Same config, plus the two runtime flags. <code class="docutils literal notranslate"><span class="pre">max_total_tokens</span></code> above is what
-weight sharing requires of the engine stage:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sgl-omni<span class="w"> </span>serve<span class="w"> </span>--config<span class="w"> </span>&lt;config.yaml&gt;<span class="w"> </span>--mps<span class="w"> </span>on<span class="w"> </span>--weight-share<span class="w"> </span>on<span class="w"> </span>--port<span class="w"> </span><span class="m">8091</span>
+<section id="replicas-on-one-gpu-with-mps">
+<h3>Replicas on one GPU with MPS<a class="headerlink" href="#replicas-on-one-gpu-with-mps" title="Link to this heading">#</a></h3>
+<p>Same config, plus the MPS flag. Both replicas are single-GPU, non-TP processes
+on GPU 0, so <code class="docutils literal notranslate"><span class="pre">auto</span></code> enables MPS there:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sgl-omni<span class="w"> </span>serve<span class="w"> </span>--config<span class="w"> </span>&lt;config.yaml&gt;<span class="w"> </span>--mps<span class="w"> </span>auto<span class="w"> </span>--port<span class="w"> </span><span class="m">8091</span>
 </pre></div>
 </div>
-<p>The leader holds the shared weights; the follower attaches over CUDA IPC and
-carries only its own KV, graphs, and request state.</p>
 </section>
 </section>
 <section id="performance-and-correctness">
@@ -829,11 +714,10 @@ carries only its own KV, graphs, and request state.</p>
 <p>Replicas mainly help under queueing and higher concurrency. At low concurrency
 they can be slightly slower, because the parallelism gain does not cover
 routing and process overhead. MPS helps only when colocated processes have
-overlappable GPU work. Weight sharing saves memory and does not by itself
-improve scheduling.</p>
+overlappable GPU work.</p>
 <p>Validate a topology change on: serial output consistency, concurrent routing
 and request isolation, abort and recovery, clean exit of processes, ports, and
-GPU memory, and, when enabled, MPS attachment and the weight-share lifecycle.</p>
+GPU memory, and, when enabled, MPS attachment.</p>
 </section>
 <section id="migration">
 <h2>Migration<a class="headerlink" href="#migration" title="Link to this heading">#</a></h2>
@@ -895,11 +779,9 @@ top-level <code class="docutils literal notranslate"><span class="pre">processes
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#process-replicas">Process replicas</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#placement">Placement</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cuda-mps">CUDA MPS</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cuda-ipc-weight-sharing">CUDA IPC weight sharing</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#putting-it-together">Putting it together</a><ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#replicas-across-gpus">Replicas across GPUs</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#replicas-on-one-gpu">Replicas on one GPU</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#replicas-on-one-gpu-with-mps-and-weight-sharing">Replicas on one GPU with MPS and weight sharing</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#replicas-on-one-gpu-with-mps">Replicas on one GPU with MPS</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#performance-and-correctness">Performance and correctness</a></li>
@@ -937,7 +819,7 @@ By SGLang-Omni Team
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on Sep 28, 2026.
+  Last updated on Sep 30, 2026.
   <br/>
 </p>
   </div>

@@ -51,17 +51,15 @@
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'developer_reference/profiler';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
-    <script src="../_static/js/qwen3_omni_server_generator.js?v=d7738e8a"></script>
-    <script src="../_static/js/ming_omni_server_generator.js?v=7979a72f"></script>
     <link rel="icon" href="../_static/logo.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Qwen3-ASR High-Concurrency Benchmark and Bottleneck Profile" href="qwen3_asr_concurrency_profile.html" />
+    <link rel="next" title="RL Admin Control" href="rl_admin_control.html" />
     <link rel="prev" title="Reference Encode Service" href="reference_encode_service.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="0.1.6" />
-    <meta name="docbuild:last-update" content="Sep 28, 2026"/>
+    <meta name="docbuild:last-update" content="Sep 30, 2026"/>
   
     
     <script src="../_static/searchtools.js"></script>
@@ -214,34 +212,10 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Cookbook</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/higgs_tts.html">Higgs TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/voxtral_tts.html">Voxtral TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/fishaudio_s2_pro.html">Fish Audio S2-Pro</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/qwen3_tts.html">Qwen3 TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/ming_tts.html">Ming-Omni-TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/moss_tts.html">MOSS-TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/moss_tts_local.html">MOSS-TTS-Local</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/dots_tts.html">dots.tts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/minimax_music3.html">MiniMax Music 3</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/zonos2.html">ZONOS2</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/qwen3_asr.html">Qwen3-ASR</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/fun_asr.html">Fun-ASR-Nano</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/arkasr.html">ARK-ASR-3B</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/moss_transcribe_diarize.html">MOSS-Transcribe-Diarize</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/whisper_asr.html">Whisper ASR</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/qwen3_omni.html">Qwen3-Omni</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/minicpm_o.html">MiniCPM-o Reference Audio</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/ming_omni.html">Ming-Omni</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/nemotron_voicechat.html">NemotronLabs VoiceChat</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/personaplex.html">PersonaPlex</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/llada2_uni.html">LLaDA2.0-Uni</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/fun_cosyvoice3.html">Fun-CosyVoice3</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/auk.html">AuK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cookbook/voicing_tts.html">Voicing-TTS</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">General Usage</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../basic_usage/qwen3_omni.html">Omni Model Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../basic_usage/audio_translations.html">Audio Translations</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../basic_usage/tts.html">TTS Model Usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../basic_usage/process_topology.html">Process Topology, Replicas, and GPU Sharing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../basic_usage/tts_process_topology.html">TTS Process Topology</a></li>
@@ -252,7 +226,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Benchmarks</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../benchmarks/relay.html">Benchmark Relay</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../benchmarks/qwen3_tts_leading_silence.html">Qwen3-TTS Base: Leading Silence in X-Vector Voice Cloning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../benchmarks/voicing_tts_leading_silence.html">Voicing-TTS Base: Leading Silence in X-Vector Voice Cloning</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Developer Reference</span></p>
 <ul class="current nav bd-sidenav">
@@ -264,7 +238,6 @@
 <li class="toctree-l1"><a class="reference internal" href="communication.html">Communication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference_encode_service.html">Reference Encode Service</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Request-level profiler</a></li>
-<li class="toctree-l1"><a class="reference internal" href="qwen3_asr_concurrency_profile.html">Qwen3-ASR High-Concurrency Benchmark and Bottleneck Profile</a></li>
 <li class="toctree-l1"><a class="reference internal" href="rl_admin_control.html">RL Admin Control</a></li>
 <li class="toctree-l1"><a class="reference internal" href="bump_version.html">Bumping the SGLang Pin</a></li>
 </ul>
@@ -546,7 +519,7 @@ deeper kernel investigation.</p>
 JSONL file. The shape:</p>
 <div class="highlight-jsonc notranslate"><div class="highlight"><pre><span></span>{
   "request_id": "req-123",
-  "stage": "thinker",
+  "stage": "tts_engine",
   "event_name": "scheduler_first_emit",
   "timestamp_ns": 1717000000123456789,
   "run_id": "demo-run",
@@ -563,11 +536,11 @@ identifies the owner. The views layer merges files from every process by
 <section id="standard-event-names">
 <h3>Standard event names<a class="headerlink" href="#standard-event-names" title="Link to this heading">#</a></h3>
 <p>The recorder always attaches the active <code class="docutils literal notranslate"><span class="pre">stage</span></code> name to every event, so the
-same <code class="docutils literal notranslate"><span class="pre">scheduler_prefill_start</span></code> becomes “thinker prefill start” when emitted
-from the thinker process and “talker prefill start” when emitted from the
-talker process. <code class="docutils literal notranslate"><span class="pre">scheduler_queue_enter</span></code> marks a built request entering the
-scheduler queue; <code class="docutils literal notranslate"><span class="pre">scheduler_prefill_start</span></code> is emitted later, when the request’s
-first executable prefill / extend batch is selected.</p>
+same <code class="docutils literal notranslate"><span class="pre">scheduler_prefill_start</span></code> reads as “tts_engine prefill start” when
+emitted from the <code class="docutils literal notranslate"><span class="pre">tts_engine</span></code> stage, and as another stage’s prefill start when
+emitted from a different AR stage. <code class="docutils literal notranslate"><span class="pre">scheduler_queue_enter</span></code> marks a built
+request entering the scheduler queue; <code class="docutils literal notranslate"><span class="pre">scheduler_prefill_start</span></code> is emitted
+later, when the request’s first executable prefill / extend batch is selected.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>Pipeline milestone</p></th>
@@ -578,51 +551,39 @@ first executable prefill / extend batch is selected.</p>
 <tbody>
 <tr class="row-even"><td><p>Request admission</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">request_admission</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">Coordinator._submit_request</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Coordinator.submit_request</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p>Preprocessing start / end</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">preprocess_start</span></code> / <code class="docutils literal notranslate"><span class="pre">preprocess_end</span></code></p></td>
-<td><p>model preprocessor <code class="docutils literal notranslate"><span class="pre">__call__</span></code></p></td>
+<td><p>model preprocessors that emit them</p></td>
 </tr>
 <tr class="row-even"><td><p>Encoder start / end</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">encoder_start</span></code> / <code class="docutils literal notranslate"><span class="pre">encoder_end</span></code> (metadata <code class="docutils literal notranslate"><span class="pre">modality</span></code>, <code class="docutils literal notranslate"><span class="pre">batch_size</span></code>)</p></td>
-<td><p>image / audio encoder executors</p></td>
+<td><p>encoder executors that emit them</p></td>
 </tr>
 <tr class="row-odd"><td><p>Aggregate ready</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">stage_aggregate_ready</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">Stage._on_data_ready</span></code> after <code class="docutils literal notranslate"><span class="pre">InputHandler.receive</span></code> returns a merged payload</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Stage.receive_payload_from_stage</span></code> after <code class="docutils literal notranslate"><span class="pre">InputHandler.receive</span></code> returns a merged payload</p></td>
 </tr>
-<tr class="row-even"><td><p>Thinker prefill start</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">scheduler_prefill_start</span></code> (stage = thinker)</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">OmniScheduler.run_batch</span></code></p></td>
+<tr class="row-even"><td><p>Engine request build execution start / end</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">scheduler_request_build_start</span></code> / <code class="docutils literal notranslate"><span class="pre">_end</span></code> (stage = tts_engine)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">OmniScheduler.run_request_builder</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p>Thinker first token</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">stage_first_stream_chunk_sent</span></code> (stage = thinker)</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">Stage._send_stream_to_target</span></code> / <code class="docutils literal notranslate"><span class="pre">_send_stream_to_coordinator</span></code></p></td>
+<tr class="row-odd"><td><p>Engine prefill start</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">scheduler_prefill_start</span></code> (stage = tts_engine)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">OmniScheduler.emit_prefill_start_for_batch</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p>First stream chunk to client</p></td>
+<tr class="row-even"><td><p>First code chunk</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">stage_first_stream_chunk_sent</span></code> (stage = tts_engine)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Stage.send_stream_to_target</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>First stream chunk to client</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">stage_first_stream_chunk_sent</span></code> (terminal stage → coordinator)</p></td>
-<td><p>same</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Stage.send_stream_to_coordinator</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p>Talker request build execution start / end</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">scheduler_request_build_start</span></code> / <code class="docutils literal notranslate"><span class="pre">_end</span></code> (stage = talker)</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">OmniScheduler._run_request_builder</span></code></p></td>
-</tr>
-<tr class="row-even"><td><p>Talker prefill start</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">scheduler_prefill_start</span></code> (stage = talker)</p></td>
-<td><p>same</p></td>
-</tr>
-<tr class="row-odd"><td><p>First code chunk</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">stage_first_stream_chunk_sent</span></code> (stage = talker)</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">Stage._send_stream_to_target</span></code></p></td>
-</tr>
-<tr class="row-even"><td><p>Code2Wav first audio</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">code2wav_first_audio</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">Code2WavScheduler.decode_delta</span></code> / <code class="docutils literal notranslate"><span class="pre">_flush_pending</span></code> / <code class="docutils literal notranslate"><span class="pre">run_step</span></code></p></td>
-</tr>
-<tr class="row-odd"><td><p>Terminal response</p></td>
+<tr class="row-even"><td><p>Terminal response</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">terminal_response</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">Coordinator._handle_completion</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Coordinator.handle_completion</span></code></p></td>
 </tr>
 </tbody>
 </table>
@@ -672,35 +633,9 @@ first executable prefill / extend batch is selected.</p>
 <td><p><code class="docutils literal notranslate"><span class="pre">scheduler_first_emit</span></code></p></td>
 <td><p>First <code class="docutils literal notranslate"><span class="pre">stream_output_builder</span></code> emission per request</p></td>
 </tr>
-<tr class="row-odd"><td><p>Code2Wav</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">code2wav_decode_start</span></code></p></td>
-<td><p>Serial decode start: trigger, start/end/new/context/window frames, active and threshold-ready requests, inbox depth</p></td>
-</tr>
-<tr class="row-even"><td><p>Code2Wav</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">code2wav_decode_launched</span></code></p></td>
-<td><p>Pipelined serial window whose vocoder work and asynchronous D2H copy have been enqueued; includes execution mode and window/new-frame counts</p></td>
-</tr>
-<tr class="row-odd"><td><p>Code2Wav</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">code2wav_decode_end</span></code></p></td>
-<td><p>Repeats start metadata and adds the current decode’s <code class="docutils literal notranslate"><span class="pre">audio_samples</span></code> plus execution metadata; output-overlap runs also include <code class="docutils literal notranslate"><span class="pre">pipelined</span></code> and the previous window’s post-EOS-scan <code class="docutils literal notranslate"><span class="pre">d2h_wait_ns</span></code></p></td>
-</tr>
-<tr class="row-even"><td><p>Code2Wav</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">code2wav_batch_start</span></code></p></td>
-<td><p>Coalesced step start: batch and bucket shape, new/window frames, active requests, inbox depth, oldest wait, fire reason, due-bucket count, and sub-batch decomposition</p></td>
-</tr>
-<tr class="row-odd"><td><p>Code2Wav</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">code2wav_batch_end</span></code></p></td>
-<td><p>Repeats the start metadata and adds audio samples, execution mode, graph key, and fallback reason</p></td>
-</tr>
 </tbody>
 </table>
 </div>
-<p>Read <code class="docutils literal notranslate"><span class="pre">d2h_wait_ns</span></code> narrowly. With output overlap on, the lazy codec-EOS scan
-calls <code class="docutils literal notranslate"><span class="pre">.tolist()</span></code> on the staged frame heads, which is itself a host
-synchronization point, and it runs before <code class="docutils literal notranslate"><span class="pre">code2wav_decode_start</span></code>. So
-<code class="docutils literal notranslate"><span class="pre">d2h_wait_ns</span></code> measures only the residual wait left after that scan, not the
-whole overlap interval. Use the process-wide CUDA API trace as the load-bearing
-measurement of whether blocking synchronization was actually removed.</p>
 <p>Custom callsites can call <code class="docutils literal notranslate"><span class="pre">sglang_omni.profiler.event_recorder.emit(...)</span></code> to
 add domain-specific events. Events from inactive recorders are no-ops, so
 instrumentation sites do not need to guard against the disabled case.</p>
@@ -709,7 +644,7 @@ instrumentation sites do not need to guard against the disabled case.</p>
 <h3>Active-stage attribution<a class="headerlink" href="#active-stage-attribution" title="Link to this heading">#</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">emit(...)</span></code> accepts an explicit <code class="docutils literal notranslate"><span class="pre">stage=...</span></code> parameter; when the caller can’t
 plumb the stage name down (preprocessor <code class="docutils literal notranslate"><span class="pre">__call__</span></code>, encoder callables,
-<code class="docutils literal notranslate"><span class="pre">OmniScheduler</span></code> / <code class="docutils literal notranslate"><span class="pre">Code2WavScheduler</span></code> internals), it can pass <code class="docutils literal notranslate"><span class="pre">stage=None</span></code>
+<code class="docutils literal notranslate"><span class="pre">OmniScheduler</span></code> / vocoder scheduler internals), it can pass <code class="docutils literal notranslate"><span class="pre">stage=None</span></code>
 and the recorder fills it in from the <strong>per-thread / per-task active
 stage</strong>.</p>
 <p><code class="docutils literal notranslate"><span class="pre">Stage._run_scheduler</span></code> binds <code class="docutils literal notranslate"><span class="pre">set_active_stage(self.name)</span></code> on the scheduler
@@ -822,7 +757,7 @@ trace stays small enough to load in <code class="docutils literal notranslate"><
 </tbody>
 </table>
 </div>
-<p>With all four off (the default), a typical 10-sample MMMU run produces a
+<p>With all four off (the default), a typical 10-request TTS run produces a
 trace in the tens of MB. With all four on, the same workload can produce a
 multi-GB trace — only opt in when you need that specific information.</p>
 </section>
@@ -882,8 +817,8 @@ in metadata, <code class="docutils literal notranslate"><span class="pre">_json_
 tensors / numpy scalars still serialize as plain scalars.</p></li>
 <li><p><strong>Event naming.</strong> Lowercase snake_case, prefix with the layer that
 owns the event (<code class="docutils literal notranslate"><span class="pre">stage_*</span></code>, <code class="docutils literal notranslate"><span class="pre">scheduler_*</span></code>, <code class="docutils literal notranslate"><span class="pre">encoder_*</span></code>, etc.). Use the
-stage name (not the event name) to distinguish “thinker prefill start”
-from “talker prefill start”.</p></li>
+stage name (not the event name) to distinguish the same event emitted
+by two stages, such as the prefill start of two AR stages.</p></li>
 </ul>
 </section>
 </section>
@@ -909,11 +844,11 @@ from “talker prefill start”.</p></li>
       </div>
     </a>
     <a class="right-next"
-       href="qwen3_asr_concurrency_profile.html"
+       href="rl_admin_control.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Qwen3-ASR High-Concurrency Benchmark and Bottleneck Profile</p>
+        <p class="prev-next-title">RL Admin Control</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -978,7 +913,7 @@ By SGLang-Omni Team
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on Sep 28, 2026.
+  Last updated on Sep 30, 2026.
   <br/>
 </p>
   </div>

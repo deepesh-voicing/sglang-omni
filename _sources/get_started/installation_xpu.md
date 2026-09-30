@@ -12,9 +12,8 @@ XPU wheel index.
 family and CUDA-only wheels would replace the `+xpu` stack.
 [`pyproject_xpu.toml`](../../pyproject_xpu.toml) encodes the XPU replacements.
 
-Core deps cover the supported models (Qwen3-ASR / TTS / Omni / MiniMax Music 3 and MiniCPM-o) plus the API server;
-`[eval]` adds SeedTTS/WER tooling and `[all]` aliases it. Other model families
-(S2-Pro, Ming-Omni, Voxtral-TTS) are CUDA-only and are not offered here.
+Core deps cover Voicing-TTS plus the API server; `[eval]` adds SeedTTS/WER tooling and
+`[all]` aliases it.
 
 > **`--no-build-isolation` is required** — without it pip emits a legacy in-tree
 > `egg-info` instead of a PEP 660 editable install. The installer always passes it.
@@ -70,6 +69,7 @@ Or do it manually (the same steps the script automates):
 cp pyproject.toml .pyproject.cuda.bak
 cp pyproject_xpu.toml pyproject.toml
 pip install -e . --no-build-isolation --extra-index-url https://download.pytorch.org/whl/xpu
+# openai-whisper provides the text normalizer used by the WER benchmark.
 # torch+xpu provides triton-xpu; do not let openai-whisper replace it with CUDA Triton.
 pip install --no-deps openai-whisper==20250625
 cp -f .pyproject.cuda.bak pyproject.toml && rm .pyproject.cuda.bak   # restore CUDA pyproject
@@ -121,81 +121,29 @@ build reports `fatal error: sycl/sycl.hpp: No such file or directory`, point the
 export CPATH="$(python -c 'import sysconfig; print(sysconfig.get_paths()["include"])')"
 ```
 
-### Qwen3-ASR (speech-to-text, single XPU)
+### Voicing-TTS (text-to-speech, single XPU)
+
+Convert a Qwen3-TTS checkpoint into a Voicing-TTS checkpoint once. The Base
+checkpoint's directory name must contain `voicing-tts` and end in `base`, which
+enables reference voices. See [docs/cookbook/voicing_tts.md](../cookbook/voicing_tts.md).
 
 ```bash
-sgl-omni serve --model-path /path/to/Qwen3-ASR-1.7B --host 0.0.0.0 --port 8000
-# transcribe:
-curl -s -X POST http://localhost:8000/v1/audio/transcriptions \
-  -F "file=@sample.wav" -F "model=/path/to/Qwen3-ASR-1.7B"
-```
-
-### Qwen3-TTS (text-to-speech, single XPU)
-
-Qwen3-TTS needs the upstream `qwen-tts` package. Option A already includes it; for
-Option B install it here, because `pyproject_xpu.toml` deliberately does not pin it.
-`--no-deps` is required on both lines: `qwen-tts` pins Transformers 4.57.3, which
-would replace this project's 5.12.1, and resolving `sox` lifts `numpy` past the
-`numba==0.65.1` ceiling. See
-[docs/cookbook/qwen3_tts.md](../cookbook/qwen3_tts.md).
-
-```bash
-apt-get update && apt-get install -y sox   # the Python sox package shells out to it
-pip install --no-deps sox
-pip install --no-deps qwen-tts==0.1.1
+python -m sglang_omni.models.voicing_tts.convert_checkpoint \
+  Qwen/Qwen3-TTS-12Hz-1.7B-Base checkpoints/voicing-tts-12hz-1.7b-base
 ```
 
 ```bash
-sgl-omni serve --model-path /path/to/Qwen3-TTS-12Hz-1.7B-Base --host 0.0.0.0 --port 8000
+sgl-omni serve --config examples/configs/voicing_tts_1_7b.yaml --host 0.0.0.0 --port 8000
 # Base checkpoint clones a reference voice — pass ref_audio (+ ref_text):
 curl -s -X POST http://localhost:8000/v1/audio/speech \
   -H "Content-Type: application/json" \
-  -d '{"model":"/path/to/Qwen3-TTS-12Hz-1.7B-Base","input":"Hello from Intel XPU.",
-       "voice":"default","ref_audio":"/path/to/ref.wav","ref_text":"reference transcript",
+  -d '{"input":"Hello from Intel XPU.",
+       "voice":"default","ref_audio":"https://huggingface.co/datasets/zhaochenyang20/seed-tts-eval-mini/resolve/main/en/prompt-wavs/common_voice_en_10119832.wav",
+       "ref_text":"We asked over twenty different people, and they all said it was his.",
        "response_format":"wav"}' -o out.wav
 ```
 
-### Qwen3-Omni (30B-A3B MoE, multi-XPU tensor parallel)
-
-The 30B MoE does not fit one 24 GB card; shard the thinker across GPUs with tensor parallelism.
-`--text-only` serves the thinker (chat) without the talker/speech stages. The text-only config normally puts every stage in the `pipeline` process, so give the TP thinker an otherwise-unused process name before enabling TP:
-
-```bash
-# thinker across 8 cards (TP=8). Large shards over shared storage load slowly, so give
-# startup more headroom than the default 600 s.
-export SGLANG_OMNI_STARTUP_TIMEOUT=1800
-sgl-omni serve --model-path /path/to/Qwen3-Omni-30B-A3B-Instruct \
-  --text-only --thinker.process thinker \
-  --thinker.tp_size 8 --thinker.gpu "[0, 1, 2, 3, 4, 5, 6, 7]" \
-  --host 0.0.0.0 --port 8000
-# chat:
-curl -s -X POST http://localhost:8000/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{"model":"/path/to/Qwen3-Omni-30B-A3B-Instruct",
-       "messages":[{"role":"user","content":"What is Intel XPU?"}],"max_tokens":64}'
-```
-
-### MiniMax Music 3 (text-to-music, two XPUs)
-```bash
-# server
-sgl-omni serve --model-path MiniMaxAI/MiniMax-Music3 --port 8000 --mem-fraction-static 0.7
-# client request - Genre, instrumentation, tempo, and a production note
-curl -X POST http://localhost:8000/v1/audio/speech \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "MiniMaxAI/MiniMax-Music3",
-    "input": "[Chorus]\nWe are the fire that never dies\nBurning bright against the sky",
-    "instructions": "An energetic arena rock anthem with distorted electric guitars, punchy live drums and a soaring male vocal at 130 BPM, wide stereo image, lightly compressed",
-    "seed": 7,
-    "max_new_tokens": 750
-  }' \
-  --output rock_1.wav
-```
-
-Health check for any of the above: `curl http://localhost:8000/v1/models`.
+Health check: `curl http://localhost:8000/v1/models`.
 
 > **Expected on XPU:** `Failed to import mooncake` / `Failed to import nixl` warnings are harmless
 > — those CUDA-only transfer backends are omitted; tensors move through the `shm` relay instead.
-
-> ✅ Support status: **Qwen3-ASR, Qwen3-TTS, Qwen3-Omni, MiniMax Music 3 and MiniCPM-o all serve end-to-end on Intel XPU**
-> (ASR, TTS, and MiniCPM-o single-card; MiniMax Music 3 needs two cards; Qwen3-Omni thinker across 8 cards with tensor parallelism).

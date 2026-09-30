@@ -409,8 +409,6 @@ window.addEventListener("load", load);
 window.runMermaid = runMermaid;</script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'basic_usage/omni_router';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
-    <script src="../_static/js/qwen3_omni_server_generator.js?v=d7738e8a"></script>
-    <script src="../_static/js/ming_omni_server_generator.js?v=7979a72f"></script>
     <link rel="icon" href="../_static/logo.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -419,7 +417,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="0.1.6" />
-    <meta name="docbuild:last-update" content="Sep 28, 2026"/>
+    <meta name="docbuild:last-update" content="Sep 30, 2026"/>
   
     
     <script src="../_static/searchtools.js"></script>
@@ -572,34 +570,10 @@ window.runMermaid = runMermaid;</script>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Cookbook</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/higgs_tts.html">Higgs TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/voxtral_tts.html">Voxtral TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/fishaudio_s2_pro.html">Fish Audio S2-Pro</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/qwen3_tts.html">Qwen3 TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/ming_tts.html">Ming-Omni-TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/moss_tts.html">MOSS-TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/moss_tts_local.html">MOSS-TTS-Local</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/dots_tts.html">dots.tts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/minimax_music3.html">MiniMax Music 3</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/zonos2.html">ZONOS2</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/qwen3_asr.html">Qwen3-ASR</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/fun_asr.html">Fun-ASR-Nano</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/arkasr.html">ARK-ASR-3B</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/moss_transcribe_diarize.html">MOSS-Transcribe-Diarize</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/whisper_asr.html">Whisper ASR</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/qwen3_omni.html">Qwen3-Omni</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/minicpm_o.html">MiniCPM-o Reference Audio</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/ming_omni.html">Ming-Omni</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/nemotron_voicechat.html">NemotronLabs VoiceChat</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/personaplex.html">PersonaPlex</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/llada2_uni.html">LLaDA2.0-Uni</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/fun_cosyvoice3.html">Fun-CosyVoice3</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/auk.html">AuK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cookbook/voicing_tts.html">Voicing-TTS</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">General Usage</span></p>
 <ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="qwen3_omni.html">Omni Model Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="audio_translations.html">Audio Translations</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tts.html">TTS Model Usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="process_topology.html">Process Topology, Replicas, and GPU Sharing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tts_process_topology.html">TTS Process Topology</a></li>
@@ -610,7 +584,7 @@ window.runMermaid = runMermaid;</script>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Benchmarks</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../benchmarks/relay.html">Benchmark Relay</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../benchmarks/qwen3_tts_leading_silence.html">Qwen3-TTS Base: Leading Silence in X-Vector Voice Cloning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../benchmarks/voicing_tts_leading_silence.html">Voicing-TTS Base: Leading Silence in X-Vector Voice Cloning</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Developer Reference</span></p>
 <ul class="nav bd-sidenav">
@@ -622,7 +596,6 @@ window.runMermaid = runMermaid;</script>
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/communication.html">Communication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/reference_encode_service.html">Reference Encode Service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/profiler.html">Request-level profiler</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../developer_reference/qwen3_asr_concurrency_profile.html">Qwen3-ASR High-Concurrency Benchmark and Bottleneck Profile</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/rl_admin_control.html">RL Admin Control</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/bump_version.html">Bumping the SGLang Pin</a></li>
 </ul>
@@ -874,7 +847,7 @@ window.runMermaid = runMermaid;</script>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#admission-and-backpressure">Admission and backpressure</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#media-and-realtime-sessions">Media and Realtime Sessions</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#media-and-speech-sessions">Media and Speech Sessions</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#health-and-readiness">Health and Readiness</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#operations">Operations</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#networking-and-shutdown">Networking and Shutdown</a></li>
@@ -901,13 +874,13 @@ window.runMermaid = runMermaid;</script>
   <section class="tex2jax_ignore mathjax_ignore" id="sglang-omni-rust-router">
 <h1>SGLang-Omni Rust Router<a class="headerlink" href="#sglang-omni-rust-router" title="Link to this heading">#</a></h1>
 <p><code class="docutils literal notranslate"><span class="pre">sgl-omni-router</span></code> is the multi-threaded Rust data plane for SGLang-Omni. It
-routes OpenAI-compatible chat, speech, transcription, translation, and
-realtime requests across compatible worker replicas with bounded admission,
-health-aware selection, and backpressured streaming.</p>
+routes OpenAI-compatible speech requests across compatible Voicing-TTS worker
+replicas with bounded admission, health-aware selection, and backpressured
+streaming.</p>
 <section id="overview">
 <h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">#</a></h2>
 <ul class="simple">
-<li><p>OpenAI-compatible HTTP and WebSocket routes for Omni, TTS, and ASR workers.</p></li>
+<li><p>OpenAI-compatible HTTP and WebSocket speech routes for TTS workers.</p></li>
 <li><p>Static worker manifests with explicit model, modality, and media contracts.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">round_robin</span></code> and <code class="docutils literal notranslate"><span class="pre">least_requests</span></code> routing over compatible healthy replicas.</p></li>
 <li><p>Direct request streaming for homogeneous worker cohorts and bounded
@@ -978,46 +951,39 @@ binary is written to <code class="docutils literal notranslate"><span class="pre
 </section>
 <section id="quick-start">
 <h2>Quick Start<a class="headerlink" href="#quick-start" title="Link to this heading">#</a></h2>
-<p>Choose the example that matches the worker service:</p>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p>Configuration</p></th>
-<th class="head"><p>Worker service</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">examples/omni.toml</span></code></p></td>
-<td><p>Multimodal chat with text or audio output</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">examples/tts.toml</span></code></p></td>
-<td><p>Speech synthesis, including PCM streaming</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">examples/asr.toml</span></code></p></td>
-<td><p>Transcription and speech-to-English translation</p></td>
-</tr>
-</tbody>
-</table>
+<p><code class="docutils literal notranslate"><span class="pre">sglang_omni_router/rust/examples/tts.toml</span></code> routes speech synthesis, including PCM streaming, across
+two workers at <code class="docutils literal notranslate"><span class="pre">127.0.0.1:8100</span></code> and <code class="docutils literal notranslate"><span class="pre">127.0.0.1:8101</span></code> that serve the model ID
+<code class="docutils literal notranslate"><span class="pre">tts-model</span></code> with preset voices. Start two Voicing-TTS CustomVoice workers that
+match it, one per GPU, from the repository root (convert the checkpoint first,
+see the <a class="reference internal" href="../cookbook/voicing_tts.html"><span class="std std-doc">Voicing-TTS cookbook</span></a>):</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">CUDA_VISIBLE_DEVICES=0 sgl-omni serve \</span>
+<span class="go">  --config examples/configs/voicing_tts_1_7b_customvoice.yaml \</span>
+<span class="go">  --model-name tts-model --port 8100</span>
+<span class="go">CUDA_VISIBLE_DEVICES=1 sgl-omni serve \</span>
+<span class="go">  --config examples/configs/voicing_tts_1_7b_customvoice.yaml \</span>
+<span class="go">  --model-name tts-model --port 8101</span>
+</pre></div>
 </div>
-<p>The examples define two workers at <code class="docutils literal notranslate"><span class="pre">127.0.0.1:8000</span></code> and
-<code class="docutils literal notranslate"><span class="pre">127.0.0.1:8001</span></code>. Set the worker URLs, model IDs, and service
-profiles to match the processes you are running.</p>
+<p>Set the worker URLs, model IDs, and service profiles to match the processes
+you are running.</p>
 <p>Validate the configuration before starting the router:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">./target/release/sgl-omni-router \</span>
-<span class="go">  --config examples/omni.toml \</span>
+<span class="go">  --config examples/tts.toml \</span>
 <span class="go">  --check-config</span>
 </pre></div>
 </div>
 <p>Start the router:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">./target/release/sgl-omni-router --config examples/omni.toml</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">./target/release/sgl-omni-router --config examples/tts.toml</span>
 </pre></div>
 </div>
 <p>Wait for readiness and send a request:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">curl --fail http://127.0.0.1:30000/ready</span>
 
-<span class="go">curl --http1.1 http://127.0.0.1:30000/v1/chat/completions \</span>
+<span class="go">curl --http1.1 http://127.0.0.1:30000/v1/audio/speech \</span>
 <span class="go">  --header 'content-type: application/json' \</span>
 <span class="go">  --data-binary \</span>
-<span class="go">  '{"model":"omni-model","messages":[{"role":"user","content":"hello"}]}'</span>
+<span class="go">  '{"model":"tts-model","input":"Hello from Voicing-TTS.","voice":"Ryan","response_format":"wav"}' \</span>
+<span class="go">  --output output.wav</span>
 </pre></div>
 </div>
 </section>
@@ -1057,16 +1023,13 @@ workers, or changing process limits.</p>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">http</span></code></p></td>
 <td><p>Shared upstream connection pool and aggregate buffering budget</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">http_generation</span></code></p></td>
-<td><p>Chat trust domain, request limits, and deadline</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">http_media</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">http_media</span></code></p></td>
 <td><p>Enabled media routes, trust domain, request limits, and deadline</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">websocket</span></code></p></td>
-<td><p>Speech and realtime routes with setup and close bounds</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">websocket</span></code></p></td>
+<td><p>Speech streaming route with setup and close bounds</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">workers</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">workers</span></code></p></td>
 <td><p>Worker identity, endpoint, health path, session capacity, and service profiles</p></td>
 </tr>
 </tbody>
@@ -1101,32 +1064,16 @@ limits, and timeouts from the expected workload and worker topology.</p>
 <td><p>Readiness of every enabled service</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">POST</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">/v1/chat/completions</span></code></p></td>
-<td><p>Chat and multimodal generation</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">POST</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">/v1/audio/speech</span></code></p></td>
 <td><p>Encoded speech or streaming PCM</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">POST</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">POST</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">/v1/audio/speech/batch</span></code></p></td>
 <td><p>Ordered, unsplit speech batch</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">POST</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">/v1/audio/transcriptions</span></code></p></td>
-<td><p>Multipart transcription</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">POST</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">/v1/audio/translations</span></code></p></td>
-<td><p>Multipart translation</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">GET</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">GET</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">/v1/audio/speech/stream</span></code></p></td>
 <td><p>Speech WebSocket</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">GET</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">/v1/realtime[?model=&lt;id&gt;]</span></code></p></td>
-<td><p>OpenAI-compatible realtime WebSocket</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">GET</span></code>, <code class="docutils literal notranslate"><span class="pre">POST</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">/v1/audio/voices</span></code></p></td>
@@ -1151,7 +1098,7 @@ limits, and timeouts from the expected workload and worker topology.</p>
 </tbody>
 </table>
 </div>
-<p>Generation requests use HTTP/1.1, JSON content type, and no query string.
+<p>Requests use HTTP/1.1 and no query string.
 Fixed-length and chunked request bodies are accepted. A single
 <code class="docutils literal notranslate"><span class="pre">Expect:</span> <span class="pre">100-continue</span></code> is handled by the client connection and is not forwarded
 upstream. Ambiguous framing, trailers, other expectations, unsupported content
@@ -1179,7 +1126,7 @@ classifier memory. The original bytes are forwarded without reconstructing
 JSON or multipart content.</p>
 <p>The direct path is bounded by each route’s <code class="docutils literal notranslate"><span class="pre">streamed_request_max_bytes</span></code>. The
 classified path is bounded by the route’s <code class="docutils literal notranslate"><span class="pre">buffered_request_max_bytes</span></code> per
-request and <code class="docutils literal notranslate"><span class="pre">http.buffered_request_total_bytes</span></code> across chat and media requests.
+request and <code class="docutils literal notranslate"><span class="pre">http.buffered_request_total_bytes</span></code> across media requests.
 Their defaults are 512 MiB, 8 MiB, and 256 MiB respectively. Chunked classified
 requests acquire the shared budget as bytes arrive. Requests without an
 explicit model return <code class="docutils literal notranslate"><span class="pre">ambiguous_model</span></code> when compatible workers do not share
@@ -1217,25 +1164,19 @@ limit.</p>
 or process drain.</p>
 </section>
 </section>
-<section id="media-and-realtime-sessions">
-<h2>Media and Realtime Sessions<a class="headerlink" href="#media-and-realtime-sessions" title="Link to this heading">#</a></h2>
+<section id="media-and-speech-sessions">
+<h2>Media and Speech Sessions<a class="headerlink" href="#media-and-speech-sessions" title="Link to this heading">#</a></h2>
 <p>Media routes are enabled independently. Speech batches remain ordered and are
-never split. Classified transcription and translation requests buffer the full
-multipart upload, so heterogeneous ASR deployments must size the buffered
-limits for their largest accepted recordings. Transcription and translation
-share a capacity class but require separate profile tasks.</p>
+never split.</p>
 <p>The router preserves the trusted worker’s response content type together with
-JSON, text, SSE, encoded audio, raw PCM, sample-rate and channel metadata,
-usage, completion-token, and finish-reason contracts. It does not decode,
+JSON, encoded audio, raw PCM, and sample-rate and channel metadata. It does not decode,
 transcode, or regenerate audio.</p>
-<p>Speech and realtime WebSockets terminate both handshakes and pin one worker for
-the complete session. Each frame awaits its destination send, preserving frame
+<p>Speech WebSockets terminate both handshakes and pin one worker for the
+complete session. Each frame awaits its destination send, preserving frame
 type and order without relay tasks or application queues. Both links use a 16
 MiB message bound. Speech configuration, upstream transport setup, the first
 worker event, and close convergence use separate deadlines. Application-level
-idle behavior remains worker-owned. A realtime <code class="docutils literal notranslate"><span class="pre">model</span></code> query requires a worker
-with the matching default; an omitted model can use any compatible worker in
-the trust domain. <code class="docutils literal notranslate"><span class="pre">worker_setup_timeout_ms</span></code> is an operator safety bound on the
+idle behavior remains worker-owned. <code class="docutils literal notranslate"><span class="pre">worker_setup_timeout_ms</span></code> is an operator safety bound on the
 initial worker application event; it does not limit session lifetime or mark a
 worker unhealthy when it expires.
 Speech configuration is replayed byte-for-byte; the router extracts routing
@@ -1246,11 +1187,10 @@ pinned to that worker. Preset names and explicit references continue to use
 normal worker selection. The router does not store, replicate, or reconcile
 worker-local voice data. <code class="docutils literal notranslate"><span class="pre">voice_name_policy</span> <span class="pre">=</span> <span class="pre">&quot;preset&quot;</span></code> declares names provided
 by the serving model. <code class="docutils literal notranslate"><span class="pre">voice_name_policy</span> <span class="pre">=</span> <span class="pre">&quot;uploaded&quot;</span></code> declares names resolved
-from worker-local voice state; hybrid pipelines should use <code class="docutils literal notranslate"><span class="pre">uploaded</span></code> so named
-requests are routed conservatively. A named-voice request is rejected when
+from worker-local voice state. A named-voice request is rejected when
 otherwise compatible profiles disagree on this policy.
-Qwen3-TTS CustomVoice profiles use <code class="docutils literal notranslate"><span class="pre">preset</span></code>; Qwen3-TTS Base, Higgs, and hybrid
-dots-style profiles use <code class="docutils literal notranslate"><span class="pre">uploaded</span></code>.</p>
+Voicing-TTS CustomVoice profiles use <code class="docutils literal notranslate"><span class="pre">preset</span></code>; Voicing-TTS Base profiles use
+<code class="docutils literal notranslate"><span class="pre">uploaded</span></code>.</p>
 </section>
 <section id="health-and-readiness">
 <h2>Health and Readiness<a class="headerlink" href="#health-and-readiness" title="Link to this heading">#</a></h2>
@@ -1259,7 +1199,7 @@ applies the configured consecutive success and failure thresholds.
 Transport and upstream protocol failures can request an immediate coalesced
 probe. Application responses do not directly change worker health.</p>
 <p><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/ready</span></code> returns <code class="docutils literal notranslate"><span class="pre">200</span></code> while the process is serving and every enabled
-generation, media, and WebSocket service has a compatible healthy worker.
+media and WebSocket service has a compatible healthy worker.
 Readiness also requires the configured uploaded-voice owner to be healthy and
 compatible. Current worker load does not change readiness.</p>
 </section>
@@ -1327,7 +1267,7 @@ control-plane/data-plane split.</p>
 <p>The router does not implement client authentication or terminate TLS. Deploy it
 on a trusted network or behind an authenticated TLS proxy.</p>
 <p>Dynamic worker discovery and CRUD, request retries, circuit breakers,
-cache-aware routing, prefill/decode routing, and worker supervision are outside
+cache-aware routing, and worker supervision are outside
 this router’s data-plane contract.</p>
 </section>
 <section id="development">
@@ -1400,19 +1340,16 @@ loopback sockets where transport behavior is part of the contract.</p>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">src/http_relay/</span></code></p></td>
 <td><p>Shared HTTP client, buffering, body adapters, and relay</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">src/http_generation/</span></code></p></td>
-<td><p>Chat validation and classification</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">src/http_media/</span></code></p></td>
+<td><p>Speech, batch, and voices</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">src/http_media/</span></code></p></td>
-<td><p>Speech, batch, transcription, translation, and voices</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">src/websocket/</span></code></p></td>
+<td><p>Speech session setup and relay</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">src/websocket/</span></code></p></td>
-<td><p>Speech and realtime session setup and relay</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">src/operations.rs</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">src/operations.rs</span></code></p></td>
 <td><p>Models, metrics, and diagnostics</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tests/</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tests/</span></code></p></td>
 <td><p>Process and protocol integration tests</p></td>
 </tr>
 </tbody>
@@ -1490,7 +1427,7 @@ loopback sockets where transport behavior is part of the contract.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#admission-and-backpressure">Admission and backpressure</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#media-and-realtime-sessions">Media and Realtime Sessions</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#media-and-speech-sessions">Media and Speech Sessions</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#health-and-readiness">Health and Readiness</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#operations">Operations</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#networking-and-shutdown">Networking and Shutdown</a></li>
@@ -1536,7 +1473,7 @@ By SGLang-Omni Team
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on Sep 28, 2026.
+  Last updated on Sep 30, 2026.
   <br/>
 </p>
   </div>

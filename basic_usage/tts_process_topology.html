@@ -51,8 +51,6 @@
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'basic_usage/tts_process_topology';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
-    <script src="../_static/js/qwen3_omni_server_generator.js?v=d7738e8a"></script>
-    <script src="../_static/js/ming_omni_server_generator.js?v=7979a72f"></script>
     <link rel="icon" href="../_static/logo.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -61,7 +59,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="0.1.6" />
-    <meta name="docbuild:last-update" content="Sep 28, 2026"/>
+    <meta name="docbuild:last-update" content="Sep 30, 2026"/>
   
     
     <script src="../_static/searchtools.js"></script>
@@ -214,34 +212,10 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Cookbook</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/higgs_tts.html">Higgs TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/voxtral_tts.html">Voxtral TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/fishaudio_s2_pro.html">Fish Audio S2-Pro</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/qwen3_tts.html">Qwen3 TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/ming_tts.html">Ming-Omni-TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/moss_tts.html">MOSS-TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/moss_tts_local.html">MOSS-TTS-Local</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/dots_tts.html">dots.tts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/minimax_music3.html">MiniMax Music 3</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/zonos2.html">ZONOS2</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/qwen3_asr.html">Qwen3-ASR</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/fun_asr.html">Fun-ASR-Nano</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/arkasr.html">ARK-ASR-3B</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/moss_transcribe_diarize.html">MOSS-Transcribe-Diarize</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/whisper_asr.html">Whisper ASR</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/qwen3_omni.html">Qwen3-Omni</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/minicpm_o.html">MiniCPM-o Reference Audio</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/ming_omni.html">Ming-Omni</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/nemotron_voicechat.html">NemotronLabs VoiceChat</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/personaplex.html">PersonaPlex</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/llada2_uni.html">LLaDA2.0-Uni</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/fun_cosyvoice3.html">Fun-CosyVoice3</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cookbook/auk.html">AuK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cookbook/voicing_tts.html">Voicing-TTS</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">General Usage</span></p>
 <ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="qwen3_omni.html">Omni Model Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="audio_translations.html">Audio Translations</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tts.html">TTS Model Usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="process_topology.html">Process Topology, Replicas, and GPU Sharing</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">TTS Process Topology</a></li>
@@ -252,7 +226,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Benchmarks</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../benchmarks/relay.html">Benchmark Relay</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../benchmarks/qwen3_tts_leading_silence.html">Qwen3-TTS Base: Leading Silence in X-Vector Voice Cloning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../benchmarks/voicing_tts_leading_silence.html">Voicing-TTS Base: Leading Silence in X-Vector Voice Cloning</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Developer Reference</span></p>
 <ul class="nav bd-sidenav">
@@ -264,7 +238,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/communication.html">Communication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/reference_encode_service.html">Reference Encode Service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/profiler.html">Request-level profiler</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../developer_reference/qwen3_asr_concurrency_profile.html">Qwen3-ASR High-Concurrency Benchmark and Bottleneck Profile</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/rl_admin_control.html">RL Admin Control</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/bump_version.html">Bumping the SGLang Pin</a></li>
 </ul>
@@ -533,34 +506,42 @@ config.</p>
 <span class="w">    </span><span class="nt">process</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pipeline</span>
 </pre></div>
 </div>
-<p>MOSS-TTS delay ships the isolated layout as its default, with declared GPU
-memory fractions 0.10 / 0.72 / 0.18 for <code class="docutils literal notranslate"><span class="pre">preprocessing</span></code>, <code class="docutils literal notranslate"><span class="pre">tts_engine</span></code> and
-<code class="docutils literal notranslate"><span class="pre">vocoder</span></code>. <code class="docutils literal notranslate"><span class="pre">config_cls:</span> <span class="pre">MossTTSSingleProcessPipelineConfig</span></code> selects the
-single-process variant, which the bounded 24 GB and 32 GB configurations and
-the MPS DP2 recipe pin because their measured budgets describe that layout.</p>
+<p>Voicing-TTS ships the single-process layout as its default: <code class="docutils literal notranslate"><span class="pre">preprocessing</span></code>,
+<code class="docutils literal notranslate"><span class="pre">tts_engine</span></code> and <code class="docutils literal notranslate"><span class="pre">vocoder</span></code> all run in the <code class="docutils literal notranslate"><span class="pre">pipeline</span></code> process.</p>
 <section id="changing-placement-at-launch">
 <h2>Changing Placement at Launch<a class="headerlink" href="#changing-placement-at-launch" title="Link to this heading">#</a></h2>
 <p>The same field is set from the command line with the dotted spelling, without
 editing the source config:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># put the vocoder in its own process</span>
 python<span class="w"> </span>-m<span class="w"> </span>sglang_omni.cli<span class="w"> </span>serve<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--model-path<span class="w"> </span>MODEL<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--config<span class="w"> </span>examples/configs/voicing_tts_1_7b.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--tts_engine.gpu_memory_fraction<span class="w"> </span><span class="m">0</span>.85<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--vocoder.gpu_memory_fraction<span class="w"> </span><span class="m">0</span>.10<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--vocoder.process<span class="w"> </span>vocoder
 </pre></div>
 </div>
-<p>Repeating one process name colocates stages in it. The following override
-produces the topology already declared by the built-in Higgs-TTS config:</p>
+<p>Both GPU stages now share GPU 0 from separate processes, so each declares its
+<code class="docutils literal notranslate"><span class="pre">gpu_memory_fraction</span></code>. Each override names the process a stage runs in, so the
+following launch splits all three stages apart. The preprocessing stage then
+needs its own GPU and memory fraction, because outside the engine process it
+loads a prompt frontend:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>sglang_omni.cli<span class="w"> </span>serve<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--model-path<span class="w"> </span>bosonai/higgs-tts-3-4b<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--config<span class="w"> </span>examples/configs/voicing_tts_1_7b.yaml<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--preprocessing.process<span class="w"> </span>tts_frontend<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--audio_encoder.process<span class="w"> </span>tts_frontend
+<span class="w">  </span>--preprocessing.gpu<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--preprocessing.gpu_memory_fraction<span class="w"> </span><span class="m">0</span>.05<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--tts_engine.gpu_memory_fraction<span class="w"> </span><span class="m">0</span>.72<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--tts_engine.engine.mem_fraction_static<span class="w"> </span><span class="m">0</span>.72<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--vocoder.gpu_memory_fraction<span class="w"> </span><span class="m">0</span>.15<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--vocoder.process<span class="w"> </span>vocoder
 </pre></div>
 </div>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>tts_frontend : preprocessing, audio_encoder
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>tts_frontend : preprocessing
 pipeline     : tts_engine
 vocoder      : vocoder
 </pre></div>
 </div>
+<p>Repeating one process name colocates stages in it.</p>
 <p>Setting a stage to the process it already runs in is an idempotent no-op.
 Writing one stage’s <code class="docutils literal notranslate"><span class="pre">process</span></code> twice with different values is refused as a
 conflict, like any other doubly-written path.</p>
@@ -580,18 +561,15 @@ stages whose fractions are missing.</p></li>
 <li><p>TP rank process names must not collide with other process groups.</p></li>
 </ul>
 <p>Not every handoff tolerates a process boundary: some stages exchange state
-through process-local registries a second process cannot read (for example,
-MOSS-TTS pipelines hand prepared requests from preprocessing to the AR engine
-through a process-local queue). A model declares those edges through
-<code class="docutils literal notranslate"><span class="pre">PipelineConfig.process_local_edges</span></code>, and splitting one is refused during
-topology compilation, before any worker starts.</p>
-<p>Qwen3-TTS keeps prepared requests in process-local module state only while
+through process-local registries a second process cannot read. A model
+declares those edges through <code class="docutils literal notranslate"><span class="pre">PipelineConfig.process_local_edges</span></code>, and
+splitting one is refused during topology compilation, before any worker starts.</p>
+<p>Voicing-TTS keeps prepared requests in process-local module state only while
 <code class="docutils literal notranslate"><span class="pre">preprocessing</span></code> and <code class="docutils literal notranslate"><span class="pre">tts_engine</span></code> share a process; placed in its own process the
 preprocessing stage loads a prompt frontend and ships the prepared prompt
 tensors through <code class="docutils literal notranslate"><span class="pre">tensor_cpu</span></code> payload fields, so that edge can cross too. The
 <code class="docutils literal notranslate"><span class="pre">tensor_cpu</span></code> codec keeps each tensor’s own dtype and lets the relay carry it
 outside the control plane, which <code class="docutils literal notranslate"><span class="pre">typed_tensor</span></code> would not do.</p>
-<p>Ming-Omni-TTS carries preprocessing fields in <code class="docutils literal notranslate"><span class="pre">StagePayload.data</span></code> and serializes the reference encoder’s <code class="docutils literal notranslate"><span class="pre">spk_emb</span></code> and <code class="docutils literal notranslate"><span class="pre">prompt_latent</span></code> tensors with the <code class="docutils literal notranslate"><span class="pre">typed_tensor</span></code> wire codec. Both <code class="docutils literal notranslate"><span class="pre">preprocessing</span> <span class="pre">-&gt;</span> <span class="pre">reference_encode</span></code> and <code class="docutils literal notranslate"><span class="pre">reference_encode</span> <span class="pre">-&gt;</span> <span class="pre">tts_engine</span></code> can therefore cross process boundaries.</p>
 </section>
 <section id="resource-and-performance-trade-offs">
 <h2>Resource and Performance Trade-offs<a class="headerlink" href="#resource-and-performance-trade-offs" title="Link to this heading">#</a></h2>
@@ -696,7 +674,7 @@ By SGLang-Omni Team
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on Sep 28, 2026.
+  Last updated on Sep 30, 2026.
   <br/>
 </p>
   </div>

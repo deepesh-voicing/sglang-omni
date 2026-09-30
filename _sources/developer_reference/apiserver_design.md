@@ -2,7 +2,7 @@
 
 This page explains the API server at the level that is most useful for maintenance: where it sits in the system, which files matter, and how requests are mapped into the runtime.
 
-If you only want to launch the server and call it, start with [API Server Quickstart](../get_started/apiserver_quickstart.md).
+If you only want to launch the server and call it, start with the [Voicing-TTS cookbook](../cookbook/voicing_tts.md).
 
 ## Role in the System
 
@@ -14,7 +14,7 @@ At a high level, the built-in server startup path is:
 
 After startup, the request path is:
 
-`HTTP request` → `FastAPI route` → `Client` → `Coordinator` → `Stage pipeline` → `Client aggregation` → `HTTP/SSE response`
+`HTTP request` → `FastAPI route` → `Client` → `Coordinator` → `Stage pipeline` → `Client aggregation` → `HTTP response`
 
 That split keeps responsibilities clean:
 
@@ -30,11 +30,13 @@ For the current server implementation, these are the files that matter most.
 | --- | --- |
 | `sglang_omni/serve/openai_api.py` | Defines the FastAPI app, routes, request conversion, and response formatting |
 | `sglang_omni/serve/protocol.py` | Defines request and response schemas |
+| `sglang_omni/serve/speech_service.py` | Validates speech requests and converts them into `GenerateRequest` objects |
+| `sglang_omni/serve/speech_ws.py` | Runs `/v1/audio/speech/stream` WebSocket sessions |
 | `sglang_omni/serve/launcher.py` | Compiles the pipeline, starts the runtime, mounts the app, and runs Uvicorn |
-| `sglang_omni/client/client.py` | Submits requests to the coordinator and aggregates text, audio, and stream results |
+| `sglang_omni/client/client.py` | Submits requests to the coordinator and aggregates audio and stream results |
 | `sglang_omni/cli/serve.py` | Defines the current CLI surface for `sgl-omni serve` |
 
-If you are tracing endpoint behavior, `openai_api.py` and `client.py` are usually the best places to start.
+If you are tracing endpoint behavior, `openai_api.py`, `speech_service.py`, and `client.py` are usually the best places to start.
 
 ## `create_app()` vs `launch_server()`
 
@@ -78,8 +80,11 @@ The current server exposes these main routes:
 | --- | --- | --- |
 | `GET` | `/health` | Health status from `client.health()` |
 | `GET` | `/v1/models` | Single-model listing for the active pipeline |
-| `POST` | `/v1/chat/completions` | Chat completions, including streaming and optional audio |
 | `POST` | `/v1/audio/speech` | Text-to-speech, raw audio response or raw PCM chunks when `stream=true` |
+| `POST` | `/v1/audio/speech/batch` | Several speech items in one request, returned as one JSON response |
+| `WS` | `/v1/audio/speech/stream` | Streaming speech session over a WebSocket |
+| `GET` / `POST` | `/v1/audio/voices` | List or upload reference voices |
+| `DELETE` | `/v1/audio/voices/{name}` | Delete an uploaded reference voice |
 | `POST` | `/start_profile` | Torch trace + (optional) request-level events. Added by the built-in launcher |
 | `POST` | `/stop_profile` | Stops both torch trace and request-level events |
 | `POST` | `/start_request_profile` | Request-level event recorder only (no torch trace) |
@@ -112,86 +117,23 @@ Request-level events are emitted as JSON lines under
 
 The server does not pass OpenAI-style request bodies straight into the runtime. It first converts them into internal request objects.
 
-### Chat requests
-
-`ChatCompletionRequest` includes standard OpenAI-style fields such as:
-
-- `model`
-- `messages`
-- `temperature`
-- `top_p`
-- `max_tokens`
-- `stop`
-- `seed`
-- `stream`
-
-It also includes `sglang-omni` extensions such as:
-
-- `images`
-- `audios`
-- `videos`
-- video processing overrides such as `video_fps` and frame/pixel limits
-- `modalities`
-- `audio`
-- `stage_sampling`
-- `stage_params`
-- talker-specific generation overrides
-- `request_id`
-
 ### Conversion into `GenerateRequest`
 
-`_build_chat_generate_request()` in `openai_api.py` is the key translation point. It:
+`SpeechRequestValidator.build_generate_request()` in `speech_service.py` is the key translation point for `CreateSpeechRequest`. It:
 
-- normalizes stop sequences
-- builds `SamplingParams`
-- converts chat messages into internal `Message` objects
-- maps per-stage sampling overrides
+- builds `SamplingParams` from the request, with speech defaults for fields the client omits
+- builds the prompt from `input` and any reference audio descriptors
 - passes per-stage runtime params through `stage_params`
-- stores media input, audio config, and video processing overrides in request metadata
-- stores talker-specific generation overrides in `extra_params`
-- copies `modalities` into `output_modalities`
+- stores TTS-specific parameters such as `voice`, `task_type`, `language`, `instructions`, `ref_audio`, and `ref_text` under `tts_params` in request metadata
+- resolves an uploaded voice name into its stored reference audio
+- sets `output_modalities=["audio"]` and `task="tts"` in metadata
 
 The route hands that `GenerateRequest` to `Client`. The client then converts it
 to an `OmniRequest` before submitting it to the coordinator.
 
 ## Response Paths
 
-### Non-streaming chat
-
-For non-streaming chat, the path is roughly:
-
-`chat request` → `Client.completion()` → OpenAI-style JSON response
-
-`Client.completion()` aggregates:
-
-- text fragments
-- audio chunks
-- final usage
-- final finish reason
-
-If audio is present, it is base64-encoded before being returned to the API layer.
-
-### Streaming chat
-
-For streaming chat, the server emits SSE events.
-
-The important current semantics are:
-
-- the first chunk may contain only `role="assistant"`
-- text and audio are emitted as separate deltas
-- the final completion chunk includes the `finish_reason`
-- the stream ends with `data: [DONE]`
-- `usage` is attached to the final completion chunk
-
 ### Speech / TTS
-
-The speech route reuses the same internal request path rather than introducing a separate serving stack.
-
-`CreateSpeechRequest` is converted into a `GenerateRequest` with:
-
-- `output_modalities=["audio"]`
-- `task="tts"` in metadata
-- TTS-specific parameters stored under `tts_params`
 
 For non-streaming requests, `Client.speech()` collects audio chunks, encodes
 them, and returns raw audio bytes to the HTTP layer.
@@ -202,5 +144,5 @@ the same sample rate. TTS chunk-timing knobs such as
 `initial_codec_chunk_frames` are forwarded as request params only when the
 client provides them, including an explicit `0`, so model schedulers can consume
 them without changing Stage, Coordinator, or Relay. When the field is omitted,
-the speech route leaves it unset and each model applies its own streaming
+the speech route leaves it unset and the model applies its own streaming
 default.

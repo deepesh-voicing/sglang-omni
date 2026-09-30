@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Qwen3 TTS &#8212; SGLang</title>
+    <title>Voicing-TTS &#8212; SGLang</title>
   
   
   
@@ -49,19 +49,17 @@
     <script src="../_static/copybutton.js?v=ccdb6887"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'cookbook/qwen3_tts';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'cookbook/voicing_tts';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
-    <script src="../_static/js/qwen3_omni_server_generator.js?v=d7738e8a"></script>
-    <script src="../_static/js/ming_omni_server_generator.js?v=7979a72f"></script>
     <link rel="icon" href="../_static/logo.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Ming-Omni-TTS" href="ming_tts.html" />
-    <link rel="prev" title="Fish Audio S2-Pro" href="fishaudio_s2_pro.html" />
+    <link rel="next" title="TTS Model Usage" href="../basic_usage/tts.html" />
+    <link rel="prev" title="🚀 Installation — MUSA" href="../get_started/installation_musa.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="0.1.6" />
-    <meta name="docbuild:last-update" content="Sep 28, 2026"/>
+    <meta name="docbuild:last-update" content="Sep 30, 2026"/>
   
     
     <script src="../_static/searchtools.js"></script>
@@ -214,34 +212,10 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Cookbook</span></p>
 <ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="higgs_tts.html">Higgs TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="voxtral_tts.html">Voxtral TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="fishaudio_s2_pro.html">Fish Audio S2-Pro</a></li>
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">Qwen3 TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ming_tts.html">Ming-Omni-TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="moss_tts.html">MOSS-TTS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="moss_tts_local.html">MOSS-TTS-Local</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dots_tts.html">dots.tts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="minimax_music3.html">MiniMax Music 3</a></li>
-<li class="toctree-l1"><a class="reference internal" href="zonos2.html">ZONOS2</a></li>
-<li class="toctree-l1"><a class="reference internal" href="qwen3_asr.html">Qwen3-ASR</a></li>
-<li class="toctree-l1"><a class="reference internal" href="fun_asr.html">Fun-ASR-Nano</a></li>
-<li class="toctree-l1"><a class="reference internal" href="arkasr.html">ARK-ASR-3B</a></li>
-<li class="toctree-l1"><a class="reference internal" href="moss_transcribe_diarize.html">MOSS-Transcribe-Diarize</a></li>
-<li class="toctree-l1"><a class="reference internal" href="whisper_asr.html">Whisper ASR</a></li>
-<li class="toctree-l1"><a class="reference internal" href="qwen3_omni.html">Qwen3-Omni</a></li>
-<li class="toctree-l1"><a class="reference internal" href="minicpm_o.html">MiniCPM-o Reference Audio</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ming_omni.html">Ming-Omni</a></li>
-<li class="toctree-l1"><a class="reference internal" href="nemotron_voicechat.html">NemotronLabs VoiceChat</a></li>
-<li class="toctree-l1"><a class="reference internal" href="personaplex.html">PersonaPlex</a></li>
-<li class="toctree-l1"><a class="reference internal" href="llada2_uni.html">LLaDA2.0-Uni</a></li>
-<li class="toctree-l1"><a class="reference internal" href="fun_cosyvoice3.html">Fun-CosyVoice3</a></li>
-<li class="toctree-l1"><a class="reference internal" href="auk.html">AuK</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Voicing-TTS</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">General Usage</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../basic_usage/qwen3_omni.html">Omni Model Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../basic_usage/audio_translations.html">Audio Translations</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../basic_usage/tts.html">TTS Model Usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../basic_usage/process_topology.html">Process Topology, Replicas, and GPU Sharing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../basic_usage/tts_process_topology.html">TTS Process Topology</a></li>
@@ -252,7 +226,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Benchmarks</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../benchmarks/relay.html">Benchmark Relay</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../benchmarks/qwen3_tts_leading_silence.html">Qwen3-TTS Base: Leading Silence in X-Vector Voice Cloning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../benchmarks/voicing_tts_leading_silence.html">Voicing-TTS Base: Leading Silence in X-Vector Voice Cloning</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Developer Reference</span></p>
 <ul class="nav bd-sidenav">
@@ -264,7 +238,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/communication.html">Communication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/reference_encode_service.html">Reference Encode Service</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/profiler.html">Request-level profiler</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../developer_reference/qwen3_asr_concurrency_profile.html">Qwen3-ASR High-Concurrency Benchmark and Bottleneck Profile</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/rl_admin_control.html">RL Admin Control</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_reference/bump_version.html">Bumping the SGLang Pin</a></li>
 </ul>
@@ -343,7 +316,7 @@
       
       
       
-      <li><a href="https://github.com/sgl-project/sglang-omni/blob/main/docs/cookbook/qwen3_tts.md?plain=1" target="_blank"
+      <li><a href="https://github.com/sgl-project/sglang-omni/blob/main/docs/cookbook/voicing_tts.md?plain=1" target="_blank"
    class="btn btn-sm btn-source-file-button dropdown-item"
    title="Show source"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -360,7 +333,7 @@
       
       
       
-      <li><a href="https://github.com/sgl-project/sglang-omni/edit/main/docs/cookbook/qwen3_tts.md" target="_blank"
+      <li><a href="https://github.com/sgl-project/sglang-omni/edit/main/docs/cookbook/voicing_tts.md" target="_blank"
    class="btn btn-sm btn-source-edit-button dropdown-item"
    title="Suggest edit"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -377,7 +350,7 @@
       
       
       
-      <li><a href="https://github.com/sgl-project/sglang-omni/issues/new?title=Issue%20on%20page%20%2Fcookbook/qwen3_tts.html&body=Your%20issue%20content%20here." target="_blank"
+      <li><a href="https://github.com/sgl-project/sglang-omni/issues/new?title=Issue%20on%20page%20%2Fcookbook/voicing_tts.html&body=Your%20issue%20content%20here." target="_blank"
    class="btn btn-sm btn-source-issues-button dropdown-item"
    title="Open an issue"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -407,7 +380,7 @@
       
       
       
-      <li><a href="../_sources/cookbook/qwen3_tts.md" target="_blank"
+      <li><a href="../_sources/cookbook/voicing_tts.md" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
    title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -490,7 +463,7 @@
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>Qwen3 TTS</h1>
+    <h1>Voicing-TTS</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -501,6 +474,7 @@
             <nav aria-label="Page">
                 <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prerequisites">Prerequisites</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#convert-a-checkpoint">Convert a Checkpoint</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#server-configuration">Server Configuration</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ascend-npu-baseline">Ascend NPU baseline</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#deterministic-inference">Deterministic Inference</a></li>
@@ -528,6 +502,7 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#generation-parameters">Generation Parameters</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#model-variants">Model Variants</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#customvoice-checkpoints">CustomVoice Checkpoints</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#voicedesign-checkpoint">VoiceDesign Checkpoint</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#benchmark-results">Benchmark Results</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#b-base">0.6B Base</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#b-customvoice">1.7B CustomVoice</a></li>
@@ -545,55 +520,69 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="qwen3-tts">
-<h1>Qwen3 TTS<a class="headerlink" href="#qwen3-tts" title="Link to this heading">#</a></h1>
-<p><a class="reference external" href="https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-Base">Qwen3-TTS-12Hz-Base</a> is a discrete
-multi-codebook text-to-speech model from the Qwen team. It performs fast voice cloning from a
-short reference clip, supports 10 languages, and streams 24 kHz speech with low latency. The
-<code class="docutils literal notranslate"><span class="pre">12Hz</span></code> in the name refers to the codec <strong>frame rate</strong> (12 acoustic frames per second), not the
-playback sample rate. SGLang-Omni serves two checkpoints — <code class="docutils literal notranslate"><span class="pre">0.6B</span></code> and <code class="docutils literal notranslate"><span class="pre">1.7B</span></code> — through the same
+  <section class="tex2jax_ignore mathjax_ignore" id="voicing-tts">
+<h1>Voicing-TTS<a class="headerlink" href="#voicing-tts" title="Link to this heading">#</a></h1>
+<p>Voicing-TTS is a discrete multi-codebook text-to-speech model served from
+<code class="docutils literal notranslate"><span class="pre">sglang_omni/models/voicing_tts</span></code>. It performs fast voice cloning from a short reference clip,
+supports 10 languages, and streams 24 kHz speech with low latency. The <code class="docutils literal notranslate"><span class="pre">12hz</span></code> in the checkpoint
+names refers to the codec <strong>frame rate</strong> (12 acoustic frames per second), not the playback
+sample rate. SGLang-Omni serves three variants — Base (voice cloning), CustomVoice (built-in
+speakers), and VoiceDesign (a voice described in text) — at <code class="docutils literal notranslate"><span class="pre">0.6B</span></code> and <code class="docutils literal notranslate"><span class="pre">1.7B</span></code> through the same
 <code class="docutils literal notranslate"><span class="pre">preprocessing</span> <span class="pre">→</span> <span class="pre">tts_engine</span> <span class="pre">→</span> <span class="pre">vocoder</span></code> pipeline and the OpenAI-compatible <code class="docutils literal notranslate"><span class="pre">/v1/audio/speech</span></code>
 endpoint.</p>
 <section id="prerequisites">
 <h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading">#</a></h2>
-<p>Install <code class="docutils literal notranslate"><span class="pre">sglang-omni</span></code> by following <a class="reference internal" href="../get_started/installation.html"><span class="std std-doc">Installation</span></a>.</p>
-<p>Qwen3-TTS Base uses the upstream <code class="docutils literal notranslate"><span class="pre">qwen-tts</span></code> package. Install it without
-dependencies so the SGLang-Omni Transformers 5.12 / SGLang 0.5.20 stack remains
-in place:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>apt-get<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>sox
-uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-deps<span class="w"> </span>sox<span class="w"> </span>einops
-uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-deps<span class="w"> </span>qwen-tts<span class="o">==</span><span class="m">0</span>.1.1
+<p>Install <code class="docutils literal notranslate"><span class="pre">sglang-omni</span></code> by following <a class="reference internal" href="../get_started/installation.html"><span class="std std-doc">Installation</span></a>. No extra
+packages are required: the tokenizer, speech-tokenizer, and speaker-encoder code Voicing-TTS
+needs is vendored under <code class="docutils literal notranslate"><span class="pre">sglang_omni/vendor/voicing_tts</span></code>.</p>
+</section>
+<section id="convert-a-checkpoint">
+<h2>Convert a Checkpoint<a class="headerlink" href="#convert-a-checkpoint" title="Link to this heading">#</a></h2>
+<p>Voicing-TTS checkpoints are converted from the public Qwen3-TTS 12Hz checkpoints. The converter
+copies the checkpoint and renames its model types for the Voicing-TTS loaders. It accepts a local
+checkpoint directory or a Hugging Face repo id (downloaded on demand, no token required):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>sglang_omni.models.voicing_tts.convert_checkpoint<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>Qwen/Qwen3-TTS-12Hz-1.7B-Base<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>checkpoints/voicing-tts-12hz-1.7b-base
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">--no-deps</span></code> is required on <strong>both</strong> lines, for two different reasons.</p>
-<p><code class="docutils literal notranslate"><span class="pre">qwen-tts</span></code> pins Transformers 4.57.3, which would replace the project’s 5.12.1.
-And resolving <code class="docutils literal notranslate"><span class="pre">sox</span></code> normally pulls <code class="docutils literal notranslate"><span class="pre">numpy</span></code> past the ceiling <code class="docutils literal notranslate"><span class="pre">numba==0.65.1</span></code>
-imposes (numba requires <code class="docutils literal notranslate"><span class="pre">numpy&lt;=2.4</span></code>); the upgraded <code class="docutils literal notranslate"><span class="pre">numpy</span></code> then breaks
-<code class="docutils literal notranslate"><span class="pre">librosa</span></code>, so <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">qwen_tts</span></code> fails with <code class="docutils literal notranslate"><span class="pre">Numba</span> <span class="pre">needs</span> <span class="pre">NumPy</span> <span class="pre">2.4</span> <span class="pre">or</span> <span class="pre">less</span></code>
-before the server can start.</p>
-<p>Do not add <code class="docutils literal notranslate"><span class="pre">onnxruntime</span></code> to that line either — it is already a SGLang-Omni
-dependency, and resolving it pulls <code class="docutils literal notranslate"><span class="pre">numpy</span></code> the same way.</p>
-<blockquote>
-<div><p>Do <strong>not</strong> install <code class="docutils literal notranslate"><span class="pre">qwen-tts</span></code> with dependencies here. Its declared dependency
-set can pull a different Transformers/Torch stack than the SGLang-Omni runtime.</p>
-</div></blockquote>
-<p>Concretely, <code class="docutils literal notranslate"><span class="pre">qwen-tts</span></code> 0.1.1 pins Transformers 4.57.3, and its model code calls
-APIs that Transformers 5.12 has since renamed or removed — most visibly the mask
-factories (<code class="docutils literal notranslate"><span class="pre">create_causal_mask</span></code> and friends), which now spell <code class="docutils literal notranslate"><span class="pre">input_embeds</span></code> as
-<code class="docutils literal notranslate"><span class="pre">inputs_embeds</span></code> and no longer accept <code class="docutils literal notranslate"><span class="pre">cache_position</span></code>. SGLang-Omni patches these
-differences in
-<code class="docutils literal notranslate"><span class="pre">sglang_omni/models/qwen3_tts/compat.py</span></code>, which every Qwen3-TTS entry point
-applies before importing <code class="docutils literal notranslate"><span class="pre">qwen_tts</span></code>. The pinned Transformers 5.12 / SGLang 0.5.20
-stack is therefore the supported configuration, not a workaround.</p>
-<p>If you hit a <code class="docutils literal notranslate"><span class="pre">TypeError</span></code> raised from inside <code class="docutils literal notranslate"><span class="pre">qwen_tts</span></code>, do not resolve it by
-installing the package’s own Transformers pin — that breaks the rest of the
-runtime. Report it instead, so the shim can cover it.</p>
-<p>The Python <code class="docutils literal notranslate"><span class="pre">sox</span></code> package shells out to the system <code class="docutils literal notranslate"><span class="pre">sox</span></code> binary on some paths, so install both.</p>
-<p>Download a checkpoint (both repositories are public, no token required):</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>hf<span class="w"> </span>download<span class="w"> </span>Qwen/Qwen3-TTS-12Hz-0.6B-Base
-hf<span class="w"> </span>download<span class="w"> </span>Qwen/Qwen3-TTS-12Hz-1.7B-Base
-</pre></div>
+<p>The target directory must not exist yet. Convert each variant you plan to serve into the
+directory its example config expects:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Source checkpoint</p></th>
+<th class="head"><p>Converted directory</p></th>
+<th class="head"><p>Config</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Qwen/Qwen3-TTS-12Hz-0.6B-Base</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">checkpoints/voicing-tts-12hz-0.6b-base</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">examples/configs/voicing_tts_0_6b.yaml</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Qwen/Qwen3-TTS-12Hz-1.7B-Base</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">checkpoints/voicing-tts-12hz-1.7b-base</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">examples/configs/voicing_tts_1_7b.yaml</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">checkpoints/voicing-tts-12hz-0.6b-customvoice</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">examples/configs/voicing_tts_0_6b_customvoice.yaml</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">checkpoints/voicing-tts-12hz-1.7b-customvoice</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">examples/configs/voicing_tts_1_7b_customvoice.yaml</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">checkpoints/voicing-tts-12hz-1.7b-voicedesign</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">examples/configs/voicing_tts_1_7b_voicedesign.yaml</span></code></p></td>
+</tr>
+</tbody>
+</table>
 </div>
+<p>Each config sets <code class="docutils literal notranslate"><span class="pre">model_path</span></code> to its converted directory; pass <code class="docutils literal notranslate"><span class="pre">--model-path</span></code> to serve a
+checkpoint stored elsewhere. Keep <code class="docutils literal notranslate"><span class="pre">voicing-tts</span></code> in a Base checkpoint’s directory name and end
+it with <code class="docutils literal notranslate"><span class="pre">base</span></code>: the server recognizes a Base checkpoint from that path and only then enables
+uploaded reference voices (<code class="docutils literal notranslate"><span class="pre">/v1/audio/voices</span></code>) for named-voice cloning.</p>
 </section>
 <section id="server-configuration">
 <h2>Server Configuration<a class="headerlink" href="#server-configuration" title="Link to this heading">#</a></h2>
@@ -601,15 +590,13 @@ hf<span class="w"> </span>download<span class="w"> </span>Qwen/Qwen3-TTS-12Hz-1.
 while the <code class="docutils literal notranslate"><span class="pre">tts_engine</span></code> captures CUDA graphs.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># 0.6B</span>
 sgl-omni<span class="w"> </span>serve<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--model-path<span class="w"> </span>Qwen/Qwen3-TTS-12Hz-0.6B-Base<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--config<span class="w"> </span>examples/configs/qwen3_tts_0_6b.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--config<span class="w"> </span>examples/configs/voicing_tts_0_6b.yaml<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--port<span class="w"> </span><span class="m">8000</span>
 </pre></div>
 </div>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1.7B</span>
 sgl-omni<span class="w"> </span>serve<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--model-path<span class="w"> </span>Qwen/Qwen3-TTS-12Hz-1.7B-Base<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--config<span class="w"> </span>examples/configs/qwen3_tts_1_7b.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--config<span class="w"> </span>examples/configs/voicing_tts_1_7b.yaml<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--port<span class="w"> </span><span class="m">8000</span>
 </pre></div>
 </div>
@@ -623,13 +610,12 @@ configuration has been validated with 16 concurrent requests; the other
 configurations retain a conservative single-request baseline.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># 0.6B Base</span>
 sgl-omni<span class="w"> </span>serve<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--model-path<span class="w"> </span>Qwen/Qwen3-TTS-12Hz-0.6B-Base<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--config<span class="w"> </span>examples/configs/qwen3_tts_0_6b_npu.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--config<span class="w"> </span>examples/configs/voicing_tts_0_6b_npu.yaml<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--port<span class="w"> </span><span class="m">8000</span>
 </pre></div>
 </div>
-<p>Use <code class="docutils literal notranslate"><span class="pre">qwen3_tts_1_7b_npu.yaml</span></code>, <code class="docutils literal notranslate"><span class="pre">qwen3_tts_0_6b_customvoice_npu.yaml</span></code>, or
-<code class="docutils literal notranslate"><span class="pre">qwen3_tts_1_7b_voicedesign_npu.yaml</span></code> for the other supported checkpoints.
+<p>Use <code class="docutils literal notranslate"><span class="pre">voicing_tts_1_7b_npu.yaml</span></code>, <code class="docutils literal notranslate"><span class="pre">voicing_tts_0_6b_customvoice_npu.yaml</span></code>, or
+<code class="docutils literal notranslate"><span class="pre">voicing_tts_1_7b_voicedesign_npu.yaml</span></code> for the other supported checkpoints.
 The 0.6B and 1.7B files intentionally have separate <code class="docutils literal notranslate"><span class="pre">mem_fraction_static</span></code>
 starting values. Calibrate configurations that retain the single-request
 baseline on the target NPU before increasing <code class="docutils literal notranslate"><span class="pre">max_running_requests</span></code> or any
@@ -637,7 +623,7 @@ vocoder batch limit.</p>
 </section>
 <section id="deterministic-inference">
 <h3>Deterministic Inference<a class="headerlink" href="#deterministic-inference" title="Link to this heading">#</a></h3>
-<p>Dynamic batching can change Qwen3-TTS codec and waveform outputs even when the
+<p>Dynamic batching can change Voicing-TTS codec and waveform outputs even when the
 prompt, reference audio, and seed are unchanged. Both the 0.6B and 1.7B Base
 checkpoints provide an opt-in deterministic mode:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">enable_deterministic_inference</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
@@ -656,7 +642,7 @@ initial and follow-up vocoder graph-capture paths (<code class="docutils literal
 <thead>
 <tr class="row-odd"><th class="head"><p>Knob</p></th>
 <th class="head"><p>Meaning</p></th>
-<th class="head"><p>Qwen3-TTS default</p></th>
+<th class="head"><p>Voicing-TTS default</p></th>
 </tr>
 </thead>
 <tbody>
@@ -674,12 +660,12 @@ initial and follow-up vocoder graph-capture paths (<code class="docutils literal
 <p>Every request enters the waiting queue first, so <code class="docutils literal notranslate"><span class="pre">max_queued_requests</span></code>
 must be <strong>≥ 1</strong>. Capacity is about <code class="docutils literal notranslate"><span class="pre">running</span> <span class="pre">+</span> <span class="pre">queued</span></code>. Extra arrivals get
 HTTP <strong>503</strong> (<code class="docutils literal notranslate"><span class="pre">The</span> <span class="pre">request</span> <span class="pre">queue</span> <span class="pre">is</span> <span class="pre">full.</span></code>) before preprocessing, or later
-if the AR waiting queue or request-build backlog is full. Qwen3-TTS
+if the AR waiting queue or request-build backlog is full. Voicing-TTS
 defaults to 4 request-build workers with pending depth 16.</p>
 </section>
 <section id="breakable-prefill-cuda-graphs">
 <h3>Breakable prefill CUDA graphs<a class="headerlink" href="#breakable-prefill-cuda-graphs" title="Link to this heading">#</a></h3>
-<p>Every Qwen3-TTS checkpoint (Base, CustomVoice, VoiceDesign) defaults to the
+<p>Every Voicing-TTS checkpoint (Base, CustomVoice, VoiceDesign) defaults to the
 breakable prefill CUDA-graph backend with a token ladder up to 512:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
@@ -718,8 +704,7 @@ new cap; declaring <code class="docutils literal notranslate"><span class="pre">
 <p>To change the ceiling, set <code class="docutils literal notranslate"><span class="pre">max_running_requests</span></code> and <code class="docutils literal notranslate"><span class="pre">max_queued_requests</span></code>
 together:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sgl-omni<span class="w"> </span>serve<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--model-path<span class="w"> </span>Qwen/Qwen3-TTS-12Hz-0.6B-Base<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--config<span class="w"> </span>examples/configs/qwen3_tts_0_6b.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--config<span class="w"> </span>examples/configs/voicing_tts_0_6b.yaml<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--tts_engine.engine.max_running_requests<span class="w"> </span><span class="m">32</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--tts_engine.engine.max_queued_requests<span class="w"> </span><span class="m">16</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--port<span class="w"> </span><span class="m">8000</span>
@@ -731,7 +716,7 @@ offered load above <code class="docutils literal notranslate"><span class="pre">
 duration with open-loop sustained overshoot:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>benchmarks.eval.benchmark_tts_seedtts<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--generate-only<span class="w"> </span>--use-existing-server<span class="w"> </span>--stream<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--model<span class="w"> </span>Qwen/Qwen3-TTS-12Hz-0.6B-Base<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--model<span class="w"> </span>checkpoints/voicing-tts-12hz-0.6b-base<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--port<span class="w"> </span><span class="m">8000</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--max-running-requests<span class="w"> </span><span class="m">32</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--max-queued-requests<span class="w"> </span><span class="m">16</span><span class="w"> </span><span class="se">\</span>
@@ -759,8 +744,7 @@ occupancy.</p>
 <p>Coalescing is <strong>off by default</strong> and opt-in through the <code class="docutils literal notranslate"><span class="pre">tts_engine</span></code> factory
 configuration:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sgl-omni<span class="w"> </span>serve<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--model-path<span class="w"> </span>Qwen/Qwen3-TTS-12Hz-1.7B-Base<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--config<span class="w"> </span>examples/configs/qwen3_tts_1_7b.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--config<span class="w"> </span>examples/configs/voicing_tts_1_7b.yaml<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--tts_engine.factory.prefill_coalesce_requests<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--tts_engine.factory.prefill_coalesce_wait_ms<span class="w"> </span><span class="m">30</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--port<span class="w"> </span><span class="m">8000</span>
@@ -783,7 +767,7 @@ admission is released as soon as any of the following holds:</p>
 </ul>
 <p><code class="docutils literal notranslate"><span class="pre">prefill_coalesce_wait_ms</span></code> is therefore an upper bound on the added admission
 wait. Admission may be released earlier if the target queue size is reached.</p>
-<p>The values above are an example for the Qwen3-TTS workload and are not intended
+<p>The values above are an example for the Voicing-TTS workload and are not intended
 as universal defaults. Match both <code class="docutils literal notranslate"><span class="pre">prefill_coalesce_requests</span></code> and
 <code class="docutils literal notranslate"><span class="pre">prefill_coalesce_wait_ms</span></code> to the workload you actually serve. Coalescing is
 most useful when natural prefill batches are small and a short hold can increase
@@ -806,7 +790,7 @@ prepared prompt tensors to the engine through the payload. Every GPU stage must
 then declare a memory fraction, and the engine’s static fraction has to agree
 with the one it declares:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sgl-omni<span class="w"> </span>serve<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--model-path<span class="w"> </span>Qwen/Qwen3-TTS-12Hz-1.7B-Base<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--config<span class="w"> </span>examples/configs/voicing_tts_1_7b.yaml<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--preprocessing.process<span class="w"> </span>tts_frontend<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--preprocessing.gpu<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--preprocessing.gpu_memory_fraction<span class="w"> </span><span class="m">0</span>.05<span class="w"> </span><span class="se">\</span>
@@ -825,7 +809,7 @@ weights.</p>
 <h2>Synthesizing Speech<a class="headerlink" href="#synthesizing-speech" title="Link to this heading">#</a></h2>
 <section id="text-only-requests">
 <h3>Text-only Requests<a class="headerlink" href="#text-only-requests" title="Link to this heading">#</a></h3>
-<p>Qwen3-TTS Base checkpoints require a reference clip. Text-only requests are supported by CustomVoice and VoiceDesign checkpoints; see <a class="reference internal" href="../basic_usage/tts.html"><span class="std std-doc">TTS Model Usage</span></a> for those launch commands.</p>
+<p>Voicing-TTS Base checkpoints require a reference clip. Text-only requests are supported by CustomVoice and VoiceDesign checkpoints; see <a class="reference internal" href="../basic_usage/tts.html"><span class="std std-doc">TTS Model Usage</span></a> for those launch commands.</p>
 </section>
 <section id="voice-cloning">
 <h3>Voice Cloning<a class="headerlink" href="#voice-cloning" title="Link to this heading">#</a></h3>
@@ -836,7 +820,7 @@ mode.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8000/v1/audio/speech<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-d<span class="w"> </span><span class="s1">'{</span>
-<span class="s1">    "model": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",</span>
+<span class="s1">    "model": "voicing-tts",</span>
 <span class="s1">    "voice": "default",</span>
 <span class="s1">    "input": "SGLang-Omni is a great project!",</span>
 <span class="s1">    "references": [{</span>
@@ -849,6 +833,10 @@ mode.</p>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">ref_audio</span></code> and <code class="docutils literal notranslate"><span class="pre">ref_text</span></code> are accepted as shorthand for <code class="docutils literal notranslate"><span class="pre">references[0].audio_path</span></code> and
 <code class="docutils literal notranslate"><span class="pre">references[0].text</span></code>.</p>
+<p>A Base checkpoint can also register a reference clip once through <code class="docutils literal notranslate"><span class="pre">/v1/audio/voices</span></code> and reuse
+it by name in <code class="docutils literal notranslate"><span class="pre">voice</span></code>; see <a class="reference internal" href="../basic_usage/tts.html#uploaded-voices"><span class="std std-ref">Uploaded Voices</span></a>. Base has
+no built-in speakers, so a request without reference fields whose <code class="docutils literal notranslate"><span class="pre">voice</span></code> is neither <code class="docutils literal notranslate"><span class="pre">default</span></code>
+nor an uploaded name returns HTTP 400.</p>
 <section id="python">
 <h4>Python<a class="headerlink" href="#python" title="Link to this heading">#</a></h4>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
@@ -856,7 +844,7 @@ mode.</p>
 <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
     <span class="s2">"http://localhost:8000/v1/audio/speech"</span><span class="p">,</span>
     <span class="n">json</span><span class="o">=</span><span class="p">{</span>
-        <span class="s2">"model"</span><span class="p">:</span> <span class="s2">"Qwen/Qwen3-TTS-12Hz-0.6B-Base"</span><span class="p">,</span>
+        <span class="s2">"model"</span><span class="p">:</span> <span class="s2">"voicing-tts"</span><span class="p">,</span>
         <span class="s2">"voice"</span><span class="p">:</span> <span class="s2">"default"</span><span class="p">,</span>
         <span class="s2">"input"</span><span class="p">:</span> <span class="s2">"Get the trust fund to the bank early."</span><span class="p">,</span>
         <span class="s2">"references"</span><span class="p">:</span> <span class="p">[{</span>
@@ -930,14 +918,13 @@ VoiceDesign requests are not affected.</p>
 <p>The mask changes which codec ids the first frames can sample, so outputs differ
 from the unmasked model. To turn it off:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sgl-omni<span class="w"> </span>serve<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--model-path<span class="w"> </span>Qwen/Qwen3-TTS-12Hz-1.7B-Base<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--config<span class="w"> </span>examples/configs/qwen3_tts_1_7b.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--config<span class="w"> </span>examples/configs/voicing_tts_1_7b.yaml<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--tts_engine.factory.leading_silence_mask_frames<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--port<span class="w"> </span><span class="m">8000</span>
 </pre></div>
 </div>
 <p>Details and the full sweep are in
-<a class="reference internal" href="../benchmarks/qwen3_tts_leading_silence.html"><span class="std std-doc">the leading-silence benchmark</span></a>.</p>
+<a class="reference internal" href="../benchmarks/voicing_tts_leading_silence.html"><span class="std std-doc">the leading-silence benchmark</span></a>.</p>
 </section>
 </section>
 <section id="language-hint">
@@ -948,7 +935,7 @@ Portuguese, Spanish, and Italian.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8000/v1/audio/speech<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-d<span class="w"> </span><span class="s1">'{</span>
-<span class="s1">    "model": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",</span>
+<span class="s1">    "model": "voicing-tts",</span>
 <span class="s1">    "voice": "default",</span>
 <span class="s1">    "input": "今天天气不错，就该出去晒晒太阳。",</span>
 <span class="s1">    "references": [{</span>
@@ -968,7 +955,7 @@ chunks in real time:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>-N<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8000/v1/audio/speech<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-d<span class="w"> </span><span class="s1">'{</span>
-<span class="s1">    "model": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",</span>
+<span class="s1">    "model": "voicing-tts",</span>
 <span class="s1">    "voice": "default",</span>
 <span class="s1">    "input": "Get the trust fund to the bank early.",</span>
 <span class="s1">    "references": [{</span>
@@ -982,8 +969,8 @@ chunks in real time:</p>
 </pre></div>
 </div>
 <p>Streaming returns <code class="docutils literal notranslate"><span class="pre">audio/pcm</span></code> 16-bit mono PCM bytes with sample-rate metadata in
-the response headers. See the <a class="reference internal" href="higgs_tts.html#streaming"><span class="std std-ref">Higgs TTS cookbook</span></a>
-for a full Python raw PCM consumer.</p>
+the response headers. See <a class="reference internal" href="../basic_usage/tts.html#use-python"><span class="std std-ref">TTS Model Usage</span></a> for a
+full Python raw PCM consumer.</p>
 <p>All three task types (Base/reference-cloning, CustomVoice and VoiceDesign) use
 true incremental codec and vocoder streaming, for both this HTTP endpoint and
 <code class="docutils literal notranslate"><span class="pre">/v1/audio/speech/stream</span></code> WebSocket sessions with <code class="docutils literal notranslate"><span class="pre">stream_audio=true</span></code>. Pass
@@ -998,7 +985,7 @@ runtime silence check emits the audio unmodified whenever the first frame is
 not actually silent. Opt out per request with
 <code class="docutils literal notranslate"><span class="pre">&quot;suppress_bootstrap_silence&quot;:</span> <span class="pre">false</span></code> or per deployment with
 <code class="docutils literal notranslate"><span class="pre">--vocoder.factory.suppress_bootstrap_silence</span> <span class="pre">false</span></code>.</p>
-<p>When <code class="docutils literal notranslate"><span class="pre">initial_codec_chunk_frames</span></code> is omitted, Qwen3-TTS ramps its first chunks
+<p>When <code class="docutils literal notranslate"><span class="pre">initial_codec_chunk_frames</span></code> is omitted, Voicing-TTS ramps its first chunks
 <code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">-&gt;</span> <span class="pre">2</span> <span class="pre">-&gt;</span> <span class="pre">4</span></code> codec frames before the steady stride, so first audio leaves after a
 single AR step while the playback cushion is rebuilt within four chunks. Pass an
 explicit value to trade continuity against time-to-first-audio.
@@ -1032,15 +1019,15 @@ configured server-side with <code class="docutils literal notranslate"><span cla
 <code class="docutils literal notranslate"><span class="pre">i</span></code> sizes streaming decode chunk <code class="docutils literal notranslate"><span class="pre">i</span> <span class="pre">+</span> <span class="pre">1</span></code> in codec frames, and past the ramp
 the steady stride takes over, so <code class="docutils literal notranslate"><span class="pre">[2,</span> <span class="pre">4,</span> <span class="pre">8]</span></code> yields a
 <code class="docutils literal notranslate"><span class="pre">2</span> <span class="pre">-&gt;</span> <span class="pre">4</span> <span class="pre">-&gt;</span> <span class="pre">8</span> <span class="pre">-&gt;</span> <span class="pre">8</span> <span class="pre">-&gt;</span> <span class="pre">...</span></code> schedule. Set it through a pipeline config file:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">config_cls</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Qwen3TTSPipelineConfig</span>
-<span class="nt">model_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Qwen/Qwen3-TTS-12Hz-0.6B-Base</span>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">config_cls</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">VoicingTTSPipelineConfig</span>
+<span class="nt">model_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">checkpoints/voicing-tts-12hz-0.6b-base</span>
 <span class="nt">stages</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">vocoder</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">factory</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">stream_chunk_ramp</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">4</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">8</span><span class="p p-Indicator">]</span>
 </pre></div>
 </div>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>sglang_omni.cli<span class="w"> </span>serve<span class="w"> </span>--config<span class="w"> </span>qwen3_tts_ramp.yaml
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>sglang_omni.cli<span class="w"> </span>serve<span class="w"> </span>--config<span class="w"> </span>voicing_tts_ramp.yaml
 </pre></div>
 </div>
 <p>Smaller early chunks lower time-to-first-audio but start playback with less
@@ -1137,24 +1124,43 @@ only the first chunk.</p>
 <h2>Model Variants<a class="headerlink" href="#model-variants" title="Link to this heading">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
-<tr class="row-odd"><th class="head"><p>Checkpoint</p></th>
+<tr class="row-odd"><th class="head"><p>Converted checkpoint</p></th>
+<th class="head"><p>Variant</p></th>
 <th class="head"><p>Parameters</p></th>
 <th class="head"><p>Config</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Qwen/Qwen3-TTS-12Hz-0.6B-Base</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">checkpoints/voicing-tts-12hz-0.6b-base</span></code></p></td>
+<td><p>Base</p></td>
 <td><p>0.6B</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">examples/configs/qwen3_tts_0_6b.yaml</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">examples/configs/voicing_tts_0_6b.yaml</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Qwen/Qwen3-TTS-12Hz-1.7B-Base</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">checkpoints/voicing-tts-12hz-1.7b-base</span></code></p></td>
+<td><p>Base</p></td>
 <td><p>1.7B</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">examples/configs/qwen3_tts_1_7b.yaml</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">examples/configs/voicing_tts_1_7b.yaml</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">checkpoints/voicing-tts-12hz-0.6b-customvoice</span></code></p></td>
+<td><p>CustomVoice</p></td>
+<td><p>0.6B</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">examples/configs/voicing_tts_0_6b_customvoice.yaml</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">checkpoints/voicing-tts-12hz-1.7b-customvoice</span></code></p></td>
+<td><p>CustomVoice</p></td>
+<td><p>1.7B</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">examples/configs/voicing_tts_1_7b_customvoice.yaml</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">checkpoints/voicing-tts-12hz-1.7b-voicedesign</span></code></p></td>
+<td><p>VoiceDesign</p></td>
+<td><p>1.7B</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">examples/configs/voicing_tts_1_7b_voicedesign.yaml</span></code></p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p>Both expose an identical request API. The 1.7B model has higher capacity (typically better
+<p>Ascend NPU variants of these configs carry an <code class="docutils literal notranslate"><span class="pre">_npu</span></code> suffix. Both Base sizes expose an identical
+request API. The 1.7B model has higher capacity (typically better
 quality) at a larger memory and latency cost; the 0.6B model is lighter and faster.</p>
 </section>
 <section id="customvoice-checkpoints">
@@ -1162,40 +1168,39 @@ quality) at a larger memory and latency cost; the 0.6B model is lighter and fast
 <p>CustomVoice generates speech with built-in speakers through the same pipeline. Use it without reference audio; omit <code class="docutils literal notranslate"><span class="pre">ref_audio</span></code>, <code class="docutils literal notranslate"><span class="pre">ref_text</span></code>, <code class="docutils literal notranslate"><span class="pre">references</span></code>, and <code class="docutils literal notranslate"><span class="pre">x_vector_only_mode</span></code>. Omit <code class="docutils literal notranslate"><span class="pre">task_type</span></code> or set it to <code class="docutils literal notranslate"><span class="pre">CustomVoice</span></code>.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
-<tr class="row-odd"><th class="head"><p>Checkpoint</p></th>
+<tr class="row-odd"><th class="head"><p>Converted checkpoint</p></th>
 <th class="head"><p>Config</p></th>
 <th class="head"><p>Instruction guidance</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">examples/configs/qwen3_tts_0_6b_customvoice.yaml</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">checkpoints/voicing-tts-12hz-0.6b-customvoice</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">examples/configs/voicing_tts_0_6b_customvoice.yaml</span></code></p></td>
 <td><p>Accepted for backward compatibility, but not recommended</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">examples/configs/qwen3_tts_1_7b_customvoice.yaml</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">checkpoints/voicing-tts-12hz-1.7b-customvoice</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">examples/configs/voicing_tts_1_7b_customvoice.yaml</span></code></p></td>
 <td><p>Supported</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p>Both released checkpoints provide <code class="docutils literal notranslate"><span class="pre">Serena</span></code>, <code class="docutils literal notranslate"><span class="pre">Vivian</span></code>, <code class="docutils literal notranslate"><span class="pre">Uncle_Fu</span></code>, <code class="docutils literal notranslate"><span class="pre">Ryan</span></code>, <code class="docutils literal notranslate"><span class="pre">Aiden</span></code>, <code class="docutils literal notranslate"><span class="pre">Ono_Anna</span></code>, <code class="docutils literal notranslate"><span class="pre">Sohee</span></code>, <code class="docutils literal notranslate"><span class="pre">Eric</span></code>, and <code class="docutils literal notranslate"><span class="pre">Dylan</span></code>. Speaker matching is case-insensitive; an omitted or <code class="docutils literal notranslate"><span class="pre">default</span></code> voice selects <code class="docutils literal notranslate"><span class="pre">Vivian</span></code>. <code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/v1/audio/voices</span></code> lists <code class="docutils literal notranslate"><span class="pre">default</span></code> and the served checkpoint’s speakers. Unknown speakers or supplied cloning fields return HTTP 400; uploaded reference voices are not used for CustomVoice synthesis.</p>
+<p>Both converted checkpoints provide <code class="docutils literal notranslate"><span class="pre">Serena</span></code>, <code class="docutils literal notranslate"><span class="pre">Vivian</span></code>, <code class="docutils literal notranslate"><span class="pre">Uncle_Fu</span></code>, <code class="docutils literal notranslate"><span class="pre">Ryan</span></code>, <code class="docutils literal notranslate"><span class="pre">Aiden</span></code>, <code class="docutils literal notranslate"><span class="pre">Ono_Anna</span></code>, <code class="docutils literal notranslate"><span class="pre">Sohee</span></code>, <code class="docutils literal notranslate"><span class="pre">Eric</span></code>, and <code class="docutils literal notranslate"><span class="pre">Dylan</span></code>. Speaker matching is case-insensitive; an omitted or <code class="docutils literal notranslate"><span class="pre">default</span></code> voice selects <code class="docutils literal notranslate"><span class="pre">Vivian</span></code>. <code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/v1/audio/voices</span></code> lists <code class="docutils literal notranslate"><span class="pre">default</span></code> and the served checkpoint’s speakers. Unknown speakers or supplied cloning fields return HTTP 400; uploaded reference voices are not used for CustomVoice synthesis.</p>
 <p>Both sizes support buffered speech, batch requests, incremental HTTP PCM output, and WebSocket audio output. HTTP streaming requires <code class="docutils literal notranslate"><span class="pre">stream=true</span></code> with <code class="docutils literal notranslate"><span class="pre">response_format=&quot;pcm&quot;</span></code>; WebSocket sessions use <code class="docutils literal notranslate"><span class="pre">stream_audio=true</span></code> with <code class="docutils literal notranslate"><span class="pre">response_format=&quot;pcm&quot;</span></code>.</p>
 <p><strong>0.6B instruction compatibility:</strong> SGLang-Omni continues to pass optional <code class="docutils literal notranslate"><span class="pre">instructions</span></code> into the 0.6B prompt, preserving existing behavior. The released 0.6B model does not provide reliable instruction control; omit this field or use 1.7B when style control is needed.</p>
-<p><strong>Eric/Dylan language behavior:</strong> For both sizes, <code class="docutils literal notranslate"><span class="pre">language:</span> <span class="pre">Auto</span></code> selects Eric’s Sichuan dialect token or Dylan’s Beijing dialect token. An explicit language takes precedence: <code class="docutils literal notranslate"><span class="pre">language:</span> <span class="pre">Chinese</span></code> keeps the Chinese language token. This preserves existing SGLang-Omni behavior and differs from the QwenLM/Qwen3-TTS Python wrapper (<code class="docutils literal notranslate"><span class="pre">qwen-tts</span></code> 0.1.1), which also selects dialect tokens for <code class="docutils literal notranslate"><span class="pre">Chinese</span></code>. This is a conditioning choice, not a guarantee that the speaker’s accent disappears.</p>
+<p><strong>Eric/Dylan language behavior:</strong> For both sizes, <code class="docutils literal notranslate"><span class="pre">language:</span> <span class="pre">Auto</span></code> selects Eric’s Sichuan dialect token or Dylan’s Beijing dialect token. An explicit language takes precedence: <code class="docutils literal notranslate"><span class="pre">language:</span> <span class="pre">Chinese</span></code> keeps the Chinese language token. This preserves existing SGLang-Omni behavior. This is a conditioning choice, not a guarantee that the speaker’s accent disappears.</p>
 <p>Start the 1.7B checkpoint with its matching config:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sgl-omni<span class="w"> </span>serve<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--model-path<span class="w"> </span>Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--config<span class="w"> </span>examples/configs/qwen3_tts_1_7b_customvoice.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--config<span class="w"> </span>examples/configs/voicing_tts_1_7b_customvoice.yaml<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--port<span class="w"> </span><span class="m">8000</span>
 </pre></div>
 </div>
-<p>Then select a built-in speaker in the request. For 0.6B, use its model/config pair from the table and omit <code class="docutils literal notranslate"><span class="pre">instructions</span></code>.</p>
+<p>Then select a built-in speaker in the request. For 0.6B, use its config from the table and omit <code class="docutils literal notranslate"><span class="pre">instructions</span></code>.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8000/v1/audio/speech<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-d<span class="w"> </span><span class="s1">'{</span>
-<span class="s1">    "model": "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",</span>
-<span class="s1">    "input": "SGLang-Omni serves Qwen CustomVoice.",</span>
+<span class="s1">    "model": "voicing-tts",</span>
+<span class="s1">    "input": "SGLang-Omni serves Voicing-TTS CustomVoice.",</span>
 <span class="s1">    "voice": "Ryan",</span>
 <span class="s1">    "language": "English",</span>
 <span class="s1">    "instructions": "Speak clearly and calmly."</span>
@@ -1204,12 +1209,38 @@ quality) at a larger memory and latency cost; the 0.6B model is lighter and fast
 </pre></div>
 </div>
 </section>
+<section id="voicedesign-checkpoint">
+<h2>VoiceDesign Checkpoint<a class="headerlink" href="#voicedesign-checkpoint" title="Link to this heading">#</a></h2>
+<p>VoiceDesign (1.7B only) builds the voice from a text description instead of a reference clip or
+a built-in speaker. Requests set <code class="docutils literal notranslate"><span class="pre">task_type</span></code> to <code class="docutils literal notranslate"><span class="pre">VoiceDesign</span></code> and pass a non-empty
+<code class="docutils literal notranslate"><span class="pre">instructions</span></code> string:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sgl-omni<span class="w"> </span>serve<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--config<span class="w"> </span>examples/configs/voicing_tts_1_7b_voicedesign.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--port<span class="w"> </span><span class="m">8000</span>
+</pre></div>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8000/v1/audio/speech<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">'{</span>
+<span class="s1">    "model": "voicing-tts",</span>
+<span class="s1">    "voice": "default",</span>
+<span class="s1">    "input": "Hello, how are you?",</span>
+<span class="s1">    "task_type": "VoiceDesign",</span>
+<span class="s1">    "instructions": "A warm, natural young adult voice."</span>
+<span class="s1">  }'</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--output<span class="w"> </span>voice-design.wav
+</pre></div>
+</div>
+</section>
 <section id="benchmark-results">
 <h2>Benchmark Results<a class="headerlink" href="#benchmark-results" title="Link to this heading">#</a></h2>
+<p>The results below were measured on the same weights and pipeline before the package was renamed
+to Voicing-TTS. Scoring WER now requires an external OpenAI-compatible ASR server, because this
+repository no longer hosts ASR models; <code class="docutils literal notranslate"><span class="pre">benchmarks/tasks/asr.py</span></code> is the client.</p>
 <section id="b-base">
 <h3>0.6B Base<a class="headerlink" href="#b-base" title="Link to this heading">#</a></h3>
-<p>Qwen3-TTS-12Hz-0.6B-Base on Seed-TTS EN (1088 utterances, reference voice cloning from each
-prompt), concurrency 16, WER scored with HF Whisper-large-v3. Hardware: 1× H200 SXM.</p>
+<p>Voicing-TTS 0.6B Base on Seed-TTS EN (1088 utterances, reference voice cloning from each
+prompt), concurrency 16, WER scored with Whisper-large-v3. Hardware: 1× H200 SXM.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>Metric</p></th>
@@ -1252,7 +1283,7 @@ latency for quality.</p>
 </section>
 <section id="b-customvoice">
 <h3>1.7B CustomVoice<a class="headerlink" href="#b-customvoice" title="Link to this heading">#</a></h3>
-<p>Qwen3-TTS-12Hz-1.7B-CustomVoice on the full Seed-TTS-Eval EN and ZH splits, concurrency 16, with 16 warmup requests per language/mode and <code class="docutils literal notranslate"><span class="pre">max_new_tokens=2048</span></code>. EN used Ryan/English and ZH used Vivian/Chinese, without reference audio or instructions. WER/CER was scored with Qwen3-ASR-1.7B at concurrency 32. Hardware: 1× H200 141 GB, BF16, TP1. Sampling overrides and seed were unset.</p>
+<p>Voicing-TTS 1.7B CustomVoice on the full Seed-TTS-Eval EN and ZH splits, concurrency 16, with 16 warmup requests per language/mode and <code class="docutils literal notranslate"><span class="pre">max_new_tokens=2048</span></code>. EN used Ryan/English and ZH used Vivian/Chinese, without reference audio or instructions. WER/CER was scored with Qwen3-ASR-1.7B at concurrency 32. Hardware: 1× H200 141 GB, BF16, TP1. Sampling overrides and seed were unset.</p>
 <p>The server used <code class="docutils literal notranslate"><span class="pre">--tts_engine.engine.max_running_requests</span> <span class="pre">64</span></code>, <code class="docutils literal notranslate"><span class="pre">--tts_engine.engine.cuda_graph_max_bs</span> <span class="pre">64</span></code>, <code class="docutils literal notranslate"><span class="pre">--tts_engine.engine.torch_compile_max_bs</span> <span class="pre">64</span></code>, <code class="docutils literal notranslate"><span class="pre">--vocoder.process</span> <span class="pre">vocoder</span></code>, <code class="docutils literal notranslate"><span class="pre">--tts_engine.gpu_memory_fraction</span> <span class="pre">0.85</span></code>, and <code class="docutils literal notranslate"><span class="pre">--vocoder.gpu_memory_fraction</span> <span class="pre">0.10</span></code>; <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code> remained disabled. Streaming used the default <code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">-&gt;</span> <span class="pre">2</span> <span class="pre">-&gt;</span> <span class="pre">4</span></code> chunk ramp without a request-level override. Each language/mode was measured once, in non-streaming EN/ZH then streaming EN/ZH order on the same warmed server. The target GPU had no external GPU process during timed windows; host CPU, memory, and I/O were shared with another profiling task.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
@@ -1328,7 +1359,7 @@ latency for quality.</p>
 <section id="known-limitations">
 <h2>Known Limitations<a class="headerlink" href="#known-limitations" title="Link to this heading">#</a></h2>
 <ul class="simple">
-<li><p><strong>Reference audio recommended.</strong> As a cloning model, Qwen3-TTS Base produces robotic speech
+<li><p><strong>Reference audio recommended.</strong> As a cloning model, Voicing-TTS Base produces robotic speech
 without a reference clip.</p></li>
 <li><p><strong>Transcript improves cloning.</strong> Providing <code class="docutils literal notranslate"><span class="pre">text</span></code> in <code class="docutils literal notranslate"><span class="pre">references</span></code> (ICL mode) yields better
 speaker similarity than speaker-embedding-only (x-vector) mode.</p></li>
@@ -1354,20 +1385,20 @@ checkpoint is less prone.</p></li>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="fishaudio_s2_pro.html"
+       href="../get_started/installation_musa.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Fish Audio S2-Pro</p>
+        <p class="prev-next-title">🚀 Installation — MUSA</p>
       </div>
     </a>
     <a class="right-next"
-       href="ming_tts.html"
+       href="../basic_usage/tts.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Ming-Omni-TTS</p>
+        <p class="prev-next-title">TTS Model Usage</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -1390,6 +1421,7 @@ checkpoint is less prone.</p></li>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prerequisites">Prerequisites</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#convert-a-checkpoint">Convert a Checkpoint</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#server-configuration">Server Configuration</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ascend-npu-baseline">Ascend NPU baseline</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#deterministic-inference">Deterministic Inference</a></li>
@@ -1417,6 +1449,7 @@ checkpoint is less prone.</p></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#generation-parameters">Generation Parameters</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#model-variants">Model Variants</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#customvoice-checkpoints">CustomVoice Checkpoints</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#voicedesign-checkpoint">VoiceDesign Checkpoint</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#benchmark-results">Benchmark Results</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#b-base">0.6B Base</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#b-customvoice">1.7B CustomVoice</a></li>
@@ -1456,7 +1489,7 @@ By SGLang-Omni Team
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on Sep 28, 2026.
+  Last updated on Sep 30, 2026.
   <br/>
 </p>
   </div>

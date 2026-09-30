@@ -134,8 +134,8 @@ read-only.
 
 ## Streaming Flow
 
-Streaming is used for producer-consumer edges such as thinker to talker hidden
-states or talker to vocoder code tensors. The stage layer exposes one sending
+Streaming is used for producer-consumer edges such as the Voicing-TTS
+`tts_engine` to `vocoder` codec tensors. The stage layer exposes one sending
 helper, `CommEngine.send_stream_chunk()`, and the router chooses the transport.
 
 For same-node GPU targets:

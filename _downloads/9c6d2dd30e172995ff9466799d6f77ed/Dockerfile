@@ -8,10 +8,6 @@ FROM ${SGLANG_IMAGE} AS runtime
 
 ARG UCX_COMMIT=d8e50df6651b9ea5b76f23aee0aefbf053a4137a
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends sox \
-    && rm -rf /var/lib/apt/lists/*
-
 RUN git clone --filter=blob:none https://github.com/openucx/ucx.git /tmp/ucx \
     && git -C /tmp/ucx checkout "${UCX_COMMIT}" \
     && cd /tmp/ucx \
@@ -37,18 +33,11 @@ RUN git clone --filter=blob:none https://github.com/openucx/ucx.git /tmp/ucx \
 # The base image installs its stack into the /opt/sglang virtualenv that PATH
 # resolves. uv finds a virtualenv only through VIRTUAL_ENV or a .venv directory,
 # so name the interpreter explicitly.
-# Reuse the project's protobuf override for DAC, and include model extras so
-# startup does not need to install packages into a different Python environment.
+# Apply the project's uv override-dependencies (protobuf pin) here as well.
 COPY pyproject.toml /tmp/pyproject.toml
 RUN python3 -c 'import tomllib; print("\n".join(tomllib.load(open("/tmp/pyproject.toml", "rb"))["tool"]["uv"]["override-dependencies"]))' > /tmp/omni-overrides.txt \
     && uv pip install --python /opt/sglang/bin/python3 --no-build-isolation \
         --overrides /tmp/omni-overrides.txt -r /tmp/pyproject.toml \
-        descript-audiotools==0.7.2 descript-audio-codec==1.0.0 \
-    && CMAKE_ARGS='-DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=89;90;100;120' \
-        CMAKE_BUILD_PARALLEL_LEVEL=8 uv pip install --no-cache --python /opt/sglang/bin/python3 \
-        --overrides /tmp/omni-overrides.txt -r /tmp/pyproject.toml \
-        --extra audar-tts --extra fun-cosyvoice3 \
-    && uv pip install --python /opt/sglang/bin/python3 --no-deps qwen-tts==0.1.1 \
     && uv pip install --python /opt/sglang/bin/python3 --no-deps --reinstall flashinfer-python==0.6.18 \
     && python3 -m pip uninstall -y flashinfer-cubin flashinfer-jit-cache \
     && rm /tmp/pyproject.toml /tmp/omni-overrides.txt
@@ -77,9 +66,6 @@ COPY --from=flashinfer-cache /root/.cache/flashinfer/0.6.18 /root/.cache/flashin
 
 ENV FLASHINFER_WORKSPACE_BASE=/root \
     FLASHINFER_JIT_DEBUG=0
-
-# llama.cpp must load the same NCCL as Torch, not the older system copy.
-ENV LD_LIBRARY_PATH=/opt/sglang/lib/python3.12/site-packages/nvidia/nccl/lib:${LD_LIBRARY_PATH}
 
 RUN <<'EOF'
 cat >/usr/local/bin/sglang-omni-entrypoint <<'SCRIPT'

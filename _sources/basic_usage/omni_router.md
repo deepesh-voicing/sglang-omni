@@ -1,13 +1,13 @@
 # SGLang-Omni Rust Router
 
 `sgl-omni-router` is the multi-threaded Rust data plane for SGLang-Omni. It
-routes OpenAI-compatible chat, speech, transcription, translation, and
-realtime requests across compatible worker replicas with bounded admission,
-health-aware selection, and backpressured streaming.
+routes OpenAI-compatible speech requests across compatible Voicing-TTS worker
+replicas with bounded admission, health-aware selection, and backpressured
+streaming.
 
 ## Overview
 
-- OpenAI-compatible HTTP and WebSocket routes for Omni, TTS, and ASR workers.
+- OpenAI-compatible HTTP and WebSocket speech routes for TTS workers.
 - Static worker manifests with explicit model, modality, and media contracts.
 - `round_robin` and `least_requests` routing over compatible healthy replicas.
 - Direct request streaming for homogeneous worker cohorts and bounded
@@ -80,30 +80,36 @@ After installation, verify the installation and check the version:
 
 ## Quick Start
 
-Choose the example that matches the worker service:
+`sglang_omni_router/rust/examples/tts.toml` routes speech synthesis, including PCM streaming, across
+two workers at `127.0.0.1:8100` and `127.0.0.1:8101` that serve the model ID
+`tts-model` with preset voices. Start two Voicing-TTS CustomVoice workers that
+match it, one per GPU, from the repository root (convert the checkpoint first,
+see the [Voicing-TTS cookbook](../cookbook/voicing_tts.md)):
 
-| Configuration | Worker service |
-| --- | --- |
-| `examples/omni.toml` | Multimodal chat with text or audio output |
-| `examples/tts.toml` | Speech synthesis, including PCM streaming |
-| `examples/asr.toml` | Transcription and speech-to-English translation |
+```console
+CUDA_VISIBLE_DEVICES=0 sgl-omni serve \
+  --config examples/configs/voicing_tts_1_7b_customvoice.yaml \
+  --model-name tts-model --port 8100
+CUDA_VISIBLE_DEVICES=1 sgl-omni serve \
+  --config examples/configs/voicing_tts_1_7b_customvoice.yaml \
+  --model-name tts-model --port 8101
+```
 
-The examples define two workers at `127.0.0.1:8000` and
-`127.0.0.1:8001`. Set the worker URLs, model IDs, and service
-profiles to match the processes you are running.
+Set the worker URLs, model IDs, and service profiles to match the processes
+you are running.
 
 Validate the configuration before starting the router:
 
 ```console
 ./target/release/sgl-omni-router \
-  --config examples/omni.toml \
+  --config examples/tts.toml \
   --check-config
 ```
 
 Start the router:
 
 ```console
-./target/release/sgl-omni-router --config examples/omni.toml
+./target/release/sgl-omni-router --config examples/tts.toml
 ```
 
 Wait for readiness and send a request:
@@ -111,10 +117,11 @@ Wait for readiness and send a request:
 ```console
 curl --fail http://127.0.0.1:30000/ready
 
-curl --http1.1 http://127.0.0.1:30000/v1/chat/completions \
+curl --http1.1 http://127.0.0.1:30000/v1/audio/speech \
   --header 'content-type: application/json' \
   --data-binary \
-  '{"model":"omni-model","messages":[{"role":"user","content":"hello"}]}'
+  '{"model":"tts-model","input":"Hello from Voicing-TTS.","voice":"Ryan","response_format":"wav"}' \
+  --output output.wav
 ```
 
 ## Configuration
@@ -136,9 +143,8 @@ The top-level sections are:
 | `admission` | Global and per-service in-flight limits |
 | `health` | Probe interval, timeout, and transition thresholds |
 | `http` | Shared upstream connection pool and aggregate buffering budget |
-| `http_generation` | Chat trust domain, request limits, and deadline |
 | `http_media` | Enabled media routes, trust domain, request limits, and deadline |
-| `websocket` | Speech and realtime routes with setup and close bounds |
+| `websocket` | Speech streaming route with setup and close bounds |
 | `workers` | Worker identity, endpoint, health path, session capacity, and service profiles |
 
 Each worker has a stable ID, base URL, trust domain, optional default model,
@@ -159,20 +165,16 @@ limits, and timeouts from the expected workload and worker topology.
 | --- | --- | --- |
 | `GET` | `/live` | Process liveness |
 | `GET` | `/ready` | Readiness of every enabled service |
-| `POST` | `/v1/chat/completions` | Chat and multimodal generation |
 | `POST` | `/v1/audio/speech` | Encoded speech or streaming PCM |
 | `POST` | `/v1/audio/speech/batch` | Ordered, unsplit speech batch |
-| `POST` | `/v1/audio/transcriptions` | Multipart transcription |
-| `POST` | `/v1/audio/translations` | Multipart translation |
 | `GET` | `/v1/audio/speech/stream` | Speech WebSocket |
-| `GET` | `/v1/realtime[?model=<id>]` | OpenAI-compatible realtime WebSocket |
 | `GET`, `POST` | `/v1/audio/voices` | List or upload worker-local voices |
 | `DELETE` | `/v1/audio/voices/{name}` | Delete a worker-local voice |
 | `GET` | `/v1/models` | Static model inventory |
 | `GET` | `/metrics` | Prometheus lifecycle and capacity metrics |
 | `GET` | `/diagnostics` | Bounded router state |
 
-Generation requests use HTTP/1.1, JSON content type, and no query string.
+Requests use HTTP/1.1 and no query string.
 Fixed-length and chunked request bodies are accepted. A single
 `Expect: 100-continue` is handled by the client connection and is not forwarded
 upstream. Ambiguous framing, trailers, other expectations, unsupported content
@@ -203,7 +205,7 @@ JSON or multipart content.
 
 The direct path is bounded by each route's `streamed_request_max_bytes`. The
 classified path is bounded by the route's `buffered_request_max_bytes` per
-request and `http.buffered_request_total_bytes` across chat and media requests.
+request and `http.buffered_request_total_bytes` across media requests.
 Their defaults are 512 MiB, 8 MiB, and 256 MiB respectively. Chunked classified
 requests acquire the shared budget as bytes arrive. Requests without an
 explicit model return `ambiguous_model` when compatible workers do not share
@@ -245,27 +247,21 @@ limit.
 Responses still end normally on upstream EOF or error, downstream disconnect,
 or process drain.
 
-## Media and Realtime Sessions
+## Media and Speech Sessions
 
 Media routes are enabled independently. Speech batches remain ordered and are
-never split. Classified transcription and translation requests buffer the full
-multipart upload, so heterogeneous ASR deployments must size the buffered
-limits for their largest accepted recordings. Transcription and translation
-share a capacity class but require separate profile tasks.
+never split.
 
 The router preserves the trusted worker's response content type together with
-JSON, text, SSE, encoded audio, raw PCM, sample-rate and channel metadata,
-usage, completion-token, and finish-reason contracts. It does not decode,
+JSON, encoded audio, raw PCM, and sample-rate and channel metadata. It does not decode,
 transcode, or regenerate audio.
 
-Speech and realtime WebSockets terminate both handshakes and pin one worker for
-the complete session. Each frame awaits its destination send, preserving frame
+Speech WebSockets terminate both handshakes and pin one worker for the
+complete session. Each frame awaits its destination send, preserving frame
 type and order without relay tasks or application queues. Both links use a 16
 MiB message bound. Speech configuration, upstream transport setup, the first
 worker event, and close convergence use separate deadlines. Application-level
-idle behavior remains worker-owned. A realtime `model` query requires a worker
-with the matching default; an omitted model can use any compatible worker in
-the trust domain. `worker_setup_timeout_ms` is an operator safety bound on the
+idle behavior remains worker-owned. `worker_setup_timeout_ms` is an operator safety bound on the
 initial worker application event; it does not limit session lifetime or mark a
 worker unhealthy when it expires.
 Speech configuration is replayed byte-for-byte; the router extracts routing
@@ -277,11 +273,10 @@ pinned to that worker. Preset names and explicit references continue to use
 normal worker selection. The router does not store, replicate, or reconcile
 worker-local voice data. `voice_name_policy = "preset"` declares names provided
 by the serving model. `voice_name_policy = "uploaded"` declares names resolved
-from worker-local voice state; hybrid pipelines should use `uploaded` so named
-requests are routed conservatively. A named-voice request is rejected when
+from worker-local voice state. A named-voice request is rejected when
 otherwise compatible profiles disagree on this policy.
-Qwen3-TTS CustomVoice profiles use `preset`; Qwen3-TTS Base, Higgs, and hybrid
-dots-style profiles use `uploaded`.
+Voicing-TTS CustomVoice profiles use `preset`; Voicing-TTS Base profiles use
+`uploaded`.
 
 ## Health and Readiness
 
@@ -291,7 +286,7 @@ Transport and upstream protocol failures can request an immediate coalesced
 probe. Application responses do not directly change worker health.
 
 `GET /ready` returns `200` while the process is serving and every enabled
-generation, media, and WebSocket service has a compatible healthy worker.
+media and WebSocket service has a compatible healthy worker.
 Readiness also requires the configured uploaded-voice owner to be healthy and
 compatible. Current worker load does not change readiness.
 
@@ -367,7 +362,7 @@ The router does not implement client authentication or terminate TLS. Deploy it
 on a trusted network or behind an authenticated TLS proxy.
 
 Dynamic worker discovery and CRUD, request retries, circuit breakers,
-cache-aware routing, prefill/decode routing, and worker supervision are outside
+cache-aware routing, and worker supervision are outside
 this router's data-plane contract.
 
 ## Development
@@ -435,9 +430,8 @@ loopback sockets where transport behavior is part of the contract.
 | `src/server.rs` | Runtime assembly, routes, listener, and shutdown |
 | `src/worker_pool/` | Admission, health, profiles, policy selection, and worker load |
 | `src/http_relay/` | Shared HTTP client, buffering, body adapters, and relay |
-| `src/http_generation/` | Chat validation and classification |
-| `src/http_media/` | Speech, batch, transcription, translation, and voices |
-| `src/websocket/` | Speech and realtime session setup and relay |
+| `src/http_media/` | Speech, batch, and voices |
+| `src/websocket/` | Speech session setup and relay |
 | `src/operations.rs` | Models, metrics, and diagnostics |
 | `tests/` | Process and protocol integration tests |
 
